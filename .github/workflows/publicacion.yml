@@ -1,0 +1,258 @@
+# Publicación de MMCelt
+#
+# Existe porque la publicación se hacía a mano y se quedó atrás: el repositorio llegó a la
+# 0.9.1 mientras la última descarga disponible seguía siendo la v0.8.1, tres versiones por
+# detrás. Quien bajaba el programa de GitHub no tenía ni el chino legible ni el «Enviar a…».
+# No fue descuido de nadie: compilar el binario de Linux desde el Windows del proyecto es
+# incómodo, y lo incómodo se posterga. Así que lo hace la máquina.
+#
+# Se dispara al empujar una etiqueta `vX.Y.Z`. A partir de ahí, sin intervención:
+#   1. comprueba que la etiqueta y `Cargo.toml` dicen el mismo número,
+#   2. ejecuta la batería antes de construir nada,
+#   3. compila el ejecutable en Windows y en Linux,
+#   4. saca las notas del historial de cambios —no se reescriben a mano— y publica.
+#
+# El paso 1 es el que impide el error clásico: etiquetar `v0.9.2` con un `Cargo.toml` que
+# todavía dice `0.9.1` y publicar un binario que no corresponde a su número.
+
+name: Publicación
+
+on:
+  push:
+    tags:
+      - "v*"
+  # Permite repetir una publicación fallida sin tener que borrar y rehacer la etiqueta.
+  workflow_dispatch:
+    inputs:
+      etiqueta:
+        description: "Etiqueta a publicar (por ejemplo, v0.9.2)"
+        required: true
+
+# El trabajo de publicar necesita poder escribir en el repositorio; el resto, no.
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ------------------------------------------------------------------------------------
+  # Comprueba que el número de la etiqueta y el de `Cargo.toml` coinciden, y deja la
+  # versión disponible para los demás trabajos.
+  # ------------------------------------------------------------------------------------
+  comprobar:
+    name: La etiqueta coincide con la versión
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.leer.outputs.version }}
+      etiqueta: ${{ steps.leer.outputs.etiqueta }}
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Leer y comparar las dos versiones
+        id: leer
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ github.event.inputs.etiqueta }}" ]; then
+            etiqueta="${{ github.event.inputs.etiqueta }}"
+          else
+            etiqueta="${GITHUB_REF#refs/tags/}"
+          fi
+
+          # La etiqueta lleva «v» delante; el número de `Cargo.toml`, no.
+          version_etiqueta="${etiqueta#v}"
+
+          # Solo la primera coincidencia: es la del propio paquete, antes de las dependencias.
+          version_cargo="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+
+          if [ "$version_etiqueta" != "$version_cargo" ]; then
+            echo "::error::La etiqueta dice $version_etiqueta y Cargo.toml dice $version_cargo."
+            echo "::error::Sube la versión en Cargo.toml y en el historial de cambios antes de etiquetar."
+            exit 1
+          fi
+
+          echo "version=$version_cargo" >> "$GITHUB_OUTPUT"
+          echo "etiqueta=$etiqueta" >> "$GITHUB_OUTPUT"
+          echo "Publicando $etiqueta (versión $version_cargo)."
+
+  # ------------------------------------------------------------------------------------
+  # No se publica nada que no pase la batería. Es la misma comprobación que hace la CI en
+  # cada empujón, repetida aquí a propósito: una etiqueta puede apuntar a un commit que
+  # nunca pasó por ella.
+  # ------------------------------------------------------------------------------------
+  pruebas:
+    name: Batería de regresión antes de publicar
+    needs: comprobar
+    runs-on: ${{ matrix.sistema }}
+    strategy:
+      fail-fast: true
+      matrix:
+        sistema: [windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar la cadena de herramientas de Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Reutilizar la caché de compilación
+        uses: Swatinem/rust-cache@v2
+
+      - name: Ejecutar las pruebas
+        run: cargo test --all-features
+
+  # ------------------------------------------------------------------------------------
+  # Compila el ejecutable de cada sistema con el perfil de publicación, que ya trae `lto`
+  # y `strip`. No hacen falta librerías del sistema en Linux: `eframe` carga X11 y Wayland
+  # de forma dinámica, así que enlazar no las exige. Está comprobado en la CI.
+  # ------------------------------------------------------------------------------------
+  construir:
+    name: Compilar para ${{ matrix.nombre }}
+    needs: [comprobar, pruebas]
+    runs-on: ${{ matrix.sistema }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sistema: windows-latest
+            nombre: Windows
+            binario: target/release/mmcelt.exe
+            sufijo: windows-x64.exe
+          - sistema: ubuntu-latest
+            nombre: Linux
+            binario: target/release/mmcelt
+            sufijo: linux-x64
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar la cadena de herramientas de Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Reutilizar la caché de compilación
+        uses: Swatinem/rust-cache@v2
+
+      - name: Compilar con el perfil de publicación
+        run: cargo build --release
+
+      - name: Renombrar el binario con su versión y su sistema
+        shell: bash
+        run: |
+          set -euo pipefail
+          destino="mmcelt-${{ needs.comprobar.outputs.version }}-${{ matrix.sufijo }}"
+          cp "${{ matrix.binario }}" "$destino"
+          ls -l "$destino"
+
+      - name: Guardar el binario para el trabajo de publicación
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmcelt-${{ matrix.sufijo }}
+          path: mmcelt-${{ needs.comprobar.outputs.version }}-${{ matrix.sufijo }}
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------------------------
+  # Publica. Las notas salen del historial de cambios en vez de escribirse a mano: si el
+  # historial y la publicación se redactan por separado, tarde o temprano dicen cosas
+  # distintas de la misma versión.
+  # ------------------------------------------------------------------------------------
+  publicar:
+    name: Crear la publicación en GitHub
+    needs: [comprobar, construir]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Recoger los binarios de los dos sistemas
+        uses: actions/download-artifact@v4
+        with:
+          path: binarios
+          merge-multiple: true
+
+      - name: Extraer del historial las notas de esta versión
+        id: notas
+        run: |
+          set -euo pipefail
+          version="${{ needs.comprobar.outputs.version }}"
+          historial="documentacion/historial-de-cambios.md"
+
+          # Toma desde el encabezado «## [X.Y.Z]» hasta el encabezado de la versión
+          # anterior, sin incluirlo. Las líneas se acumulan en vez de imprimirse sobre la
+          # marcha para poder recortar por el final el separador «---» y los huecos que
+          # van antes de la versión anterior: si no, la publicación acaba con una raya
+          # suelta que no separa nada.
+          notas="$(awk -v v="## [$version]" '
+            index($0, v) == 1 { dentro = 1; next }
+            dentro && /^## \[/ { exit }
+            dentro { lineas[++n] = $0 }
+            END {
+              while (n > 0 && (lineas[n] ~ /^[[:space:]]*$/ || lineas[n] == "---")) n--
+              for (i = 1; i <= n; i++) print lineas[i]
+            }
+          ' "$historial")"
+
+          if [ -z "$(echo "$notas" | tr -d '[:space:]')" ]; then
+            echo "::error::No hay ninguna sección [$version] en $historial."
+            exit 1
+          fi
+
+          # Las notas van a un archivo, no a GITHUB_OUTPUT, y se entregan luego con
+          # --notes-file. El motivo no es de estilo: una expresión de Actions se sustituye
+          # TEXTUALMENTE en el guion antes de que lo lea bash, así que unas notas metidas
+          # entre comillas dobles llevarían dentro los acentos graves del historial
+          # (.mmcelt, _AI.md, toolbar.rs) y bash intentaría EJECUTARLOS como órdenes.
+          # Con un archivo por medio, el texto no pasa nunca por el intérprete.
+          #
+          # Y ojo con explicarlo: escribir la sintaxis de esas expresiones aquí dentro, aun
+          # en un comentario, la evalúa igual y tumba el flujo entero con «An expression was
+          # expected». Pasó al escribir este mismo comentario. Por eso va descrita en
+          # palabras y no en símbolos.
+          {
+            echo "$notas"
+            echo ""
+            echo "## Descargas"
+            echo ""
+            echo "| Archivo | Sistema |"
+            echo "|---|---|"
+            echo "| \`mmcelt-$version-windows-x64.exe\` | Windows 10 u 11, 64 bits |"
+            echo "| \`mmcelt-$version-linux-x64\` | Linux 64 bits (requiere X11 o Wayland) |"
+            echo ""
+            echo "No hay instalador: es un ejecutable único, sin dependencias externas ni tiempo"
+            echo "de ejecución que instalar. En Linux, dale permiso con \`chmod +x\`."
+            echo ""
+            echo "## Licencia"
+            echo ""
+            echo "Software libre bajo la [GPL-3.0 o posterior](https://github.com/celtidcs/mmcelt/blob/main/LICENSE). Puedes usarlo, estudiarlo"
+            echo "y modificarlo; si repartes una versión modificada, tienes que publicar también su"
+            echo "código. Se entrega sin ninguna garantía."
+          } > notas-de-la-publicacion.md
+
+          echo "Notas preparadas:"
+          head -3 notas-de-la-publicacion.md
+
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          etiqueta="${{ needs.comprobar.outputs.etiqueta }}"
+          version="${{ needs.comprobar.outputs.version }}"
+
+          # `--clobber` permite repetir una publicación fallida sin borrarla a mano antes.
+          if gh release view "$etiqueta" >/dev/null 2>&1; then
+            gh release edit "$etiqueta" \
+              --title "MMCelt $version" \
+              --notes-file notas-de-la-publicacion.md
+            gh release upload "$etiqueta" binarios/* --clobber
+          else
+            gh release create "$etiqueta" \
+              --title "MMCelt $version" \
+              --notes-file notas-de-la-publicacion.md \
+              binarios/*
+          fi

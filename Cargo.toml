@@ -1,0 +1,61 @@
+[package]
+name = "mmcelt"
+version = "0.12.0"
+edition = "2021"
+
+# Los datos de aqui abajo no los usa el programa: los leen quien recibe el proyecto y las
+# herramientas del ecosistema de Rust. Se conservan para la copia local y una posible publicación
+# futura aprobada.
+description = "Mapas mentales de escritorio para diseñar, supervisar y dirigir el trabajo de modelos de inteligencia artificial."
+authors = ["celtidcs"]
+readme = "README.md"
+keywords = ["mapas-mentales", "mcp", "ia", "egui", "escritorio"]
+categories = ["visualization", "gui"]
+
+# GPL-3.0 o posterior, elegida al hacer publico el repositorio el 2026-08-27. El texto
+# integro esta en LICENSE, en la raiz.
+#
+# Se eligio copyleft y no una licencia permisiva a proposito: cualquiera puede usar y
+# modificar el programa, pero quien reparta una version modificada tiene que publicar
+# tambien su codigo. Lo que se construya encima vuelve a todos.
+license = "GPL-3.0-or-later"
+
+# Sigue sin publicarse en crates.io: esto es una aplicacion de escritorio, no una libreria
+# que nadie vaya a declarar como dependencia.
+publish = false
+
+[dependencies]
+eframe = { version = "0.36.0", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
+egui = "0.36.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rfd = "0.15"
+uuid = { version = "1.10", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+notify = "8.0"
+sha2 = "0.10"
+# Lectura y escritura de OPML y del .mm de FreeMind/Freeplane (tanda 5, exportación e
+# importación a formatos no propietarios). MIT/Apache-2.0, compatible con GPL-3.0-or-later.
+quick-xml = "=0.41.0"
+
+[build-dependencies]
+# Solo para poner la fecha de compilacion en el binario (ver build.rs).
+chrono = "0.4"
+
+# Incrusta el icono como recurso del ejecutable, que es lo que hace que Windows lo muestre
+# en el explorador y en los accesos directos. Solo interviene al compilar en Windows: no
+# forma parte del programa ni anade nada al binario en otros sistemas.
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+[dev-dependencies]
+# La barrera de los conectores analiza como TOML real el archivo que MMCelt entrega a Codex.
+# Comprobar solo cadenas no detecta claves duplicadas, que impiden arrancar la herramienta.
+toml = "1.1.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

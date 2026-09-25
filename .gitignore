@@ -1,0 +1,67 @@
+# --- Compilación de Rust ---
+/target
+**/*.rs.bk
+# Carpetas de compilación con sufijo que se crearon dentro del proyecto al verificar cada
+# corrección por separado. Llegaron a ocupar 15 GB dentro de la unidad sincronizada. La
+# carpeta buena se fija en .cargo/config.toml, fuera de Drive; esta regla evita que las que
+# se escapen vuelvan a aparecer como archivos sin seguimiento.
+.target-*/
+
+# --- Secretos y configuración local ---
+# El proyecto se integra con varias plataformas de IA. Aunque hoy no maneja ninguna
+# credencial (el puente con la IA es copiar y pegar manual), estas reglas existen
+# para que el primer archivo de credenciales que aparezca no acabe en el repositorio.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+credentials.json
+
+# --- Archivos de trabajo de MMCelt ---
+# Mapas mentales personales del usuario, sus copias de seguridad y el registro de
+# errores. Los mapas de ejemplo que sí deban versionarse van en `examples/`, que queda
+# excluido de la regla.
+*.mmcelt
+*.bak
+*_AI.md
+mmcelt-errores.log
+!examples/**/*.mmcelt
+
+# --- Herramientas de trabajo, fuera del repositorio publicado ---
+# El repositorio contiene la aplicación y su documentación. Las instrucciones de los
+# agentes de IA que ayudan a desarrollarla, el canal por el que se coordinan y el registro
+# de las sesiones son del proceso de trabajo: no le sirven de nada a quien descarga el
+# programa, así que se quedan en el equipo y no se publican.
+# La barra inicial las ata a la raiz. Sin ella, `CLAUDE.md` excluiria cualquier archivo
+# con ese nombre en cualquier carpeta, y en Windows —que no distingue mayusculas— eso
+# alcanzaba tambien a la guia `documentacion/integraciones/claude.md`, que si es del
+# proyecto. Por eso esa guia se llama ahora `claude-mcp.md`.
+/CLAUDE.md
+/GEMINI.md
+/AGENTS.md
+/.gestor/
+# Notas de compilación propias de un equipo concreto: rutas locales que no le
+# sirven a nadie más.
+/LEEME-ESTE-EQUIPO.txt
+# Fija la carpeta de compilación fuera de la unidad sincronizada. La ruta solo
+# existe en un equipo concreto, así que tampoco se publica.
+/.cargo/
+
+# Carpeta de trabajo de Claude Code: worktrees temporales, sesiones y ajustes locales.
+.claude/
+
+# --- Sistema operativo y editores ---
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Resultados de cargo-mutants: se regeneran en cada ejecución.
+mutants.out/
+mutants.out.old/

@@ -1,0 +1,30 @@
+# Normalización de finales de línea
+#
+# El proyecto se desarrolla en Windows pero contiene archivos que deben conservar
+# finales de línea Unix para funcionar.
+
+# Por defecto, git normaliza a LF en el repositorio y usa el final nativo al extraer.
+* text=auto
+
+# --- Archivos que EXIGEN finales de línea LF ---------------------------------
+# Un script de shell con finales CRLF falla en Linux y macOS con un error confuso
+# ("bad interpreter: No such file or directory"), porque el retorno de carro pasa a
+# formar parte del nombre del intérprete en la línea del shebang.
+*.sh text eol=lf
+.githooks/* text eol=lf
+
+# --- Archivos que EXIGEN finales de línea CRLF -------------------------------
+# PowerShell 5.1 los maneja mejor, y estos scripts se usan exclusivamente en Windows.
+*.ps1 text eol=crlf
+
+# --- Archivos binarios --------------------------------------------------------
+# Se marcan explícitamente para que git no intente normalizarlos ni mostrar diferencias.
+# Los pixeles en crudo del icono. Sin esta linea, `text=auto` decide por heuristica: hoy
+# acierta porque el archivo tiene bytes nulos, pero un icono sin transparencia podria no
+# tenerlos, y git le convertiria los finales de linea al clonar, corrompiendolo.
+*.rgba binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary
+*.pdf binary

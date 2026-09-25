@@ -1,0 +1,18 @@
+# Marcas del trinquete de duplicación — barrera P7
+#
+# Regla de paso acordada el 2026-09-16: «nuclearizar» deja de ser una
+# intención y pasa a comprobarse. Cada línea declara una decisión que ya tiene dueño único, y
+# cuántos sitios la repiten hoy. Ese número NO PUEDE SUBIR. Bajar siempre se puede, y al bajar
+# HAY QUE BAJAR EL CUPO: si no, mañana vuelve a caber lo que hoy se centralizó.
+#
+# Esta barrera no juzga si el diseño es elegante: cuenta repeticiones. Es lo que se puede
+# comprobar, y es exactamente revisar mil líneas de código disperso.
+#
+# Formato: etiqueta|texto que se busca|carpeta|cupo|motivo
+#
+# `src/audit_checks.rs` nunca cuenta: las barreras nombran lo que vigilan, y penalizarlas sería
+# castigar justo lo que queremos que crezca.
+#
+solo-lectura|es_solo_lectura_por_raiz()|src|18|Si el mapa está en solo lectura es UNA decisión del dominio. Hoy se repregunta en 18 sitios: romper uno solo dejó 480 pruebas en verde el 2026-09-16. La guardia número 19 no se añade, se centraliza.
+error-carpeta-invalida|CarpetaProyectoInvalida {|src|21|El mismo error se construye a mano en 21 sitios. Cada uno puede redactar el motivo a su manera y ninguno obliga al siguiente a ser coherente. Deben nacer de constructores con nombre.
+ruta-pintada-sin-normalizar|.display()|src/ui|8|Una ruta que se le enseña a una persona debe venir ya resuelta y limpia de un único punto. «Conectar con mis IAs» y la pestaña «Instrucciones» consumen ahora `conectores::ruta_de_trabajo_para_interfaz` en vez de formatear por su cuenta (A-2, C22-B). Los 8 restantes muestran rutas que por su naturaleza no son el espacio de trabajo de los agentes (ejecutables confirmados, fuentes nativas individuales, rutas de error).

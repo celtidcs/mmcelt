@@ -1,0 +1,412 @@
+# Integración continua de MMCelt
+#
+# Comprueba en cada push y en cada pull request que el proyecto sigue cumpliendo las
+# garantías que estableció la auditoría de código de 2026-08-21:
+#   · compila sin avisos,
+#   · pasa `clippy` sin ninguna advertencia,
+#   · supera las pruebas de regresión, incluidas las del servidor MCP integrado,
+#   · no arrastra dependencias con vulnerabilidades conocidas.
+#
+# El proyecto no tiene ninguna dependencia de Python: el servidor MCP está integrado en
+# el propio ejecutable y sus pruebas forman parte de `cargo test`.
+#
+# Se ejecuta en Windows porque es la plataforma de destino de la aplicación (usa
+# `eframe` con ventana nativa y diálogos `rfd` del sistema), **y también en Linux**.
+#
+# Lo de Linux se añadió en la 0.6.4 y no es simetría de adorno: la primera vez que la
+# batería se ejecutó en un Linux real —en la 0.6.3, a mano y en un contenedor— apareció un
+# fallo que en Windows llevaba versiones en verde. La valla que rechaza los `..` no miraba
+# la barra invertida, y en Linux esa barra no es un separador sino un carácter normal de
+# nombre, así que la comprobación no veía nada.
+#
+# Además hay pruebas que solo existen en una plataforma: el escape por unión de directorio
+# es `#[cfg(windows)]` y el escape por enlace simbólico es `#[cfg(unix)]`. Sin los dos
+# trabajos, una de las dos no la ejecuta nadie, que es exactamente lo que pasaba.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # Un fallo de compilación es más fácil de leer sin colores en el registro de la CI.
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Compilación, linter y pruebas (Rust)
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar la cadena de herramientas de Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Reutilizar la caché de compilación
+        uses: Swatinem/rust-cache@v2
+
+      - name: Comprobar que compila sin avisos
+        # `-D warnings` convierte cualquier aviso en error: la auditoría dejó el
+        # proyecto con cero avisos y así se garantiza que siga igual.
+        run: cargo build --all-targets
+        env:
+          RUSTFLAGS: "-D warnings"
+
+      - name: Ejecutar clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Comprobar el formato
+        # Sin `continue-on-error`. Lo llevaba, y con él este paso comprobaba el formato
+        # para después ignorar el resultado: una comprobación decorativa es peor que
+        # ninguna, porque aparenta un rigor que no existe. El código está ya formateado
+        # con el estilo estándar de Rust, así que la comprobación puede exigirse.
+        run: cargo fmt --check
+
+      - name: Comprobar que la documentación no tiene enlaces rotos
+        # `cargo doc` avisa de los enlaces `[`Algo`]` que no resuelven, y nadie los miraba:
+        # el 2026-09-06 había siete, todos por lo mismo —el elemento se renombró al
+        # traducirlo al español y la documentación que lo citaba se quedó con el nombre
+        # viejo—. `ThemeConfig::grid_line` llevaba desde la traducción del módulo apuntando
+        # a un campo que ya se llama `linea_de_la_reticula`.
+        #
+        # Un enlace roto no rompe el programa, pero manda a quien lee la documentación a
+        # buscar algo que no existe, y este proyecto exige documentar en serio. Con
+        # `-D warnings` el aviso pasa a ser un fallo, que es lo único que impide que se
+        # vuelvan a acumular.
+        run: cargo doc --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+      - name: Comprobar que los scripts de PowerShell al menos parsean
+        # Nació de un defecto real: `preparar-entorno.ps1` estuvo roto por una coma
+        # sobrante en su bloque `param()`, de modo que PowerShell se detenía antes de la
+        # primera línea. Sobrevivió a cinco rondas de auditoría porque nadie lo ejecutó
+        # nunca: `cargo` no mira los scripts y las pruebas tampoco.
+        #
+        # Esto no comprueba que hagan lo correcto, solo que se pueden ejecutar. Es poco,
+        # pero es exactamente lo que faltaba.
+        shell: pwsh
+        run: |
+          $fallos = 0
+          Get-ChildItem -Path documentacion -Filter *.ps1 -Recurse | ForEach-Object {
+            $errores = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile(
+              $_.FullName, [ref]$null, [ref]$errores)
+            if ($errores -and $errores.Count -gt 0) {
+              Write-Host "::error file=$($_.FullName)::$($errores[0].Message)"
+              $fallos++
+            } else {
+              Write-Host "$($_.Name): sintaxis correcta"
+            }
+          }
+          if ($fallos -gt 0) { exit 1 }
+
+      - name: Ejecutar las pruebas
+        # Incluye las pruebas de regresión de `src/audit_checks.rs`, que vigilan que no
+        # vuelvan los defectos detectados en la auditoría.
+        run: cargo test --all-features
+
+  linux:
+    name: Pruebas en Linux (Rust)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar la cadena de herramientas de Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Reutilizar la caché de compilación
+        uses: Swatinem/rust-cache@v2
+
+      - name: Ejecutar clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Ejecutar las pruebas
+        # No hace falta instalar librerías del sistema: se comprobó compilando el proyecto
+        # entero en un contenedor con la imagen oficial de Rust, sin añadir ningún paquete.
+        # `eframe` carga X11 y Wayland de forma dinámica, así que enlazar no las exige.
+        #
+        # Aquí se ejecuta la prueba `el_espacio_de_trabajo_no_se_escapa_por_un_enlace_simbolico`,
+        # que en Windows no corre.
+        run: cargo test --all-features
+
+  macos:
+    name: Pruebas en macOS (Rust)
+    runs-on: macos-latest
+
+    # macOS es la plataforma que falta y la que bloquea el 1.0.0: el programa **nunca se ha
+    # ejecutado ahí**. Este trabajo existe para dejar de suponerlo.
+    #
+    # Se añadió tras un estudio que concluía que el soporte era «100 % viable». La conclusión
+    # es razonable y el código la respalda: `autoguardado.rs` y `conectores.rs` ya tienen
+    # escritas las rutas de macOS, y `winit` excluye de forma explícita a macOS de las
+    # dependencias de X11 y Wayland, de modo que esas dos características quedan inertes
+    # aunque se activen aquí. Pero un estudio no es una ejecución, y esto lo es.
+    #
+    # `macos-latest` es Apple Silicon (ARM64), la arquitectura de cualquier Mac que se venda
+    # hoy. Los ejecutores de macOS no cuestan nada en repositorios públicos, que es lo que
+    # este pasó a ser el 2026-08-27.
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar la cadena de herramientas de Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Reutilizar la caché de compilación
+        uses: Swatinem/rust-cache@v2
+
+      - name: Ejecutar clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Ejecutar las pruebas
+        # Como en Linux, aquí sí corre la prueba del escape por enlace simbólico: es
+        # `#[cfg(unix)]` y en Windows no la ejecuta nadie.
+        run: cargo test --all-features
+
+      - name: Comprobar que macOS entiende el icono del paquete
+        # `assets/icono/mmcelt.icns` se genera desde Windows con un guion propio, porque
+        # `iconutil` —la herramienta de Apple -- solo existe en macOS y el proyecto se
+        # desarrolla en Windows. Un archivo construido a mano contra una especificación
+        # puede ser válido sobre el papel y no abrirse en el sistema real.
+        #
+        # Este paso lo comprueba donde importa. `iconutil` descompone el `.icns` en sus
+        # variantes: si la estructura estuviera mal, falla aquí y no en el ordenador de
+        # quien se descargue el programa.
+        run: |
+          set -euo pipefail
+          iconutil --convert iconset assets/icono/mmcelt.icns --output /tmp/mmcelt.iconset
+          echo "Variantes que ha reconocido macOS:"
+          ls -1 /tmp/mmcelt.iconset
+
+          # `iconutil` acepta un archivo con una sola variante, así que comprobar que no
+          # falla no basta: hay que exigir que estén todas las que se declararon.
+          reconocidas=$(ls -1 /tmp/mmcelt.iconset | wc -l | tr -d ' ')
+          if [ "$reconocidas" -lt 10 ]; then
+            echo "::error::El icono solo declara $reconocidas variantes; se esperaban 10 o más."
+            exit 1
+          fi
+
+          # Y que la mayor es de verdad de 1024, que es la que se ve en «Obtener
+          # información» y la que delata un icono ampliado desde uno pequeño.
+          sips -g pixelWidth -g pixelHeight /tmp/mmcelt.iconset/icon_512x512@2x.png
+
+      - name: Comprobar que la ventana se abre, y fotografiarla
+        # Hasta aquí la CI demuestra que MMCelt **compila y pasa las pruebas** en macOS,
+        # que no es lo mismo que demostrar que **se abre**. Ninguna de las 200 pruebas crea
+        # una ventana: si `eframe` no consiguiera un contexto de OpenGL —que en macOS Apple
+        # da por obsoleto y emula sobre Metal—, la batería seguiría en verde y el programa
+        # no arrancaría en el ordenador de nadie.
+        #
+        # Este paso separa a propósito dos cosas que suelen confundirse:
+        #
+        #   1. **Que la ventana existe.** Si `run_native` no logra crearla, `main` devuelve
+        #      el error y el proceso muere en el acto. Comprobar que sigue vivo pasados
+        #      veinte segundos es una medición de verdad, y por eso el paso **falla** si no
+        #      lo está.
+        #   2. **Cómo se ve.** Eso no lo juzga ninguna máquina: la captura se sube como
+        #      artefacto para mirarla con los ojos. Ya pasó con el icono, que la métrica
+        #      daba por «casi idéntico» mientras el ojo veía las muescas del borde.
+        #
+        # Advertencia al leer la imagen: esto es el ejecutable suelto, **no el paquete
+        # `.app`**, que todavía no existe. Sin `Info.plist` no hay `NSHighResolutionCapable`,
+        # así que la captura no dice nada sobre cómo se verá en una pantalla Retina. Y la
+        # pantalla del ejecutor mide 1024×768, menos que los 1280×800 que pide la ventana.
+        run: |
+          set -uo pipefail
+
+          # El binario de publicación, que es el que acabaría usando una persona, no el de
+          # pruebas: son perfiles distintos y no se comportan igual de fluidos.
+          cargo build --release
+
+          echo "Pantalla del ejecutor:"
+          system_profiler SPDisplaysDataType | grep -i resolution || true
+
+          # Foto del escritorio *antes* de abrir nada. Sirve para dos cosas: de referencia,
+          # para distinguir luego una captura buena de una que no recoge la ventana, y de
+          # pararrayos, porque la primera llamada a `screencapture` es la que despierta el
+          # aviso de permiso de macOS.
+          screencapture -x escritorio-sin-mmcelt.png 2>/dev/null || true
+
+          ./target/release/mmcelt &
+          pid=$!
+
+          # Veinte segundos: en el primer arranque hay que crear el contexto gráfico,
+          # cargar las fuentes incrustadas —incluida la de chino— y armar el mapa de
+          # ejemplo con el que abre el programa.
+          sleep 20
+
+          if ! kill -0 "$pid" 2>/dev/null; then
+            wait "$pid"
+            codigo=$?
+            echo "::error::MMCelt se cerró solo a los pocos segundos (código $codigo): en macOS no llega a abrir la ventana."
+            exit 1
+          fi
+          echo "MMCelt lleva veinte segundos en marcha: la ventana existe."
+
+          # Se fotografía **la ventana sola**, no la pantalla, y no es un capricho: medido
+          # el 2026-08-30, macOS levanta un aviso de permiso —«bash is requesting to bypass
+          # the system private window picker»— en cuanto algo llama a `screencapture`, y ese
+          # aviso se queda encima, justo en el centro, tapando el mapa. No se puede descartar
+          # sin permiso de accesibilidad, que un ejecutor de CI tampoco tiene.
+          #
+          # Así que se rodea: el servidor de ventanas compone cada ventana por separado y
+          # `screencapture -l` la entrega entera **aunque haya algo delante**, y aunque no
+          # quepa en la pantalla del ejecutor. Sale además sin escritorio ni Dock alrededor.
+          #
+          # El identificador de la ventana se pide a CoreGraphics filtrando por el PID del
+          # proceso que acabamos de arrancar. Enumerar ventanas y quedarse con su número no
+          # exige el permiso de grabación de pantalla; solo leer sus títulos lo exigiría, y
+          # eso no hace falta aquí.
+          #
+          # Se coge **la mayor**, no la primera. Medido el 2026-08-30 en la ejecución
+          # 33303857465: quedarse con la primera devolvió una ventana auxiliar de 500×500 en
+          # blanco, y el artefacto salió siendo un cuadrado vacío. La principal mide 1280×800.
+          cat > identificador-de-ventana.swift <<'SWIFT'
+          import CoreGraphics
+          import Foundation
+
+          // Devuelve por la salida estándar el identificador de la ventana MÁS GRANDE que
+          // pertenezca al proceso cuyo PID llega como argumento, entre las de capa 0 —ni
+          // menús, ni sombras, ni paneles del sistema—.
+          //
+          // Exige además un tamaño mínimo: una ventana diminuta no es la del programa, y más
+          // vale caer a la pantalla entera que subir un cuadro en blanco como si fuera buena.
+          let anchoMinimo = 600.0
+          let altoMinimo = 400.0
+
+          guard CommandLine.arguments.count > 1, let pid = Int32(CommandLine.arguments[1]) else {
+              exit(1)
+          }
+          guard let ventanas = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID)
+                  as? [[String: Any]] else {
+              exit(1)
+          }
+
+          var mejorNumero: Int?
+          var mejorArea = 0.0
+          for ventana in ventanas {
+              guard let duenyo = ventana[kCGWindowOwnerPID as String] as? Int32, duenyo == pid,
+                    let capa = ventana[kCGWindowLayer as String] as? Int, capa == 0,
+                    let numero = ventana[kCGWindowNumber as String] as? Int,
+                    let limites = ventana[kCGWindowBounds as String] as? [String: Any],
+                    let ancho = limites["Width"] as? Double,
+                    let alto = limites["Height"] as? Double else { continue }
+              FileHandle.standardError.write(
+                  "ventana \(numero): \(Int(ancho))x\(Int(alto))\n".data(using: .utf8)!)
+              guard ancho >= anchoMinimo, alto >= altoMinimo, ancho * alto > mejorArea else {
+                  continue
+              }
+              mejorArea = ancho * alto
+              mejorNumero = numero
+          }
+
+          guard let elegida = mejorNumero else { exit(1) }
+          print(elegida)
+          SWIFT
+
+          identificador=""
+          if command -v swift >/dev/null 2>&1; then
+            # La salida de error del guion lista las ventanas que ha visto, con su tamaño:
+            # si algún día vuelve a elegir mal, el registro dirá entre qué elegía.
+            identificador=$(swift identificador-de-ventana.swift "$pid" | head -1)
+          else
+            echo '::warning::No hay swift en el ejecutor: no se puede aislar la ventana.'
+          fi
+
+          if [ -n "$identificador" ]; then
+            echo "Ventana de MMCelt en el servidor de ventanas: $identificador"
+            screencapture -x -o -l"$identificador" captura-mmcelt-macos.png 2>/dev/null || true
+          fi
+
+          # La pantalla entera va siempre: es el contexto —cómo se sitúa la ventana, qué
+          # avisos del sistema hay— y es el recambio si lo anterior no dio imagen.
+          screencapture -x pantalla-completa.png 2>/dev/null || true
+
+          if [ ! -s captura-mmcelt-macos.png ]; then
+            if [ -s pantalla-completa.png ]; then
+              echo "::warning::No se pudo aislar la ventana; queda la pantalla entera, donde el aviso de permiso de macOS puede tapar parte del mapa."
+              cp pantalla-completa.png captura-mmcelt-macos.png
+            else
+              echo "::warning::El ejecutor no ha dejado fotografiar nada. Queda comprobado que la ventana se abre, pero no hay imagen que mirar."
+            fi
+          fi
+
+          if [ -s captura-mmcelt-macos.png ]; then
+            sips -g pixelWidth -g pixelHeight captura-mmcelt-macos.png
+          fi
+
+          # Si la pantalla sale idéntica a como estaba antes de abrir el programa, la
+          # fotografía no está recogiendo lo que pasa: más vale decirlo que subir una imagen
+          # del fondo de escritorio haciéndola pasar por buena.
+          if [ -s escritorio-sin-mmcelt.png ] && [ -s pantalla-completa.png ] &&
+             [ "$(shasum -a 256 < escritorio-sin-mmcelt.png)" = "$(shasum -a 256 < pantalla-completa.png)" ]; then
+            echo "::warning::La pantalla sale igual que antes de arrancar MMCelt: la captura no recoge la ventana."
+          fi
+
+          # Cerrar el programa: dejar el proceso suelto retrasa el final del trabajo.
+          kill "$pid" 2>/dev/null || true
+
+      - name: Guardar las capturas para mirarlas
+        # `always()` a propósito: si el paso anterior falló porque el programa se cerró
+        # solo, la foto del escritorio es justo lo que hay que ver para entender por qué.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captura-macos
+          path: |
+            captura-mmcelt-macos.png
+            pantalla-completa.png
+            escritorio-sin-mmcelt.png
+          if-no-files-found: warn
+          retention-days: 30
+
+  seguridad:
+    name: Vulnerabilidades en dependencias
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar la cadena de herramientas de Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Comprobar que los scripts de shell al menos parsean
+        # Se validan aquí, y no en el trabajo de Windows, porque el `bash` que hay allí
+        # depende de lo que traiga la imagen. En Linux es el del sistema.
+        run: |
+          fallos=0
+          for script in $(find documentacion -name '*.sh'); do
+            if bash -n "$script"; then
+              echo "$script: sintaxis correcta"
+            else
+              echo "::error file=$script::error de sintaxis"
+              fallos=$((fallos + 1))
+            fi
+          done
+          exit $fallos
+
+      - name: Instalar cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Auditar las dependencias
+        # Consulta la base de datos de avisos de seguridad de RustSec.
+        #
+        # Con eframe >= 0.32, quick-xml 0.30 ya no forma parte del árbol de dependencias
+        # y la auditoría pasa limpia sin necesidad de excepciones.
+        run: cargo audit

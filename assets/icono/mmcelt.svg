@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Icono de MMCelt — fuente editable.
+
+  Un mapa mental reducido a lo mínimo: el nodo raíz a la izquierda y dos ramas que se
+  abren hacia la derecha. La rama de abajo termina en un nodo corriente; la de arriba no
+  termina en un nodo, sino en un destello. Ahí está la inteligencia artificial, que es lo
+  que distingue a MMCelt de cualquier otro programa de mapas mentales.
+
+  Los colores no son inventados: salen de la paleta del tema oscuro de la aplicación
+  (`src/theme.rs`). Las ramas son la primera y la segunda del mapa, y el destello es el
+  ámbar de las conexiones cruzadas.
+
+  El fondo arranca en el azul del panel (#1D2434) y baja hasta un tono más oscuro que el
+  del lienzo (#0E121A frente al #12161F del tema). No es un descuido: un icono se ve sobre
+  fondos que no controlamos, y ese punto extra de oscuridad le da borde propio sin
+  necesidad de dibujarle uno.
+
+  Los archivos que usa el programa —`mmcelt.ico`, los PNG y `mmcelt-64.rgba`— se generan a
+  partir de esta geometría. El procedimiento está en `documentacion/funcionalidades.md`.
+
+  Lienzo de 256×256. Todas las medidas en esas unidades.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"
+     role="img" aria-label="Un nodo con dos ramas; la superior acaba en un destello">
+
+  <defs>
+    <!-- Del azul pizarra del panel al del lienzo, en diagonal. -->
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1D2434"/>
+      <stop offset="1" stop-color="#0E121A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#fondo)"/>
+
+  <!-- Las dos ramas. Nacen dentro del nodo raíz, que las tapa al dibujarse encima. -->
+  <g fill="none" stroke-width="14" stroke-linecap="round">
+    <path d="M104 128 C148 128 142 74 188 72" stroke="#3B82F6"/>
+    <path d="M104 128 C148 128 142 190 186 190" stroke="#10B981"/>
+  </g>
+
+  <!-- Hoja inferior: un nodo como cualquier otro. -->
+  <circle cx="186" cy="190" r="18" fill="#10B981"/>
+
+  <!--
+    Hoja superior: el destello. Cuatro puntas de lados cóncavos, que es lo que lo separa
+    de una flor: los puntos de control de cada cuadrante quedan muy cerca del centro.
+  -->
+  <path d="M188 38 Q193.1 66.9 222 72 Q193.1 77.1 188 106 Q182.9 77.1 154 72 Q182.9 66.9 188 38 Z"
+        fill="#F59E0B"/>
+
+  <!-- El nodo raíz, sin anillo: un halo azul competía con la rama azul que sale de él. -->
+  <circle cx="82" cy="128" r="28" fill="#EEF2F8"/>
+</svg>
