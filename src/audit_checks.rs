@@ -18414,7 +18414,12 @@ fn instrucciones_sin_fuentes_muestran_estado_vacio_y_raiz_exacta() {
     let raiz = carpeta_temporal_contexto("estado-vacio-fuentes");
     crate::proyecto_trabajo::RepositorioProyecto::abrir_o_inicializar(&raiz)
         .expect("identificar proyecto");
-    app.agentes.espacio_de_trabajo = raiz.clone();
+    // Se canoniza antes de asignar, igual que hace el único punto de verdad del dominio
+    // (`sincronizar_espacio_de_trabajo_con_el_mapa`, A-2): en entornos donde la ruta cruda no
+    // coincide con la canónica —nombres cortos 8.3 de Windows, `/var` symlink de macOS—, asignar
+    // la ruta cruda rompería la invariante que toda pantalla da por hecha.
+    let raiz_canonica = std::fs::canonicalize(&raiz).expect("canonizar raíz esperada");
+    app.agentes.espacio_de_trabajo = raiz_canonica.clone();
     let mut editor = crate::ui::proyecto_ia_modal::cargar_editor_para_prueba(&app)
         .expect("detectar realmente la ausencia de fuentes");
     editor.pestana = PestanaProyectoIa::Instrucciones;
@@ -18422,7 +18427,6 @@ fn instrucciones_sin_fuentes_muestran_estado_vacio_y_raiz_exacta() {
         editor.fuentes.is_empty(),
         "la carpeta controlada no tiene fuentes"
     );
-    let raiz_canonica = std::fs::canonicalize(&raiz).expect("canonizar raíz esperada");
 
     let textos = crate::arnes_interfaz::textos_de(&mut app, |app, ui| {
         crate::ui::proyecto_ia_modal::dibujar_contenido_para_prueba(
@@ -18464,7 +18468,9 @@ fn instrucciones_muestran_carpeta_de_trabajo_y_explicacion_incluso_con_fuentes_p
     crate::proyecto_trabajo::RepositorioProyecto::abrir_o_inicializar(&raiz)
         .expect("identificar proyecto");
     std::fs::write(raiz.join("AGENTS.md"), "# Reglas").expect("crear fuente nativa");
-    app.agentes.espacio_de_trabajo = raiz.clone();
+    // Se canoniza antes de asignar: mismo motivo que en la prueba anterior (A-2).
+    let raiz_canonica = std::fs::canonicalize(&raiz).expect("canonizar raíz esperada");
+    app.agentes.espacio_de_trabajo = raiz_canonica.clone();
     let mut editor = crate::ui::proyecto_ia_modal::cargar_editor_para_prueba(&app)
         .expect("detectar fuentes existentes");
     editor.pestana = PestanaProyectoIa::Instrucciones;
@@ -18472,7 +18478,6 @@ fn instrucciones_muestran_carpeta_de_trabajo_y_explicacion_incluso_con_fuentes_p
         !editor.fuentes.is_empty(),
         "la carpeta debe contener al menos una fuente nativa"
     );
-    let raiz_canonica = std::fs::canonicalize(&raiz).expect("canonizar raíz esperada");
     let raiz_esperada = crate::ui::limpiar_ruta_para_interfaz(&raiz_canonica);
 
     for idioma in Idioma::TODOS {
@@ -18670,7 +18675,9 @@ fn modal_proyecto_ia_sincroniza_editor_si_cambia_el_espacio_de_trabajo() {
     let raiz_b_canonica = std::fs::canonicalize(&raiz_b).expect("canonizar B");
 
     // 1. Abrir con el proyecto A y pasar a la pestaña de Instrucciones
-    app.agentes.espacio_de_trabajo = raiz_a.clone();
+    // Se asigna la ruta ya canonizada: es lo que hace el único punto de verdad del dominio
+    // (`sincronizar_espacio_de_trabajo_con_el_mapa`, A-2) antes de que cualquier pantalla la lea.
+    app.agentes.espacio_de_trabajo = raiz_a_canonica.clone();
     app.presentacion_mut().ventanas().modal_datos_del_proyecto = true;
 
     // Dibujar el primer fotograma: se inicializa el editor para A
@@ -18699,7 +18706,7 @@ fn modal_proyecto_ia_sincroniza_editor_si_cambia_el_espacio_de_trabajo() {
 
     // 2. Simular apertura de otro mapa desde la barra (el espacio de trabajo pasa a B)
     // mientras la ventana «Proyecto e instrucciones» sigue abierta
-    app.agentes.espacio_de_trabajo = raiz_b.clone();
+    app.agentes.espacio_de_trabajo = raiz_b_canonica.clone();
 
     // Dibujar el siguiente fotograma
     let textos_b = crate::arnes_interfaz::textos_de_ventana_en_pantalla(
