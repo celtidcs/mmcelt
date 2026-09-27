@@ -12533,6 +12533,496 @@ fn la_ci_no_ignora_avisos_de_seguridad_sin_motivo() {
     }
 }
 
+/// Versión mayor mínima exigida a cada acción usada en `.github/workflows/`, con su motivo.
+///
+/// La lista es **cerrada**: si aparece una acción que no figura aquí, la prueba falla. No es
+/// rigidez gratuita. Una acción nueva trae su propio entorno de ejecución, y si nadie lo mira al
+/// añadirla, el aviso de retirada reaparece sin que nadie se entere hasta que ya es un fallo.
+///
+/// El número es la primera versión mayor cuyo `action.yml` **declara `node24` de verdad**, no la
+/// primera que lo anunció. La distinción importa: `actions/upload-artifact@v5` se publicó
+/// diciendo «supports Node v24.x», pero su `action.yml` seguía poniendo `using: 'node20'`; la
+/// primera que lo declara es la v6. Los valores de abajo están medidos uno a uno sobre el
+/// `action.yml` de cada etiqueta, no leídos de las notas de versión.
+const VERSION_MINIMA_DE_CADA_ACCION: [(&str, u32, &str); 4] = [
+    (
+        "actions/checkout",
+        5,
+        "la v4 declara `using: node20`; la v5 es la primera con `node24`",
+    ),
+    (
+        "actions/upload-artifact",
+        6,
+        "la v5 anunciaba Node 24 pero su action.yml seguía en `node20`; la v6 es la primera real",
+    ),
+    (
+        "actions/download-artifact",
+        7,
+        "la v6 declara `node20`; la v7 es la primera con `node24`",
+    ),
+    (
+        "Swatinem/rust-cache",
+        2,
+        "la v2 ya declara `using: node24`, así que no hace falta subirla",
+    ),
+];
+
+/// Acciones sin entorno propio, que por eso quedan fuera de la comprobación de versión.
+///
+/// Una acción `composite` no trae su propio Node: se limita a encadenar pasos que corren en el
+/// entorno del trabajo. No puede quedarse anclada a un Node retirado porque no ancla ninguno.
+const ACCIONES_SIN_ENTORNO_PROPIO: [&str; 1] = ["dtolnay/rust-toolchain"];
+
+/// Versión mayor de una etiqueta de versión, y `None` si la etiqueta no lo es.
+///
+/// Acepta exactamente tres formas: `vN`, `vN.N` y `vN.N.N`, con todos los tramos formados por
+/// dígitos y nada más. La `v` inicial es **obligatoria**, y no sobra: `@7` no es «la versión 7»
+/// para GitHub, sino la rama o etiqueta llamada `7`, que puede apuntar a cualquier cosa y moverse
+/// cuando quiera.
+///
+/// Se escribe aparte, sin efectos, para poder probarla con una tabla de casos sin tocar disco
+/// (§8.2). Ha hecho falta corregirla dos veces, las dos por auditoría ajena, y las dos historias
+/// explican por qué está escrita así:
+///
+/// - `CX-CINODE24-1`: la primera versión hacía `trim_start_matches('v')` y leía solo el primer
+///   tramo. Eso volvía la `v` **opcional** —colaba `@7`— y no miraba nada detrás del primer punto
+///   —colaba `@v7.rama`—, mientras su propio mensaje prometía aceptar solo `vN[.N.N]`.
+/// - `R2-CX-PLUS`: la segunda delegaba la validación de cada tramo en `parse::<u32>()`, y **un
+///   comentario afirmaba que `parse` rechaza los signos. Era falso**: `"+7".parse::<u32>()`
+///   devuelve `Ok(7)`, así que `@v+7` pasaba. Por eso ahora los dígitos se comprueban a mano y no
+///   se delega en el comportamiento recordado de una función de la biblioteca.
+///
+/// La lección que dejan las dos: al validar una forma, comprobar lo que se exige, no confiar en
+/// que otra función lo exija por su cuenta.
+fn mayor_de_etiqueta_de_version(etiqueta: &str) -> Option<u32> {
+    // La `v` es obligatoria; `strip_prefix` devuelve `None` si no está.
+    let sin_v = etiqueta.strip_prefix('v')?;
+
+    let tramos: Vec<&str> = sin_v.split('.').collect();
+    if tramos.len() > 3 {
+        return None;
+    }
+
+    let mut numeros = Vec::with_capacity(tramos.len());
+    for tramo in &tramos {
+        // Dígitos ASCII, todos, y al menos uno. Comprobado aquí en vez de confiárselo a `parse`,
+        // que acepta un `+` delante (ver `R2-CX-PLUS` arriba).
+        if tramo.is_empty() || !tramo.bytes().all(|byte| byte.is_ascii_digit()) {
+            return None;
+        }
+        numeros.push(tramo.parse::<u32>().ok()?);
+    }
+
+    numeros.first().copied()
+}
+
+/// Lo que queda de una línea de YAML tras apartar lo que precede a la clave.
+///
+/// Aparta la sangría, los guiones de lista y las llaves de la notación en línea, que pueden
+/// aparecer combinados y repetidos: `- uses:`, `- {uses:`, `  {  uses :`. No interpreta nada más;
+/// solo deja la línea en el punto donde empieza la clave.
+fn cuerpo_de_linea_yaml(linea: &str) -> &str {
+    let mut resto = linea.trim();
+    loop {
+        let anterior = resto;
+        resto = resto.trim_start_matches(['-', '{']).trim_start();
+        if resto == anterior {
+            return resto;
+        }
+    }
+}
+
+/// Pares de un mapa YAML en línea separados solo por comas de nivel superior.
+///
+/// Las comas dentro de cadenas, mapas, listas o grupos anidados pertenecen al valor y no separan
+/// pares exteriores. El resultado son vistas del texto original: no copia ni interpreta valores.
+fn pares_de_mapa_yaml_en_linea(linea: &str) -> Vec<&str> {
+    let cuerpo = cuerpo_de_linea_yaml(linea);
+    let mut pares = Vec::new();
+    let mut inicio = 0;
+    let mut profundidad = 0_u32;
+    let mut comilla = None;
+    let mut escape_doble = false;
+
+    for (indice, caracter) in cuerpo.char_indices() {
+        if let Some(delimitador) = comilla {
+            if delimitador == '"' && caracter == '\\' && !escape_doble {
+                escape_doble = true;
+                continue;
+            }
+            if caracter == delimitador && !escape_doble {
+                comilla = None;
+            }
+            escape_doble = false;
+            continue;
+        }
+
+        match caracter {
+            '"' | '\'' => comilla = Some(caracter),
+            '{' | '[' | '(' => profundidad += 1,
+            '}' | ']' | ')' => profundidad = profundidad.saturating_sub(1),
+            ',' if profundidad == 0 => {
+                pares.push(&cuerpo[inicio..indice]);
+                inicio = indice + caracter.len_utf8();
+            }
+            _ => {}
+        }
+    }
+
+    pares.push(&cuerpo[inicio..]);
+    pares
+}
+
+/// ¿Esta línea anuncia una clave `uses`, esté bien escrita o mal?
+///
+/// Es la **medida laxa** del par que usa la comprobación, y su laxitud es deliberada: basta con
+/// que la línea empiece por la palabra `uses`, con comillas o sin ellas, para que cuente. No exige
+/// dos puntos, ni que los siga un valor con forma de acción, ni nada.
+///
+/// Sirve para contrastar: si una línea anuncia `uses` y la lectura estricta no consigue sacar de
+/// ella una referencia, **algo se está quedando sin vigilar**, y la comprobación lo dice en vez de
+/// pasar de largo. Es el agujero `R2-CX-USES-SPACE`: una acción escrita `uses : actions/…` es YAML
+/// válido, y las dos medidas anteriores compartían el literal `uses:` —con los dos puntos pegados—,
+/// así que ninguna la veía y la prueba se quedaba verde con una acción vieja dentro.
+///
+/// Los comentarios no cuentan, y eso también viene de un defecto medido: contando cualquier
+/// aparición de `uses:`, un comentario que la mencionara ponía la prueba en rojo sin que hubiera
+/// nada que arreglar.
+fn anuncia_clave_uses(linea: &str) -> bool {
+    linea.match_indices("uses").any(|(indice, _)| {
+        let antes = &linea[..indice];
+        let despues = &linea[indice + "uses".len()..];
+
+        let (antes_de_la_clave, comilla) = match antes.chars().next_back() {
+            Some(delimitador @ ('"' | '\'')) => (
+                &antes[..antes.len() - delimitador.len_utf8()],
+                Some(delimitador),
+            ),
+            _ => (antes, None),
+        };
+        let empieza_un_par = antes_de_la_clave
+            .chars()
+            .rev()
+            .find(|caracter| !caracter.is_whitespace())
+            .is_none_or(|caracter| matches!(caracter, '-' | '{' | ','));
+        if !empieza_un_par {
+            return false;
+        }
+
+        let despues = if let Some(delimitador) = comilla {
+            let Some(resto) = despues.strip_prefix(delimitador) else {
+                return false;
+            };
+            resto
+        } else {
+            despues
+        };
+
+        despues.trim_start().starts_with(':')
+    })
+}
+
+/// La referencia que invoca una línea `uses`, si la línea es una invocación bien formada.
+///
+/// Es la **medida estricta** del par: exige que la clave, recortada y sin comillas, sea exactamente
+/// `uses`, y devuelve el valor ya limpio de comillas y de un comentario al final. Tolera a
+/// propósito las grafías que YAML admite —espacios antes de los dos puntos, ausencia de espacio
+/// después, comillas— porque todas son válidas y todas deben vigilarse.
+fn referencia_de_accion_en(linea: &str) -> Option<&str> {
+    let valor = pares_de_mapa_yaml_en_linea(linea)
+        .into_iter()
+        .filter_map(|par| par.split_once(':'))
+        .find_map(|(clave, valor)| {
+            (clave.trim().trim_matches(['"', '\'']) == "uses").then_some(valor)
+        })?;
+
+    // Un comentario al final del valor no forma parte de la referencia.
+    let valor = valor.split_once(" #").map_or(valor, |(antes, _)| antes);
+
+    // Ni la coma que separa los pares de un mapa en línea, ni la llave que lo cierra. Sin esto,
+    // `- {uses: actions/checkout@v7}` se leía con la llave pegada —etiqueta «v7}»— y la
+    // comprobación daba un **rojo falso** sobre YAML perfectamente válido. Una referencia de
+    // acción no lleva comas ni llaves, así que cortar por ahí no puede partir una buena.
+    let valor = valor.split_once(',').map_or(valor, |(antes, _)| antes);
+    let referencia = valor.trim().trim_end_matches('}').trim();
+    let referencia = referencia.trim_matches(['"', '\'']);
+    if referencia.is_empty() {
+        return None;
+    }
+
+    Some(referencia)
+}
+
+/// Las tres piezas que leen el YAML hacen lo que dicen, incluidas las grafías raras.
+///
+/// Se prueban aparte de la comprobación que las usa porque los casos que importan **no aparecen en
+/// los dos flujos reales**: hay que inventarlos. Cada caso raro de esta tabla está aquí porque
+/// alguien lo usó para colar una acción vieja sin que la comprobación se enterara.
+///
+/// Las filas de arriba —las que **deben** leerse— importan tanto como las de abajo, y por una razón
+/// que se aprendió fallando: la primera versión de esta tabla afirmaba que
+/// `- {uses: actions/checkout@v7}` se leía como `actions/checkout@v7}`, con la llave pegada. Eso no
+/// era una expectativa, era el defecto escrito como si fuera la norma — y con él, esa línea de YAML
+/// perfectamente válida daba un rojo que no señalaba nada. **Una tabla de pruebas redactada a partir
+/// de lo que el código hace no comprueba nada; hay que redactarla desde lo que debe hacer.**
+#[test]
+fn la_lectura_del_yaml_reconoce_las_invocaciones_y_solo_las_invocaciones() {
+    // Formas válidas de invocar una acción. Todas deben leerse.
+    for (linea, esperada) in [
+        ("        uses: actions/checkout@v7", "actions/checkout@v7"),
+        ("        uses:actions/checkout@v7", "actions/checkout@v7"),
+        ("        uses : actions/checkout@v7", "actions/checkout@v7"),
+        (
+            "        uses   :   actions/checkout@v7",
+            "actions/checkout@v7",
+        ),
+        ("      - uses: actions/checkout@v7", "actions/checkout@v7"),
+        ("      - {uses: actions/checkout@v7}", "actions/checkout@v7"),
+        (
+            "      - {uses: actions/checkout@v7, with: {fetch-depth: 0}}",
+            "actions/checkout@v7",
+        ),
+        (
+            "      - {name: Descargar, uses: actions/checkout@v7}",
+            "actions/checkout@v7",
+        ),
+        (
+            "      - {name: \"Descargar, validar\", with: {fetch-depth: 0}, uses: actions/checkout@v7}",
+            "actions/checkout@v7",
+        ),
+        (
+            "        \"uses\": actions/checkout@v7",
+            "actions/checkout@v7",
+        ),
+        (
+            "        'uses' : actions/checkout@v7",
+            "actions/checkout@v7",
+        ),
+        (
+            "        uses: \"actions/checkout@v7\"",
+            "actions/checkout@v7",
+        ),
+        (
+            "        uses: actions/checkout@v7 # con nota al lado",
+            "actions/checkout@v7",
+        ),
+    ] {
+        assert_eq!(
+            referencia_de_accion_en(linea),
+            Some(esperada),
+            "«{linea}» invoca una acción y hay que leerla"
+        );
+        assert!(
+            anuncia_clave_uses(linea),
+            "«{linea}» anuncia `uses` y la medida laxa tiene que verlo"
+        );
+    }
+
+    // Lo que no es una invocación. Ni se lee, ni cuenta como anuncio: si contara, daría un rojo
+    // que no señala ningún defecto.
+    for linea in [
+        "        # uses: actions/checkout@v4",
+        "      # Nota: este paso usa uses: para traer el repositorio",
+        "          echo \"el flujo uses: actions para todo\"",
+        "          sips -g pixelWidth /tmp/mmcelt.iconset/icon_512x512@2x.png",
+        "        with:",
+        "        name: Descargar el repositorio",
+        "        usesomething: actions/checkout@v4",
+        "      - {name: \"uses: aparece en un valor\", run: echo bien}",
+        "",
+    ] {
+        assert_eq!(
+            referencia_de_accion_en(linea),
+            None,
+            "«{linea}» no invoca ninguna acción"
+        );
+        assert!(
+            !anuncia_clave_uses(linea),
+            "«{linea}» no anuncia `uses`, y contarlo sería un rojo sin defecto"
+        );
+    }
+
+    // Una clave `uses` sin valor: se anuncia pero no se puede leer. La comprobación tiene que
+    // notar el desajuste en vez de pasar de largo.
+    assert!(anuncia_clave_uses("        uses:"));
+    assert_eq!(referencia_de_accion_en("        uses:"), None);
+}
+
+/// La lectura de etiquetas acepta las versiones bien formadas y rechaza todo lo demás.
+///
+/// La tabla de rechazados guarda memoria de los dos hallazgos ajenos que corrigieron esta función:
+/// `7` y `v7.rama` (de `CX-CINODE24-1`), y `v+7` y `v7.+0` (de `R2-CX-PLUS`).
+#[test]
+fn solo_las_etiquetas_de_version_bien_formadas_dan_una_version_mayor() {
+    for (etiqueta, esperada) in [
+        ("v7", Some(7)),
+        ("v7.0", Some(7)),
+        ("v7.0.1", Some(7)),
+        ("v11", Some(11)),
+        ("v0.1.0", Some(0)),
+    ] {
+        assert_eq!(
+            mayor_de_etiqueta_de_version(etiqueta),
+            esperada,
+            "«{etiqueta}» es una etiqueta de versión bien formada y debería leerse"
+        );
+    }
+
+    for etiqueta in [
+        "7",         // sin la `v`: para GitHub es una rama o etiqueta llamada «7»
+        "7.0.1",     // idem, con puntos
+        "v7.rama",   // segundo tramo no numérico
+        "v7.0.rama", // tercer tramo no numérico
+        "v7.0.1.2",  // cuatro tramos no es una versión de acción
+        "v+7",       // `parse::<u32>()` aceptaría el signo; aquí no
+        "v7.+0",     // el signo en un tramo posterior
+        "v+7.0",     // y en el primero, con más tramos detrás
+        "v7.",       // tramo final vacío
+        "v.7",       // tramo inicial vacío
+        "v",         // solo la marca
+        "",          // vacío
+        "main",      // una rama
+        "latest",    // un alias móvil
+        "v-7",       // signo negativo
+        "v 7",       // espacio
+        "v٧",        // dígito arábigo-índico: numérico, pero no ASCII
+        "8f4b7f84864484a7bf31766abe9204da3cbe65b3", // un sha
+        "V7",        // mayúscula: no es la forma que usan estas acciones
+    ] {
+        assert_eq!(
+            mayor_de_etiqueta_de_version(etiqueta),
+            None,
+            "«{etiqueta}» no es una etiqueta de versión y no debe leerse como tal"
+        );
+    }
+}
+
+/// Ninguna acción de la integración continua se queda anclada a un entorno que GitHub retira.
+///
+/// GitHub no retira de golpe el entorno viejo de una acción: primero la ejecuta sobre el nuevo y
+/// deja un aviso en cada ejecución —«Node.js 20 is deprecated […] being forced to run on Node.js
+/// 24»—, y solo después la corta. Ese periodo intermedio es el peligroso, porque todo sigue en
+/// verde y el aviso se vuelve parte del paisaje.
+///
+/// Lo que hace que esto merezca una barrera y no una nota es **dónde** vive la mitad de esas
+/// líneas: en `publicacion.yml`, la tubería que construye y publica las versiones. Si se rompe,
+/// lo que deja de funcionar no es una comprobación, sino la capacidad de sacar una versión, y se
+/// descubre en el peor momento posible —al ir a publicarla—, sin que nadie haya tocado nada del
+/// programa.
+///
+/// La comprobación es local a propósito (§8.2): no consulta la red ni pregunta a GitHub qué
+/// versión es la última. Contrasta contra `VERSION_MINIMA_DE_CADA_ACCION`, una tabla medida a
+/// mano y con su motivo escrito al lado. Quedarse corta frente a la última versión publicada es
+/// aceptable; lo que no lo es, y es lo que vigila, es **retroceder** a un entorno ya avisado.
+///
+/// # Por qué lleva dos medidas y no una
+///
+/// Leer las invocaciones con un solo criterio ya ha fallado tres veces, siempre igual: alguien
+/// escribe la línea de una forma que el criterio no reconoce, la acción se vuelve invisible y la
+/// prueba se queda verde con una versión vieja dentro. Por eso cada archivo se mide dos veces:
+/// `anuncia_clave_uses`, deliberadamente laxa, y `referencia_de_accion_en`, estricta. **Si la laxa
+/// ve más que la estricta, hay algo sin vigilar y la prueba lo dice.**
+///
+/// El umbral total cubre el otro lado, el de las desapariciones: dos medidas que caen a cero a la
+/// vez coinciden, y coincidir no es vigilar.
+///
+/// Ficha del defecto que la originó: `D-2026-09-27` en `documentacion/defectos-conocidos.md`.
+#[test]
+fn ninguna_accion_de_la_ci_se_queda_en_un_entorno_retirado() {
+    let flujos = [
+        ".github/workflows/ci.yml",
+        ".github/workflows/publicacion.yml",
+    ];
+
+    let mut revisadas = 0_usize;
+
+    for flujo in flujos {
+        let contenido = std::fs::read_to_string(flujo)
+            .unwrap_or_else(|fallo| panic!("el flujo «{flujo}» debe existir y leerse: {fallo}"));
+
+        let mut anunciadas = 0_usize;
+        let mut leidas = 0_usize;
+
+        for (numero, linea) in contenido.lines().enumerate() {
+            let numero_de_linea = numero + 1;
+
+            if anuncia_clave_uses(linea) {
+                anunciadas += 1;
+            }
+
+            let Some(referencia) = referencia_de_accion_en(linea) else {
+                continue;
+            };
+            leidas += 1;
+            // El total cuenta **toda** invocación leída, incluidas las exentas de la comprobación
+            // de versión: lo que vigila el umbral es que la lectura siga viendo el YAML, no
+            // cuántas versiones se han comparado.
+            revisadas += 1;
+
+            let Some((accion, etiqueta)) = referencia.split_once('@') else {
+                panic!(
+                    "{flujo}:{numero_de_linea} usa «{referencia}» sin etiqueta. Una acción sin \
+                     versión fijada cambia de entorno sin avisar y esta comprobación no puede \
+                     decir nada útil sobre ella"
+                );
+            };
+
+            if ACCIONES_SIN_ENTORNO_PROPIO.contains(&accion) {
+                continue;
+            }
+
+            let Some((_, minima, motivo)) = VERSION_MINIMA_DE_CADA_ACCION
+                .iter()
+                .find(|(nombre, _, _)| *nombre == accion)
+            else {
+                panic!(
+                    "{flujo}:{numero_de_linea} usa la acción «{accion}», que no está declarada \
+                     en VERSION_MINIMA_DE_CADA_ACCION. Antes de añadir una acción hay que mirar \
+                     qué entorno declara su action.yml y anotarlo ahí con su motivo, o dejarla \
+                     en ACCIONES_SIN_ENTORNO_PROPIO si es `composite`"
+                );
+            };
+
+            let mayor = mayor_de_etiqueta_de_version(etiqueta).unwrap_or_else(|| {
+                panic!(
+                    "{flujo}:{numero_de_linea} fija «{accion}» en «{etiqueta}», que no es una \
+                     etiqueta de versión `vN`, `vN.N` ni `vN.N.N`. Un `sha`, una rama, un `@7` \
+                     sin la `v` o un `@v+7` con signo esquivan esta comprobación: si hace falta \
+                     uno, se declara aparte y con su motivo"
+                )
+            });
+
+            assert!(
+                mayor >= *minima,
+                "{flujo}:{numero_de_linea} deja «{accion}» en «{etiqueta}», por debajo de la \
+                 v{minima}: {motivo}. GitHub ya avisa en cada ejecución de que ese entorno está \
+                 retirado, y el día que lo corte esta tubería deja de funcionar sin que nadie \
+                 haya tocado el programa"
+            );
+        }
+
+        assert_eq!(
+            leidas, anunciadas,
+            "{flujo} anuncia {anunciadas} claves `uses` pero solo {leidas} se han podido leer \
+             como invocación. Alguna está escrita de una forma que la lectura estricta no \
+             reconoce, así que se queda sin vigilar: es el agujero exacto que una acción escrita \
+             «uses : …» abrió en una versión anterior de esta prueba"
+        );
+    }
+
+    // Y que haya mirado los dos flujos enteros, no uno solo ni ninguno. La igualdad de arriba
+    // se cumple sola cuando las dos medidas caen a cero a la vez —renombrar todos los `uses:`,
+    // o apuntar a otros archivos—, y entonces la prueba pasaría sin vigilar nada. Este número
+    // está medido sobre los flujos reales: 12 en `ci.yml` y 10 en `publicacion.yml`.
+    const ACCIONES_QUE_HAY_EN_LOS_DOS_FLUJOS: usize = 22;
+    assert!(
+        revisadas >= ACCIONES_QUE_HAY_EN_LOS_DOS_FLUJOS,
+        "la comprobación solo ha encontrado {revisadas} acciones entre los dos flujos, y hay \
+         {ACCIONES_QUE_HAY_EN_LOS_DOS_FLUJOS}. O los flujos han cambiado de forma, o la \
+         extracción ha dejado de reconocerlas y esta prueba se ha vuelto un adorno"
+    );
+}
+
 #[test]
 fn ningun_texto_se_recorta_en_el_inspector_en_diferentes_resoluciones() {
     let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
