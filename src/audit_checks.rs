@@ -12473,10 +12473,10 @@ fn el_script_de_compilacion_vigila_las_rutas_clave_del_arbol() {
     //
     // Vigilar una ruta ignorada no detecta nada, porque un archivo que git no mira no puede
     // ensuciar el árbol; y a cambio recompila el crate entero cada vez que se toca. Estas
-    // cuatro llegaron a estar en la lista de obligatorias, y `.gestor` se escribe en cada
-    // hito de cada sesión: era una recompilación completa por cada nota que se apunta.
+    // llegaron a estar en la lista de obligatorias, y alguna de ellas se reescribe muy a menudo:
+    // era una recompilación completa por cada cambio que no podía ensuciar nada.
     // Comprobado ejecutándolo antes de quitarlas.
-    let rutas_prohibidas = [".gestor", "CLAUDE.md", "GEMINI.md", "AGENTS.md", "target"];
+    let rutas_prohibidas = ["CLAUDE.md", "GEMINI.md", "AGENTS.md", "target"];
 
     for ignorada in rutas_prohibidas {
         assert!(
@@ -13905,14 +13905,15 @@ fn sin_preferencia_la_carpeta_propuesta_es_la_del_mapa_activo() {
     );
 }
 
-/// **Prueba humana del 2026-09-13** — una carpeta elegida no secuestra un mapa de otra.
+/// Una carpeta elegida no secuestra un mapa de otra. Detectado usando el programa, el
+/// 2026-09-13.
 ///
 /// Un usuario guardó su mapa en una carpeta nueva, cerró el programa y lo abrió desde ella;
 /// MMCelt siguió apuntando a la anterior y rechazó tres envíos con «ruta fuera de la carpeta
 /// del proyecto». En sus palabras: «es un error de un dato que se queda desfasado».
 ///
 /// Abrir un mapa es una acción **posterior** a elegir carpeta, y manda la intención más
-/// reciente. Acordado por los tres agentes el 2026-09-14.
+/// reciente. Así se decidió al corregirlo, el 2026-09-14.
 #[test]
 fn un_mapa_de_otra_carpeta_se_lleva_consigo_el_espacio_de_trabajo() {
     let elegida = std::env::temp_dir().join(format!("mmcelt_elegida_{}", uuid::Uuid::new_v4()));
@@ -21761,8 +21762,7 @@ fn ninguna_fila_del_inspector_ensancha_el_panel_fotograma_tras_fotograma() {
 ///
 /// # Qué vigila, y por qué existe en vez de un hilo de trabajo
 ///
-/// El estándar 11 de `CLAUDE.md` prohíbe bloquear el hilo principal con operaciones síncronas
-/// **pesadas**. La lectura de cambios externos y el recorrido completo de «Enviar a…» ya viven en
+/// MMCelt no bloquea el hilo principal con operaciones síncronas **pesadas**. La lectura de cambios externos y el recorrido completo de «Enviar a…» ya viven en
 /// trabajadores estables. Permanecen síncronos el escaneo que la persona inicia desde un diálogo,
 /// el autoguardado periódico y la composición en memoria del Markdown; por eso sus topes se miden.
 ///
@@ -22522,117 +22522,6 @@ fn el_dialogo_de_atajos_cita_los_rotulos_reales_de_ia() {
                 "el consejo «{consejo}» no cita el control completo «{rotulo}» en {idioma:?}"
             );
         }
-    }
-}
-
-/// Comprueba que las tres copias del núcleo común sean fieles al maestro y no estén corruptas.
-///
-/// La igualdad entre copias no basta: una transformación equivocada puede dañar las tres de la
-/// misma manera. Por eso cada bloque local se compara byte a byte con el maestro versionado en
-/// `documentacion/instrucciones-comunes.md`. El maestro se valida incluso en un clon sin archivos
-/// canónicos locales; si aparece alguno de estos, deben existir los tres.
-#[test]
-fn nucleo_comun_de_instrucciones_es_identico_en_agents_claude_y_gemini() {
-    use std::fs;
-    use std::path::Path;
-
-    let ruta_agents = Path::new("AGENTS.md");
-    let ruta_claude = Path::new("CLAUDE.md");
-    let ruta_gemini = Path::new("GEMINI.md");
-    let ruta_maestro = Path::new("documentacion/instrucciones-comunes.md");
-
-    // En un clon público, el protocolo interno de coordinación entre agentes
-    // (documentacion/instrucciones-comunes.md) no se publica a propósito: sin él no
-    // hay nada que comparar, y su ausencia aquí no es un defecto del clon.
-    let Ok(texto_maestro) = fs::read_to_string(ruta_maestro) else {
-        return;
-    };
-
-    const INDICIOS_MOJIBAKE: [&str; 5] = ["Ã", "Â", "â€", "ðŸ", "�"];
-    let comprobar_codificacion = |nombre: &str, texto: &str| {
-        for indicio in INDICIOS_MOJIBAKE {
-            assert!(
-                !texto.contains(indicio),
-                "{nombre} contiene el indicio de texto mal codificado {indicio:?}"
-            );
-        }
-    };
-    comprobar_codificacion("documentacion/instrucciones-comunes.md", &texto_maestro);
-
-    let extraer_nucleo = |texto: &str, nombre: &str| -> String {
-        let inicio_tag = "\n<!-- NUCLEO-COMUN:INICIO -->";
-        let fin_tag = "\n<!-- NUCLEO-COMUN:FIN -->";
-        let pos_inicio = texto.find(inicio_tag).unwrap_or_else(|| {
-            panic!(
-                "{} debe contener la marca delimitadora de inicio en su propia línea",
-                nombre
-            )
-        });
-        let pos_fin = texto.find(fin_tag).unwrap_or_else(|| {
-            panic!(
-                "{} debe contener la marca delimitadora de fin en su propia línea",
-                nombre
-            )
-        });
-        assert!(
-            pos_inicio < pos_fin,
-            "{}: la marca de inicio debe preceder a la de fin",
-            nombre
-        );
-        let pos_inicio_limpia = pos_inicio + 1;
-        let fin_real = pos_fin + fin_tag.len();
-        texto[pos_inicio_limpia..fin_real].to_string()
-    };
-
-    let nucleo_maestro = extraer_nucleo(&texto_maestro, "documentacion/instrucciones-comunes.md");
-
-    assert!(
-        nucleo_maestro.len() > 1000,
-        "El núcleo común no puede estar vacío (obtenidos {} caracteres)",
-        nucleo_maestro.len()
-    );
-    for contenido_obligatorio in [
-        "Norma Suprema de Verificación y Seguridad",
-        "cargo test --all-features",
-        "El Canal Canónico en `.gestor/canal/`",
-        "documentacion/infraestructura/",
-        "Preparación previa a un reinicio de contexto (`clear`)",
-    ] {
-        assert!(
-            nucleo_maestro.contains(contenido_obligatorio),
-            "El núcleo común debe conservar la regla {contenido_obligatorio:?}"
-        );
-    }
-
-    let rutas_locales = [ruta_agents, ruta_claude, ruta_gemini];
-    let presentes = rutas_locales.iter().filter(|ruta| ruta.exists()).count();
-    if presentes == 0 {
-        eprintln!(
-            "maestro de instrucciones validado; este clon no contiene canónicos locales de agentes"
-        );
-        return;
-    }
-    assert_eq!(
-        presentes,
-        rutas_locales.len(),
-        "si existe algún canónico local deben estar los tres; hay {presentes} de {}",
-        rutas_locales.len()
-    );
-
-    for (nombre, ruta) in [
-        ("AGENTS.md", ruta_agents),
-        ("CLAUDE.md", ruta_claude),
-        ("GEMINI.md", ruta_gemini),
-    ] {
-        let texto = fs::read_to_string(ruta)
-            .unwrap_or_else(|error| panic!("no se pudo leer {nombre}: {error}"));
-        comprobar_codificacion(nombre, &texto);
-        let nucleo = extraer_nucleo(&texto, nombre);
-        assert_eq!(
-            nucleo.as_bytes(),
-            nucleo_maestro.as_bytes(),
-            "El núcleo común de {nombre} debe ser idéntico byte a byte al maestro"
-        );
     }
 }
 

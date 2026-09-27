@@ -1324,9 +1324,9 @@ mod pruebas {
 
     /// Un registro que apunta a otro binario existente no pertenece al MMCelt en curso.
     ///
-    /// Reproduce el caso real: los tres agentes conservaban el candidato 0.11.2 y la
-    /// ventana del 0.11.3 lo daba por conectado porque solo comprobaba que el archivo
-    /// antiguo siguiera existiendo. Eso ocultaba el botón que podía actualizarlo.
+    /// Reproduce un caso real: en un equipo quedaba instalado el ejecutable de una versión
+    /// anterior, y la ventana de la nueva lo daba por conectado porque solo comprobaba que el
+    /// archivo antiguo siguiera existiendo. Eso ocultaba el botón que podía actualizarlo.
     #[test]
     fn un_ejecutable_anterior_existente_no_cuenta_como_conexion_actual() {
         let ruta = std::env::temp_dir().join(format!(

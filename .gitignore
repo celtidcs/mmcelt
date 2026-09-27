@@ -43,7 +43,6 @@ mmcelt-errores.log
 /CLAUDE.md
 /GEMINI.md
 /AGENTS.md
-/.gestor/
 # Notas de compilación propias de un equipo concreto: rutas locales que no le
 # sirven a nadie más.
 /LEEME-ESTE-EQUIPO.txt

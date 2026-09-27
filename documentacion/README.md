@@ -102,4 +102,5 @@ MMCelt admite dos modalidades principales de trabajo con IA:
   - Auditoría de código: `cargo clippy --all-targets --all-features -- -D warnings` (0 advertencias).
   - Formato: `cargo fmt --check` (100% conforme).
   - Seguridad: `cargo audit` (0 vulnerabilidades reportadas sobre 426 dependencias).
-  - Validación humana: Candidato oficial validado mediante checklist de 12 puntos de prueba humana.
+  - Validación manual: la versión publicada se comprobó a mano, punto por punto, sobre un guion
+    de 12 comprobaciones, antes de publicarla.

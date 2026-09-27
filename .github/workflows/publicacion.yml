@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: Descargar el repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Leer y comparar las dos versiones
         id: leer
@@ -94,7 +94,7 @@ jobs:
 
     steps:
       - name: Descargar el repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Instalar la cadena de herramientas de Rust
         uses: dtolnay/rust-toolchain@stable
@@ -129,7 +129,7 @@ jobs:
 
     steps:
       - name: Descargar el repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Instalar la cadena de herramientas de Rust
         uses: dtolnay/rust-toolchain@stable
@@ -149,7 +149,7 @@ jobs:
           ls -l "$destino"
 
       - name: Guardar el binario para el trabajo de publicación
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mmcelt-${{ matrix.sufijo }}
           path: mmcelt-${{ needs.comprobar.outputs.version }}-${{ matrix.sufijo }}
@@ -167,10 +167,10 @@ jobs:
 
     steps:
       - name: Descargar el repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Recoger los binarios de los dos sistemas
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: binarios
           merge-multiple: true

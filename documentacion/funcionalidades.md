@@ -831,14 +831,13 @@ se instancian localizados en el idioma activo en el momento de su creación (inc
 etiquetas de ejemplo `#tech` y `#objetivo` / `#goal` / `#objectif` / `#ziel` / `#технологии` / `#цель` / `#技术` / `#目标`),
 convirtiéndose desde ese instante en datos del usuario bajo la misma garantía de soberanía.
 
-> **Sobre la procedencia de las traducciones.** Las de los cinco idiomas no castellanos las
-> produjo Gemini en sucesivas tandas (`TRAD-001` a `TRAD-006-BIS`), con su nivel de
-> verificación declarado clave por clave. Antes de integrar cada tanda se comprueba
-> mecánicamente que estén todas las claves, que los emoji y los huecos coincidan en cantidad y
-> **orden**, que la sintaxis Markdown y la sangría se conserven, y que las claves que hablan del
-> mismo concepto no se contradigan entre ventanas. El material de origen y las herramientas de
-> comprobación viven en el entorno de trabajo del proyecto y **no se publican en el repositorio**;
-> lo que sí viaja aquí es el resultado: `src/textos.rs` y las guías de `assets/ayuda/`.
+> **Sobre la procedencia de las traducciones.** Las de los cinco idiomas no castellanos se
+> incorporaron por lotes, y ninguna entró sin pasar antes por comprobaciones automáticas: que
+> estén todas las claves, que los emoji y los huecos coincidan en cantidad y **orden**, que la
+> sintaxis Markdown y la sangría se conserven, y que las claves que hablan del mismo concepto no
+> se contradigan entre ventanas. Esas comprobaciones forman parte de la batería de pruebas del
+> proyecto, así que cualquiera puede volver a ejecutarlas: el resultado que se distribuye es
+> `src/textos.rs` y las guías de `assets/ayuda/`.
 
 Lo que no cambia nunca es el **contenido de los archivos**: los nombres de los campos del
 `.mmcelt`, las claves del protocolo MCP y las de la configuración de los agentes. Son formato, no

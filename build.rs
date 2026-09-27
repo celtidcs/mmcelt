@@ -57,10 +57,10 @@ fn main() {
     // no reejecutaba este guion, y el binario seguía declarando que correspondía exactamente
     // a un commit cuando ya no era verdad.
     //
-    // **Solo se vigila lo que git rastrea.** Aquí llegaron a estar también `.gestor`,
+    // **Solo se vigila lo que git rastrea.** Aquí llegaron a estar también rutas ignoradas,
     // `CLAUDE.md`, `GEMINI.md` y `AGENTS.md`, y las cuatro están en `.gitignore`. Vigilarlas
     // no detecta nada —un archivo ignorado no puede ensuciar el árbol— y a cambio recompila
-    // el crate entero cada vez que se tocan. `.gestor` se escribe en cada hito de cada
+    // el crate entero cada vez que se tocan. Alguna de ellas se reescribe a cada
     // sesión, así que era una recompilación completa por cada nota que se apunta.
     // Comprobado ejecutándolo antes de quitarlo.
     println!("cargo:rerun-if-changed=documentacion");
