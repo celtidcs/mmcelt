@@ -13023,6 +13023,121 @@ fn ninguna_accion_de_la_ci_se_queda_en_un_entorno_retirado() {
     );
 }
 
+/// Contenido útil de una línea de YAML: sin sangría a la derecha ni comentario de cola. Las
+/// líneas que solo son comentario devuelven cadena vacía, para que nadie las tome por claves.
+fn linea_yaml_sin_comentario(linea: &str) -> &str {
+    let sin_cola = linea.split_once(" #").map_or(linea, |(antes, _)| antes);
+    if sin_cola.trim_start().starts_with('#') {
+        return "";
+    }
+    sin_cola.trim_end()
+}
+
+/// Entradas del bloque `permissions:` declarado **a nivel de flujo** (columna cero), ya
+/// recortadas; o `None` si el flujo no lo declara.
+///
+/// Admite la forma de bloque (`permissions:` y debajo `contents: read`, una por línea) y la forma
+/// en línea (`permissions: read-all`), que devuelve su único valor. Las claves sangradas no
+/// cuentan: un `permissions:` dentro de un trabajo no sustituye al del flujo.
+fn permisos_de_nivel_de_flujo(contenido: &str) -> Option<Vec<String>> {
+    let mut lineas = contenido.lines().map(linea_yaml_sin_comentario);
+    let valor_en_linea = lineas.find_map(|linea| linea.strip_prefix("permissions:"))?;
+
+    if !valor_en_linea.trim().is_empty() {
+        return Some(vec![valor_en_linea.trim().to_owned()]);
+    }
+
+    let entradas = lineas
+        .filter(|linea| !linea.is_empty())
+        .take_while(|linea| linea.starts_with(char::is_whitespace))
+        .map(|linea| linea.trim().to_owned())
+        .collect();
+    Some(entradas)
+}
+
+/// Calibra la lectura de `permisos_de_nivel_de_flujo` contra casos de resultado conocido antes de
+/// creerla sobre los flujos reales: si esta lectura fallara, la barrera de abajo podría
+/// pasar en verde mirando otra cosa.
+#[test]
+fn la_lectura_de_permisos_de_flujo_reconoce_los_casos_conocidos() {
+    let bloque = "on:\r\n  push:\r\n\r\n# comentario\r\npermissions:\r\n  # dentro\r\n  contents: read\r\n\r\nenv:\r\n  A: b\r\n";
+    assert_eq!(
+        permisos_de_nivel_de_flujo(bloque),
+        Some(vec!["contents: read".to_owned()])
+    );
+
+    let en_linea = "permissions: read-all  # todo\njobs:\n";
+    assert_eq!(
+        permisos_de_nivel_de_flujo(en_linea),
+        Some(vec!["read-all".to_owned()])
+    );
+
+    let solo_en_trabajo = "jobs:\n  a:\n    permissions:\n      contents: write\n";
+    assert_eq!(permisos_de_nivel_de_flujo(solo_en_trabajo), None);
+
+    let solo_comentado = "# permissions:\n#   contents: read\njobs:\n";
+    assert_eq!(permisos_de_nivel_de_flujo(solo_comentado), None);
+}
+
+/// Los flujos de CI no dejan el `GITHUB_TOKEN` con los permisos por defecto del repositorio.
+///
+/// Sin un bloque `permissions:`, el token de cada trabajo hereda lo que diga la configuración del
+/// repositorio, que puede incluir escritura: una acción de terceros comprometida podría entonces
+/// empujar código o tocar las Releases. CodeQL lo marcó (`actions/missing-workflow-permissions`)
+/// en los cuatro trabajos de `ci.yml`.
+///
+/// - Todo flujo declara `permissions:` a nivel de flujo.
+/// - `ci.yml` no escribe en ningún sitio, así que su único permiso es `contents: read` y ningún
+///   trabajo declara otros propios. `publicacion.yml` sí necesita escribir para publicar la
+///   Release y no se le exige lo mismo.
+#[test]
+fn los_flujos_de_ci_declaran_permisos_minimos() {
+    let flujos = [
+        ".github/workflows/ci.yml",
+        ".github/workflows/publicacion.yml",
+    ];
+
+    for flujo in flujos {
+        let contenido = std::fs::read_to_string(flujo)
+            .unwrap_or_else(|fallo| panic!("el flujo «{flujo}» debe existir y leerse: {fallo}"));
+        assert!(
+            permisos_de_nivel_de_flujo(&contenido).is_some(),
+            "{flujo} no declara `permissions:` a nivel de flujo, así que el `GITHUB_TOKEN` hereda \
+             los permisos por defecto del repositorio, que pueden incluir escritura"
+        );
+    }
+
+    let ci = std::fs::read_to_string(".github/workflows/ci.yml")
+        .unwrap_or_else(|fallo| panic!("ci.yml debe existir y leerse: {fallo}"));
+
+    assert_eq!(
+        permisos_de_nivel_de_flujo(&ci),
+        Some(vec!["contents: read".to_owned()]),
+        "ci.yml solo descarga, compila y prueba: su único permiso debe ser `contents: read`"
+    );
+
+    let declaraciones_de_permisos = ci
+        .lines()
+        .map(linea_yaml_sin_comentario)
+        .filter(|linea| linea.trim_start().starts_with("permissions:"))
+        .count();
+    assert_eq!(
+        declaraciones_de_permisos, 1,
+        "ci.yml declara `permissions:` {declaraciones_de_permisos} veces. Solo debe hacerlo una, a \
+         nivel de flujo: un trabajo que declara los suyos puede ampliar lo que el flujo limita"
+    );
+
+    for (numero, linea) in ci.lines().enumerate() {
+        let util = linea_yaml_sin_comentario(linea);
+        assert!(
+            !util.ends_with(": write") && !util.contains("write-all"),
+            "ci.yml:{} concede escritura («{}»), y ningún trabajo de la CI la necesita",
+            numero + 1,
+            util.trim()
+        );
+    }
+}
+
 #[test]
 fn ningun_texto_se_recorta_en_el_inspector_en_diferentes_resoluciones() {
     let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();

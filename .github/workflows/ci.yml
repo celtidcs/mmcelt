@@ -31,6 +31,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Ningún trabajo de este flujo escribe en el repositorio: solo lo descarga, compila, prueba
+# y sube un artefacto (eso usa el token propio de Actions, no `GITHUB_TOKEN`). Sin esta
+# declaración el token heredaría los permisos por defecto del repositorio, que pueden incluir
+# escritura. Lo vigila `los_flujos_de_ci_declaran_permisos_minimos` en `src/audit_checks.rs`.
+permissions:
+  contents: read
+
 env:
   # Un fallo de compilación es más fácil de leer sin colores en el registro de la CI.
   CARGO_TERM_COLOR: always
