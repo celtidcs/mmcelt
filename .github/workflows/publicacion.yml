@@ -28,9 +28,10 @@ on:
         description: "Etiqueta a publicar (por ejemplo, v0.9.2)"
         required: true
 
-# El trabajo de publicar necesita poder escribir en el repositorio; el resto, no.
+# Solo el trabajo `publicar` necesita escribir en el repositorio, y es el único que amplía este
+# permiso. Lo vigila `los_flujos_de_ci_declaran_permisos_minimos` en `src/audit_checks.rs`.
 permissions:
-  contents: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -164,6 +165,9 @@ jobs:
     name: Crear la publicación en GitHub
     needs: [comprobar, construir]
     runs-on: ubuntu-latest
+    # `gh release create/edit/upload` escribe en las publicaciones del repositorio.
+    permissions:
+      contents: write
 
     steps:
       - name: Descargar el repositorio
