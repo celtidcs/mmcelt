@@ -59,6 +59,8 @@ MMCelt/
 ├── src/                        Aplicación de escritorio (Rust)
 │   ├── main.rs                 Punto de entrada; elige entre app y servidor MCP
 │   ├── model.rs                Modelo de datos y validación estructural
+│   │                           (`model/jerarquia.rs`: hacer hijo o hermano sin crear ciclos; `model/conexiones.rs`: qué conexión admite la interfaz;
+│   │                            `model/clasificacion.rs`: estado, prioridad, control humano y rol)
 │   ├── error.rs                Manejo centralizado de errores
 │   ├── storage.rs              Persistencia en disco
 │   ├── layout.rs               Disposición espacial de los nodos
@@ -76,9 +78,11 @@ MMCelt/
 │   ├── busqueda.rs             Encuentra nodos por título o etiqueta
 │   ├── preferencias.rs         Ajustes que se conservan entre sesiones
 │   ├── version.rs              Identificación de la compilación
+│   ├── version_publicada.rs    Compara versiones y valida la respuesta de GitHub, sin red
+│   ├── comprobacion_de_version.rs Consulta HTTPS de la última versión, en un hilo de trabajo
 │   ├── theme.rs                Paletas de color y estilo de toda la ventana
-│   ├── textos.rs               Todo lo que la aplicación le dice al usuario, en los seis idiomas (520 textos)
-│   ├── audit_checks.rs         Pruebas de regresión (400 en Windows y 399 en Linux)
+│   ├── textos.rs               Todo lo que la aplicación le dice al usuario, en los seis idiomas (595 textos)
+│   ├── audit_checks.rs         Pruebas de regresión y barreras (603 en Windows y 602 en Linux, medido el 2026-10-07)
 │   ├── arnes_interfaz.rs       Ejecuta la interfaz e interactúa con clics reales en pruebas, sin abrir ventana
 │   └── ui/                     Capa de presentación
 │       ├── mod.rs              Estado global, ciclo de vida de eframe y carga de fuente CJK embebida
@@ -89,11 +93,14 @@ MMCelt/
 │       ├── conexiones_modal.rs Ventana de conexión con agentes de IA
 │       ├── sesion_agente_modal.rs Vista previa supervisada de una sesión de agente
 │       ├── dialogos.rs         Diálogos nativos del sistema
-│       ├── help_system.rs      Sistema de ayuda contextual: los 23 temas y sus tres piezas
-│       └── ayuda_textos.rs     Las 69 piezas de la ayuda por idioma; incrusta las guías
+│       ├── estado_version_nueva.rs Comprobación de versión de este arranque y su aviso
+│       ├── suelta_de_nodo.rs   Menú al soltar un nodo encima de otro y su resolución
+│       ├── menu_contextual_nodo.rs Menú del clic derecho sobre un nodo
+│       ├── help_system.rs      Sistema de ayuda contextual: los 24 temas y sus tres piezas
+│       └── ayuda_textos.rs     Las 72 piezas de la ayuda por idioma; incrusta las guías
 │
 ├── assets/
-│   ├── ayuda/                  Las 138 guías de la ayuda: 23 temas x 6 idiomas, en Markdown
+│   ├── ayuda/                  Las 144 guías de la ayuda: 24 temas x 6 idiomas, en Markdown
 │   ├── fuentes/                Subconjunto embebido de Noto Sans SC (~1,06 MB) para caracteres CJK
 │   ├── icono/                  Iconos en varios formatos y tamaños (.svg, .ico, .png, .rgba)
 │   └── capturas/               Capturas de pantalla para la documentación
@@ -1111,7 +1118,7 @@ subconjunto optimizado de **Noto Sans SC** (`assets/fuentes/NotoSansSC-subconjun
 que cubre:
 - El estándar completo **GB2312 Nivel 1** (3.755 caracteres chinos simplificados de uso frecuente).
 - Todos los caracteres adicionales requeridos por las traducciones de la interfaz, el inspector,
-  los modales y las 23 guías de ayuda en chino.
+  los modales y las 24 guías de ayuda en chino.
 - Símbolos y flechas de uso habitual en la interfaz.
 
 ### Integración en el motor de fuentes
@@ -1148,3 +1155,35 @@ responsabilidad adecuada. Esas propiedades se comprueban ejecutando el comportam
 justifica el código. Tampoco sustituye a Rustdoc y Clippy: una prueba estructural separada cubre
 el único hueco confirmado, una línea vacía entre la documentación `///` y el campo de una
 estructura.
+
+---
+
+## 21. Comprobación de versión nueva
+
+Es la única conexión de red de la aplicación, y está repartida en tres piezas para que cada una
+tenga un solo motivo para cambiar y para que ninguna prueba necesite red:
+
+| Pieza | Responsabilidad | Red |
+|---|---|---|
+| `version_publicada.rs` | Leer `tag_name`, comparar versiones como números, validar repositorio y direcciones, componer el enlace | No |
+| `comprobacion_de_version.rs` | El rasgo `ConsultaDeVersion`, la consulta real `ConsultaHttps` (`ureq` + `rustls`) y el hilo de trabajo | Sí |
+| `ui/estado_version_nueva.rs` | Arrancar una vez si la opción está activa y recoger el resultado sin esperar | No |
+
+**Decisiones y por qué:**
+
+- **La respuesta es un dato ajeno.** Solo se toma `tag_name` y solo si es `X.Y.Z`. El enlace del
+  aviso se compone con la raíz web y el repositorio de la configuración; `html_url` se ignora,
+  para que una respuesta manipulada no pueda llevar al usuario a otro sitio.
+- **Desactivada, no existe la consulta.** `arrancar_si_procede` comprueba la opción antes de
+  llamar a la fábrica de la consulta: con la opción apagada no llega a crearse nada capaz de salir
+  a la red. Una prueba lo vigila contando las llamadas.
+- **Ningún fallo es un pánico.** En publicación `panic = "abort"`: un pánico en el hilo cerraría
+  el programa entero. Cada fallo vuelve como `FalloDeComprobacion`, se registra como
+  `AppError::ComprobacionDeVersion` (severidad de aviso) y no se muestra.
+- **Configurable sin recompilar.** Repositorio, raíces de API y web, tiempo de espera y límite de
+  respuesta viven en `preferencias.json` (`ajustes_de_version`) con valores de fábrica
+  documentados en `preferencias.rs`, y se validan en la frontera: solo `https://` con un nombre de
+  servidor, y un repositorio `dueño/nombre`.
+- **Solo el arranque real consulta.** `nueva_con_contexto` arranca la comprobación; las
+  construcciones de prueba (`nueva_limpia`) nunca salen a la red.
+

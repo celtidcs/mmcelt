@@ -42,16 +42,19 @@ el mapa con sus avances.
 
 | Componente | Tecnología |
 |---|---|
-| Aplicación de escritorio | **Rust** 1.85+ con `egui` / `eframe` 0.36 (modo inmediato, aceleración por GPU con backend `glow`) |
+| Aplicación de escritorio | **Rust** 1.95+ con `egui` / `eframe` 0.36 (modo inmediato, aceleración por GPU con backend `glow`) |
 | Persistencia nativa | JSON estructurado mediante `serde`, en archivos `.mmcelt` |
 | Formatos de intercambio | Estándares abiertos no propietarios: **OPML** y **FreeMind / Freeplane (`.mm`)** |
 | Servidor MCP integrado | `mmcelt --mcp-server`, protocolo JSON-RPC 2.0 (2024-11-05) sobre entrada/salida estándar con 6 herramientas |
 | Diálogos del sistema | `rfd` (diálogos nativos de selección de archivos y carpetas) |
 | Vigilancia de archivos | `notify` 8.0 (observador reactivo del sistema de archivos para sincronización en tiempo real) |
+| Aviso de versión nueva | `ureq` 3.4 con `rustls` (una consulta HTTPS anónima a GitHub al arrancar, desactivable) |
 | Tipografía internacional | Subconjunto embebido de **Noto Sans SC** para soporte CJK completo (chino simplificado) sin dependencias |
 
 **Privacidad y soberanía de datos**: La aplicación no requiere conexión a internet para funcionar,
-no aloja datos en la nube ni recopila telemetría. Toda la comunicación con agentes de IA se realiza en
+no aloja datos en la nube ni recopila telemetría. Su única petición de red es una consulta anónima
+a GitHub al arrancar para avisar de versiones nuevas, que se desactiva desde el menú «🎨 Ver y
+Diseño». Toda la comunicación con agentes de IA se realiza en
 local (mediante la consola del sistema o el servidor MCP en `stdio`).
 
 ## Puesta en marcha rápida
@@ -62,7 +65,7 @@ cd mmcelt
 cargo run --release
 ```
 
-Requiere Rust 1.85 o superior. **No hay dependencias externas pesadas**: el servidor MCP y todos los
+Requiere Rust 1.95 o superior. **No hay dependencias externas pesadas**: el servidor MCP y todos los
 activos de ayuda e idiomas van integrados dentro del propio ejecutable.
 
 La guía completa está en [`infraestructura/guia-de-clonado.md`](infraestructura/guia-de-clonado.md), y
@@ -95,12 +98,13 @@ MMCelt admite dos modalidades principales de trabajo con IA:
 
 ## Estado del proyecto
 
-- **Versión vigente**: **0.12.0**
+- **Versión vigente**: **0.13.0**
 - **Estado de verificación**:
-  - Windows: **542 pruebas unitarias e integradas** pasadas al 100%.
-  - Linux (`mmcelt-linux`): **541 pruebas** pasadas al 100%.
+  - Windows: **611 pruebas unitarias e integradas** pasadas al 100%.
+  - Linux (`mmcelt-linux`): **610 pruebas** pasadas al 100% (una es exclusiva de Windows).
   - Auditoría de código: `cargo clippy --all-targets --all-features -- -D warnings` (0 advertencias).
   - Formato: `cargo fmt --check` (100% conforme).
-  - Seguridad: `cargo audit` (0 vulnerabilidades reportadas sobre 426 dependencias).
-  - Validación manual: la versión publicada se comprobó a mano, punto por punto, sobre un guion
-    de 12 comprobaciones, antes de publicarla.
+  - Documentación: `cargo doc --all-features --no-deps` (0 advertencias).
+  - Seguridad: `cargo audit` (0 vulnerabilidades reportadas sobre 441 dependencias).
+  - Validación manual: la versión publicada se comprobó a mano, recorriendo cada novedad, antes de
+    publicarla; los defectos que salieron se corrigieron antes de publicar.

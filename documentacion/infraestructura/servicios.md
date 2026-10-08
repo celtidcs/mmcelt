@@ -9,8 +9,9 @@ Qué se conecta con MMCelt, cómo se configura y qué credenciales hacen falta.
 Conviene decirlo antes que nada, porque es contraintuitivo en una aplicación centrada en
 la inteligencia artificial:
 
-> **MMCelt no se conecta a ninguna plataforma de IA.** No tiene claves de API, no hace
-> peticiones HTTP y no guarda credenciales de ningún tipo.
+> **MMCelt no se conecta a ninguna plataforma de IA.** No tiene claves de API, no guarda
+> credenciales de ningún tipo y su única petición HTTP es la comprobación de versión nueva
+> descrita más abajo, que va a GitHub y no a ninguna IA.
 
 Las «integraciones» de este documento son **plantillas y guías** para que el usuario
 configure su propia cuenta en cada plataforma. El intercambio de datos ocurre en el
@@ -22,6 +23,41 @@ navegador del usuario o en su agente local, nunca dentro de MMCelt.
 | Claude Desktop / Claude Code | Configuración del cliente | No |
 | ChatGPT (GPT personalizado) | Copiar y pegar | No |
 | Gemini (Gem) | Copiar y pegar | No |
+| GitHub (comprobación de versión nueva) | Una petición HTTPS anónima al arrancar | No |
+
+---
+
+## Comprobación de versión nueva
+
+Al arrancar, MMCelt pregunta a GitHub cuál es la última versión publicada y, si es más nueva que
+la que se está ejecutando, lo avisa en la barra superior con un enlace a su página. **No descarga
+ni instala nada.**
+
+| Dato | Valor |
+|---|---|
+| Petición | `GET https://api.github.com/repos/celtidcs/mmcelt/releases/latest`, una por arranque |
+| Qué devuelve | «the most recent non-prerelease, non-draft release» ([documentación de GitHub](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)) |
+| Qué se usa de la respuesta | Solo `tag_name`, y solo si es `X.Y.Z` (con `v` opcional). El enlace se compone desde la configuración, nunca desde la respuesta |
+| Cabeceras | `User-Agent: mmcelt/<versión>` (GitHub la exige) y `Accept: application/vnd.github+json` |
+| Autenticación | Ninguna. Sin autenticar, GitHub admite 60 peticiones por hora y dirección IP ([límites](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)) |
+| Transporte | Solo HTTPS con certificado verificado (`ureq` + `rustls`); cualquier dirección `http://` se rechaza |
+| Tiempo y tamaño | Espera máxima de 10 s y respuesta de 1 MiB como mucho, en un hilo aparte |
+| Si falla | No hay aviso ni ventana de error; el fallo queda en `mmcelt-errores.log` |
+| Cómo desactivarla | Menú «🎨 Ver y Diseño» → «Comprobar al arrancar si hay una versión nueva». Desactivada, no hay tráfico de red |
+
+Repositorio, raíces de la API y de la web, tiempo de espera y límite de respuesta se pueden
+cambiar en `preferencias.json`, en el bloque `ajustes_de_version`. Se validan antes de usarse:
+solo `https://` con un nombre de servidor y un repositorio `dueño/nombre`.
+
+**Limitaciones conocidas** (detalle en [`defectos-conocidos.md`](../defectos-conocidos.md)):
+
+- **Proxy (D-2026-10-07-A).** Se respeta el proxy de las variables de entorno `HTTPS_PROXY`,
+  `HTTP_PROXY`, `ALL_PROXY` y `NO_PROXY`, pero no el configurado en las opciones de internet de
+  Windows, ni PAC/WPAD, ni la autenticación integrada NTLM/Kerberos. Detrás de un proxy así, no
+  aparece el aviso. Rodeo: definir `HTTPS_PROXY`.
+- **GitHub Enterprise Server (D-2026-10-07-B).** Su API vive en `https://SERVIDOR/api/v3`, con
+  ruta, y `url_api` solo admite la raíz de un servidor: esa dirección se rechaza y no se consulta.
+  Sí funcionan `api.github.com` y GitHub Enterprise Cloud (`api.SUBDOMINIO.ghe.com`).
 
 ---
 

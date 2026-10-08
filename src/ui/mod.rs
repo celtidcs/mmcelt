@@ -11,10 +11,13 @@ pub mod conexiones_modal;
 pub mod dialogos;
 pub(crate) mod estado_agentes;
 pub(crate) mod estado_persistencia;
+pub(crate) mod estado_version_nueva;
 pub mod help_system;
+pub(crate) mod menu_contextual_nodo;
 pub mod proyecto_ia_modal;
 pub mod sesion_agente_modal;
 pub mod sidebar;
+pub(crate) mod suelta_de_nodo;
 pub mod toolbar;
 
 /// Devuelve la representación legible de una ruta para la interfaz gráfica, retirando

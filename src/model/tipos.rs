@@ -553,6 +553,18 @@ impl RolNodo {
     /// a mano, así que una nueva existía en el modelo pero no se podía elegir en la
     /// interfaz. Es el mismo motivo por el que existen `AppThemeMode::TODOS` y
     /// `TemaDeAyuda::TODOS`.
+    /// Icono del rol en la tarjeta: el mismo con el que empieza su nombre en el inspector.
+    pub fn simbolo(&self) -> &'static str {
+        match self {
+            RolNodo::IdeaCentral => "🎯",
+            RolNodo::PilarEstrategico => "🏛️",
+            RolNodo::Subtema => "📌",
+            RolNodo::HipotesisDuda => "❓",
+            RolNodo::AccionTarea => "⚡",
+            RolNodo::RecursoHerramienta => "🔧",
+        }
+    }
+
     pub const TODOS: [RolNodo; 6] = [
         RolNodo::IdeaCentral,
         RolNodo::PilarEstrategico,
@@ -1500,7 +1512,12 @@ impl Proyecto {
         profundidad
     }
 
-    /// Crea una conexión cruzada entre dos nodos que no comparten rama directa.
+    /// Crea una conexión cruzada entre dos nodos distintos.
+    ///
+    /// No mira la jerarquía a propósito: la usan los importadores y el servidor MCP, y lo que
+    /// trae un archivo o un agente —incluida una relación etiquetada entre padre e hijo— se
+    /// conserva tal cual. La interfaz pregunta antes a [`Proyecto::conexion_cruzada_admitida`]
+    /// para no dibujar una segunda línea encima de la de la jerarquía (PH-1007-2).
     ///
     /// # Parámetros
     /// - `from`: nodo de origen de la relación.

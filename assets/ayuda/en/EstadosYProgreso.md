@@ -26,3 +26,6 @@ The states of your nodes are not just colors for you; artificial intelligence re
 - **Respect for what is dismissed:** If you mark a branch as **`⛔ Dismissed`**, the AI understands that this path was intentionally rejected and will not insist on proposing it to you.
 - **Context of completed work:** The **`✅ Completed`** nodes indicate to the AI which parts of your system already exist and work, so it builds upon them without duplicating effort.
 - **Automatic metrics:** In the export header, MMCelt calculates an overall summary (completion percentage, completed vs pending tasks) so the model knows the exact maturity phase of the project.
+
+### 💡 What each card icon means
+Hover over an icon to see what it means: the emoji before the title is the **status**; the ones in the top-right corner are the **priority** and the **human control**, for example `Priority: ⚡ High`; at the bottom right, the node's **Role**, for example `Role: 📌 Subtopic / Module` (the ⚡ of "Task / Action" is not the High priority one: the tooltip tells them apart); and the 📝 at the bottom says `📝 Has notes: select it to read them in the inspector`. It does not appear while you drag a node.

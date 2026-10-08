@@ -25,7 +25,9 @@
 set -o pipefail
 
 # --- Versiones mínimas exigidas -----------------------------------------------
-readonly VERSION_MINIMA_RUST="1.85.0"
+# La que exigen egui y eframe 0.36 (`rust-version = "1.95"` en sus Cargo.toml). Con 1.85 el
+# script daba el visto bueno y la compilación fallaba después.
+readonly VERSION_MINIMA_RUST="1.95.0"
 
 # --- Colores (se desactivan si la salida no es un terminal) -------------------
 if [ -t 1 ]; then

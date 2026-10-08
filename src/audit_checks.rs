@@ -2123,6 +2123,11 @@ fn las_preferencias_sobreviven_al_reinicio() {
         idioma: crate::textos::Idioma::Ingles,
         sugerencia_mostrada: true,
         plantillas_usuario: Vec::new(),
+        comprobar_version_nueva: false,
+        ajustes_de_version: crate::preferencias::AjustesDeVersionNueva {
+            repositorio: "otro/repositorio".to_string(),
+            ..crate::preferencias::ajustes_de_version_de_fabrica()
+        },
     };
 
     preferencias
@@ -2154,6 +2159,14 @@ fn las_preferencias_sobreviven_al_reinicio() {
     assert_eq!(
         recuperadas.intervalo_autoguardado_minutos, 5,
         "el intervalo de autoguardado elegido debería recordarse entre sesiones"
+    );
+    assert!(
+        !recuperadas.comprobar_version_nueva,
+        "quien desactivó la comprobación de versión nueva no puede encontrarla activa al reabrir"
+    );
+    assert_eq!(
+        recuperadas.ajustes_de_version.repositorio, "otro/repositorio",
+        "los ajustes de la comprobación de versión deberían recordarse"
     );
     assert!(
         recuperadas.sugerencia_mostrada,
@@ -4674,11 +4687,7 @@ fn ningun_modo_automatico_solapa_las_tarjetas() {
                 .nodes
                 .values()
                 .map(|nodo| {
-                    let (ancho, alto) = estimar_tamano_del_nodo(
-                        &nodo.title,
-                        !nodo.notes.is_empty(),
-                        nodo.tags.len(),
-                    );
+                    let (ancho, alto) = estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
                     (
                         nodo.title.clone(),
                         nodo.pos[0] - ancho / 2.0,
@@ -5118,11 +5127,7 @@ fn perimetro_que_exigen_las_hojas(proyecto: &Proyecto) -> f32 {
         .values()
         .filter(|nodo| nodo.children.is_empty() || nodo.collapsed)
         .map(|nodo| {
-            let (ancho, _) = crate::layout::estimar_tamano_del_nodo(
-                &nodo.title,
-                !nodo.notes.is_empty(),
-                nodo.tags.len(),
-            );
+            let (ancho, _) = crate::layout::estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
             ancho + crate::layout::SEPARACION_VERTICAL
         })
         .sum()
@@ -5359,36 +5364,34 @@ fn todo_boton_de_reorganizar_avisa_cuando_no_puede_hacer_nada() {
 /// El mapa solo se recoloca cuando la tarjeta editada cambia de tamaño de verdad.
 ///
 /// Recolocar recorre el árbol entero. El inspector lo hacía en cada pulsación mientras se
-/// escribían las notas —siete milisegundos por tecla con veinte mil nodos— aunque el alto de
-/// la tarjeta solo distingue entre tener notas y no tenerlas. Y al revés: **quitar** una
-/// etiqueta no recolocaba nada, aunque encoge la tarjeta igual que añadirla la agranda.
+/// escribían las notas —siete milisegundos por tecla con veinte mil nodos—. Y al revés:
+/// **quitar** una etiqueta no recolocaba nada, aunque encoge la tarjeta igual que añadirla la
+/// agranda.
+///
+/// Desde PH-1007-4 las notas ya no cambian el alto: la fila inferior de iconos se reserva
+/// siempre, porque el rol se pinta en todas las tarjetas, y el estimador ni siquiera recibe las
+/// notas. Lo que aquí afirmaba que la primera letra de una nota agranda la tarjeta dejó de ser
+/// cierto y se sustituyó, declarándolo en el canal, por la comprobación de que el alto base ya
+/// incluye esa fila.
 ///
 /// Aquí se comprueba la regla con el mismo estimador que usa la disposición.
 #[test]
 fn recolocar_solo_hace_falta_cuando_cambia_el_tamano_de_la_tarjeta() {
-    use crate::layout::estimar_tamano_del_nodo;
+    use crate::layout::{estimar_tamano_del_nodo, ALTURA_BASE_NODO};
 
-    let sin_notas = estimar_tamano_del_nodo("Idea", false, 0);
-    let con_una_letra = estimar_tamano_del_nodo("Idea", true, 0);
-    assert_ne!(
-        sin_notas, con_una_letra,
-        "el primer carácter de las notas sí agranda la tarjeta: ahí hay que recolocar"
-    );
-
-    // Escribir el resto de la nota no cambia nada, y es donde estaba el coste.
+    let sin_etiquetas = estimar_tamano_del_nodo("Idea", 0);
     assert_eq!(
-        con_una_letra,
-        estimar_tamano_del_nodo("Idea", true, 0),
-        "a partir del primer carácter, escribir no cambia el tamaño"
+        sin_etiquetas.1, ALTURA_BASE_NODO,
+        "la tarjeta mínima ya lleva la fila de iconos: escribir notas no la agranda"
     );
 
-    let con_etiqueta = estimar_tamano_del_nodo("Idea", false, 1);
+    let con_etiqueta = estimar_tamano_del_nodo("Idea", 1);
     assert_ne!(
-        con_etiqueta, sin_notas,
+        con_etiqueta, sin_etiquetas,
         "poner la primera etiqueta agranda la tarjeta"
     );
     assert_ne!(
-        estimar_tamano_del_nodo("Idea", false, 0),
+        estimar_tamano_del_nodo("Idea", 0),
         con_etiqueta,
         "y quitar la última la encoge exactamente igual: las dos tienen que recolocar"
     );
@@ -7922,6 +7925,7 @@ fn ningun_texto_de_la_interfaz_falta_ni_esta_vacio() {
             | Texto::ModalGuardarMapaMentalMmcelt
             | Texto::ModalExportarArchivoMarkdownMd
             | Texto::ModalCentrarLaVistaEn
+            | Texto::ModalBuscarUnNodo
             | Texto::ModalDeshacerElUltimoCambio
             | Texto::ModalRehacerLoDeshecho
             | Texto::ModalAgrandarOReducirToda
@@ -8020,6 +8024,20 @@ fn ningun_texto_de_la_interfaz_falta_ni_esta_vacio() {
             | Texto::EdicionEditarTextoDelNodo
             | Texto::TeclaSuprimir
             | Texto::TeclaEspacio
+            | Texto::TeclaInicio
+            | Texto::TeclaInsertar
+            | Texto::BarraVersionNuevaDisponible
+            | Texto::VerComprobarVersionNueva
+            | Texto::SueltaHacerHijo
+            | Texto::SueltaConectar
+            | Texto::SueltaMoverSinTapar
+            | Texto::SueltaCancelar
+            | Texto::SueltaHacerHermano
+            | Texto::SueltaNoSePuedeConectar
+            | Texto::SueltaNoSePuedeHacerHijo
+            | Texto::SueltaNoSePuedeHacerHermano
+            | Texto::MenuContextualTitulo
+            | Texto::IconoTieneNotas
             | Texto::IaConectarConMisIas
             | Texto::IaConectarConMisIasAyuda
             | Texto::IaMenuEnviarA
@@ -8637,11 +8655,21 @@ fn p8_las_pantallas_de_interfaz_no_llevan_ningun_rotulo_escrito_a_mano() {
     /// no son texto de interfaz —identificadores de egui, contexto para el registro de errores,
     /// plantillas de formato o rutas de prueba—, así que si alguna aparece dentro de una llamada
     /// de pintado en pantalla, la prueba salta igualmente.
-    const PERMITIDAS: [(&str, bool, &str); 112] = [
+    const PERMITIDAS: [(&str, bool, &str); 121] = [
         (
             "{} / {sufijo}",
             false,
             "no es un rótulo: es la plantilla con la que `TeclaDelAtajo::rotulo` une un nombre de tecla traducido con su alternativa literal, como «Supr / Backspace». La barra es un separador visual, no texto que traducir",
+        ),
+        (
+            "{prefijo} / {}",
+            false,
+            "plantilla simétrica de la anterior: tecla que no se traduce y alternativa traducida",
+        ),
+        (
+            "Tab / {}",
+            false,
+            "atajo de añadir hijo en el menú contextual: «Tab» no se traduce y el hueco es `TeclaInsertar` ya traducida",
         ),
         (
             "top_menu_bar",
@@ -8690,6 +8718,36 @@ fn p8_las_pantallas_de_interfaz_no_llevan_ningun_rotulo_escrito_a_mano() {
             "inspector_sidebar",
             false,
             "identificador interno de egui, no se ve",
+        ),
+        (
+            "buscador_de_nodos",
+            false,
+            "identificador interno de egui del campo al que `Ctrl+F` da el foco, no se ve",
+        ),
+        (
+            "menu_de_suelta",
+            false,
+            "identificador interno de egui del menú que aparece al soltar un nodo, no se ve",
+        ),
+        (
+            "menu_contextual_nodo",
+            false,
+            "identificador interno de egui del menú del clic derecho sobre un nodo, no se ve",
+        ),
+        (
+            "texto_emergente_de_icono",
+            false,
+            "identificador interno de egui del texto emergente de los iconos, no se ve",
+        ),
+        (
+            "pulsacion_empezada_en_el_mapa",
+            false,
+            "identificador interno de la memoria de egui: dónde empezó la pulsación, no se ve",
+        ),
+        (
+            "{}: {valor}",
+            false,
+            "plantilla «categoría: valor» del texto emergente; los dos huecos llegan ya traducidos",
         ),
         (
             "detailed_help_side_panel",
@@ -8894,6 +8952,11 @@ fn p8_las_pantallas_de_interfaz_no_llevan_ningun_rotulo_escrito_a_mano() {
         ),
         (
             "guardar preferencia de idioma",
+            false,
+            "contexto técnico del registro de errores; nunca se dibuja en la interfaz",
+        ),
+        (
+            "guardar la opción de comprobar versión nueva",
             false,
             "contexto técnico del registro de errores; nunca se dibuja en la interfaz",
         ),
@@ -9186,7 +9249,7 @@ fn p8_las_pantallas_de_interfaz_no_llevan_ningun_rotulo_escrito_a_mano() {
     /// Para no ser auditado, un archivo debe declararse aquí con su motivo obligatorio no vacío.
     /// Además, si algún archivo exento invoca primitivas de pintado en pantalla, la prueba salta
     /// igualmente para impedir que se cuelen componentes visuales bajo una exención técnica.
-    const ARCHIVOS_EXENTOS_NO_DIBUJAN: [(&str, &str); 50] = [
+    const ARCHIVOS_EXENTOS_NO_DIBUJAN: [(&str, &str); 52] = [
         ("ai_bridge.rs", "comunicación y puente IPC con procesos de agentes; no dibuja interfaz"),
         ("ai_export.rs", "exportación y generación de documentos Markdown de proyecto para agentes de IA; no dibuja interfaz"),
         ("arnes_interfaz.rs", "arnés de pruebas simuladas de interfaz para verificación mecánica de UI sin ventana real; no forma parte de la aplicación"),
@@ -9194,6 +9257,8 @@ fn p8_las_pantallas_de_interfaz_no_llevan_ningun_rotulo_escrito_a_mano() {
         ("autoguardado.rs", "temporizador y lógica de persistencia periódica de mapas en segundo plano; no dibuja interfaz"),
         ("busqueda.rs", "algoritmo de coincidencia y búsqueda de nodos por texto y etiquetas; no dibuja interfaz"),
         ("carga_en_segundo_plano.rs", "hilos de trabajo asíncronos para lectura y procesamiento de mapas pesados; no dibuja interfaz"),
+        ("comprobacion_de_version.rs", "consulta HTTPS a GitHub de la última versión publicada, en un hilo de trabajo; no dibuja interfaz"),
+        ("version_publicada.rs", "comparación de versiones y validación de la respuesta de GitHub, sin red ni interfaz; no dibuja interfaz"),
         ("conectores.rs", "detección en disco y configuración de ejecutables de agentes (Claude Code, Codex CLI, Gemini CLI) y servidores MCP; no dibuja interfaz"),
         ("configuracion_agente_proyecto.rs", "lectura y serialización de configuración específica del agente en el proyecto; no dibuja interfaz"),
         ("consola_windows.rs", "gestión de descriptores y modo de consola para Windows en modo CLI; no dibuja interfaz"),
@@ -9496,7 +9561,7 @@ fn p8_error_rs_no_contiene_prosa_para_el_usuario() {
         }
 
         // Catálogo exhaustivo y cerrado de cadenas técnicas permitidas en `error.rs` (Display y logging)
-        const PERMITIDAS_EN_ERROR_RS: [(&str, &str); 35] = [
+        const PERMITIDAS_EN_ERROR_RS: [(&str, &str); 36] = [
             // Archivo de registro técnico y depuración (no visible en interfaz)
             ("mmcelt-errores.log", "nombre del archivo de registro técnico de errores en disco"),
             (".mmcelt-prueba-escritura", "archivo temporal para verificar permisos de escritura"),
@@ -9535,6 +9600,7 @@ fn p8_error_rs_no_contiene_prosa_para_el_usuario() {
             ("entrada inválida en {campo:?}: {motivo:?}", "descripción técnica de AppError::EntradaInvalida en Display"),
             ("confirmación de sesión caducada", "descripción técnica de AppError::ConfirmacionCaducada en Display"),
             ("error de vigilancia en {}: {origen}", "descripción técnica de AppError::Vigilancia en Display"),
+            ("comprobación de versión nueva: {detalle}", "descripción técnica de AppError::ComprobacionDeVersion en Display; solo va al registro"),
         ];
 
         for (texto, motivo) in PERMITIDAS_EN_ERROR_RS {
@@ -10513,8 +10579,10 @@ fn ningun_campo_opcional_de_la_interfaz_se_queda_sin_asignar() {
     // única asignación de `origen_de_la_conexion` dejaba esta prueba en verde, y con ella el
     // control muerto que narra su propia documentación —el modal de conexión cruzada
     // cerrándose en el fotograma en que se abre—.
-    let fuentes: [String; 9] = [
+    let fuentes: [String; 11] = [
         fuente_normalizado(include_str!("aplicacion.rs")),
+        fuente_normalizado(include_str!("ui/suelta_de_nodo.rs")),
+        fuente_normalizado(include_str!("ui/menu_contextual_nodo.rs")),
         fuente_normalizado(include_str!("ui/mod.rs")),
         fuente_normalizado(include_str!("ui/canvas.rs")),
         fuente_normalizado(include_str!("ui/toolbar.rs")),
@@ -26051,4 +26119,2688 @@ fn c22_c_las_tres_pantallas_de_la_ruta_de_trabajo_pintan_el_mismo_texto() {
     );
 
     std::fs::remove_dir_all(&raiz).expect("limpiar carpeta de prueba C22-C");
+}
+
+// ---------------------------------------------------------------------------------------------
+// PEND-2026-09-30-1 — `Ctrl+F` busca un nodo e `Inicio` centra la vista
+// ---------------------------------------------------------------------------------------------
+
+/// Tamaño de pantalla con el que se ejecutan los fotogramas de estas pruebas.
+const PANTALLA_DE_PRUEBA_DE_ATAJOS: egui::Vec2 = egui::vec2(1920.0, 1400.0);
+
+/// Construye la pulsación de una tecla tal como la entrega el sistema a `egui`.
+///
+/// # Parámetros
+/// - `tecla`: la tecla pulsada.
+/// - `modificadores`: `Ctrl`, `Mayús`… que se mantenían pulsados.
+fn pulsacion(tecla: egui::Key, modificadores: egui::Modifiers) -> egui::Event {
+    egui::Event::Key {
+        key: tecla,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: modificadores,
+    }
+}
+
+/// Ejecuta un fotograma con el panel lateral y los atajos, como el bucle real.
+///
+/// El panel se dibuja **antes** de atender los atajos, igual que en `update`: así el campo
+/// del buscador existe cuando se pregunta si alguien tiene el foco del teclado.
+///
+/// # Parámetros
+/// - `app`: la aplicación.
+/// - `ctx`: el contexto, que tiene que ser el mismo entre fotogramas para que el foco dure.
+/// - `eventos`: lo que se pulsa en este fotograma.
+/// - `modificadores`: el estado de `Ctrl`/`Mayús` del fotograma (lo que lee `i.modifiers`).
+fn fotograma_con_teclas(
+    app: &mut crate::aplicacion::AplicacionMapaMental,
+    ctx: &egui::Context,
+    eventos: Vec<egui::Event>,
+    modificadores: egui::Modifiers,
+) {
+    let entrada = egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(
+            egui::Pos2::ZERO,
+            PANTALLA_DE_PRUEBA_DE_ATAJOS,
+        )),
+        // `egui` ya no lee los modificadores de la entrada cruda: los acumula a partir de
+        // este evento, y se quedan puestos hasta el siguiente. Por eso se envía en cada
+        // fotograma, también para soltarlos.
+        events: std::iter::once(egui::Event::ModifiersChanged(modificadores))
+            .chain(eventos)
+            .collect(),
+        ..Default::default()
+    };
+    let mut salida = ctx.run_ui(entrada, |ui| {
+        crate::ui::sidebar::dibujar_panel_lateral(app, ui);
+        app.atender_atajos_de_teclado(ui.ctx());
+    });
+    salida.textures_delta.clear();
+}
+
+/// Deja la cámara en una posición conocida y lejos del encuadre, para ver si alguien la mueve.
+fn camara_descolocada(app: &mut crate::aplicacion::AplicacionMapaMental) -> (f32, egui::Vec2) {
+    app.lienzo.vista.tamano_visible = egui::vec2(1200.0, 800.0);
+    app.lienzo.vista.zoom = 0.75;
+    app.lienzo.vista.desplazamiento = egui::vec2(321.0, -123.0);
+    (app.lienzo.vista.zoom, app.lienzo.vista.desplazamiento)
+}
+
+/// `Ctrl+F` lleva el foco al buscador con lo que tuviera escrito ya seleccionado, y no toca
+/// la cámara (P1-A).
+///
+/// Es lo que hace `Ctrl+F` en cualquier programa: quien lo pulsa quiere escribir qué busca, y
+/// si ya había una búsqueda, sustituirla tecleando encima sin tener que borrarla antes.
+#[test]
+fn ctrl_f_lleva_el_foco_al_buscador_con_su_texto_seleccionado() {
+    let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    app.presentacion.filtro_de_busqueda.texto = "idea".to_string();
+    let (zoom, desplazamiento) = camara_descolocada(&mut app);
+
+    fotograma_con_teclas(
+        &mut app,
+        &ctx,
+        vec![pulsacion(egui::Key::F, egui::Modifiers::COMMAND)],
+        egui::Modifiers::COMMAND,
+    );
+    fotograma_con_teclas(&mut app, &ctx, Vec::new(), egui::Modifiers::NONE);
+    fotograma_con_teclas(&mut app, &ctx, Vec::new(), egui::Modifiers::NONE);
+
+    assert_eq!(
+        ctx.memory(|m| m.focused()),
+        Some(crate::ui::sidebar::id_del_buscador()),
+        "tras Ctrl+F el foco del teclado tiene que estar en el buscador"
+    );
+    let estado = egui::text_edit::TextEditState::load(&ctx, crate::ui::sidebar::id_del_buscador())
+        .expect("el buscador tiene que haber guardado su estado de edición");
+    let rango = estado
+        .cursor
+        .char_range()
+        .expect("tras Ctrl+F tiene que haber una selección en el buscador")
+        .as_sorted_char_range();
+    assert_eq!(
+        (rango.start.0, rango.end.0),
+        (0, "idea".chars().count()),
+        "Ctrl+F tiene que dejar seleccionado todo lo escrito, para buscar otra cosa encima"
+    );
+    assert_eq!(
+        (app.lienzo.vista.zoom, app.lienzo.vista.desplazamiento),
+        (zoom, desplazamiento),
+        "Ctrl+F ya no centra la vista: ahora busca, y la cámara no se mueve"
+    );
+}
+
+/// `Inicio` centra la vista con el teclado libre (P1-B, caso positivo).
+#[test]
+fn inicio_centra_la_vista_con_el_teclado_libre() {
+    let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    let antes = camara_descolocada(&mut app);
+    let caja = crate::layout::caja_del_mapa(&app.mapa.proyecto)
+        .expect("el mapa de prueba tiene al menos la raíz");
+    let esperado =
+        crate::ui::canvas::encuadre_para_ver_el_mapa(caja, app.lienzo.vista.tamano_visible);
+    assert_ne!(
+        antes, esperado,
+        "calibración: la cámara de partida no puede coincidir ya con el encuadre"
+    );
+
+    fotograma_con_teclas(
+        &mut app,
+        &ctx,
+        vec![pulsacion(egui::Key::Home, egui::Modifiers::NONE)],
+        egui::Modifiers::NONE,
+    );
+
+    assert_eq!(
+        (app.lienzo.vista.zoom, app.lienzo.vista.desplazamiento),
+        esperado,
+        "con el teclado libre, Inicio tiene que encuadrar el mapa"
+    );
+}
+
+/// `Inicio` no mueve la cámara mientras se escribe ni con una ventana delante (P1-B).
+///
+/// Dentro de un campo de texto `Inicio` lleva el cursor al principio de la línea. Si además
+/// moviera el mapa, cada vez que alguien corrige el principio de un título perdería de vista
+/// lo que estaba editando.
+#[test]
+fn inicio_no_mueve_la_camara_mientras_se_escribe_ni_con_una_ventana_delante() {
+    /// Pulsa `Inicio` y dice si la cámara se ha quedado donde estaba.
+    fn inicio_deja_la_camara_quieta(
+        app: &mut crate::aplicacion::AplicacionMapaMental,
+        ctx: &egui::Context,
+    ) -> bool {
+        let antes = camara_descolocada(app);
+        fotograma_con_teclas(
+            app,
+            ctx,
+            vec![pulsacion(egui::Key::Home, egui::Modifiers::NONE)],
+            egui::Modifiers::NONE,
+        );
+        (app.lienzo.vista.zoom, app.lienzo.vista.desplazamiento) == antes
+    }
+
+    // 1. Escribiendo en el buscador.
+    let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    ctx.memory_mut(|m| m.request_focus(crate::ui::sidebar::id_del_buscador()));
+    fotograma_con_teclas(&mut app, &ctx, Vec::new(), egui::Modifiers::NONE);
+    assert_eq!(
+        ctx.memory(|m| m.focused()),
+        Some(crate::ui::sidebar::id_del_buscador()),
+        "calibración: el buscador tenía que quedarse con el foco"
+    );
+    assert!(
+        inicio_deja_la_camara_quieta(&mut app, &ctx),
+        "escribiendo en el buscador, Inicio ha movido el mapa"
+    );
+
+    // 2. Editando el título de un nodo en el lienzo.
+    let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    app.lienzo.edicion.nodo = Some(app.mapa.proyecto.root_id);
+    assert!(
+        inicio_deja_la_camara_quieta(&mut app, &ctx),
+        "editando un título, Inicio ha movido el mapa"
+    );
+
+    // 3. Con una ventana delante, aunque no tenga campos de texto.
+    let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    app.presentacion.ventanas.modal_atajos = true;
+    assert!(
+        inicio_deja_la_camara_quieta(&mut app, &ctx),
+        "con la ventana de atajos abierta, Inicio ha movido el mapa de detrás"
+    );
+}
+
+/// La tabla de atajos y el menú anuncian `Inicio` para centrar y `Ctrl + F` para buscar, en
+/// los seis idiomas, con el nombre de la tecla traducido (P1-C).
+#[test]
+fn la_tabla_de_atajos_y_el_menu_anuncian_inicio_para_centrar_y_ctrl_f_para_buscar() {
+    use crate::textos::{Idioma, Texto};
+
+    for idioma in Idioma::TODOS {
+        let tecla_inicio = Texto::TeclaInicio.en(idioma);
+        let que_hace = |rotulo: &str| {
+            crate::ui::ai_modal::ATAJOS_DE_TECLADO
+                .iter()
+                .find(|(tecla, _)| tecla.rotulo(idioma) == rotulo)
+                .map(|(_, que_hace)| *que_hace)
+        };
+        assert_eq!(
+            que_hace(tecla_inicio),
+            Some(Texto::ModalCentrarLaVistaEn),
+            "en {idioma:?}, la tabla de atajos no dice que «{tecla_inicio}» centra la vista"
+        );
+        assert_eq!(
+            que_hace("Ctrl + F"),
+            Some(Texto::ModalBuscarUnNodo),
+            "en {idioma:?}, la tabla de atajos no dice que «Ctrl + F» busca un nodo"
+        );
+
+        let (mut app, _ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+        app.presentacion.preferencias.idioma = idioma;
+        let textos =
+            crate::arnes_interfaz::textos_de(&mut app, crate::ui::toolbar::menu_ver_y_diseno);
+        let centrar = Texto::VerCentrarVista.en(idioma);
+        assert!(
+            textos
+                .iter()
+                .any(|t| t.contains(centrar) && t.contains(tecla_inicio)),
+            "en {idioma:?}, el menú no anuncia «{tecla_inicio}» junto a «{centrar}». \
+             Pintó: {textos:?}"
+        );
+        assert!(
+            !textos.iter().any(|t| t.contains("Ctrl+F")),
+            "en {idioma:?}, el menú sigue anunciando Ctrl+F para centrar. Pintó: {textos:?}"
+        );
+    }
+}
+
+/// Ninguna guía ni documento asocia `Ctrl + F` con centrar la vista, y la guía de atajos de
+/// cada idioma nombra la tecla `Inicio` traducida (P1-D).
+///
+/// Se compara por raíces de palabra porque las guías son prosa libre: lo que no puede pasar
+/// es que la línea que habla de `Ctrl + F` hable también de centrar o encuadrar.
+#[test]
+fn ninguna_guia_asocia_ctrl_f_con_centrar_la_vista() {
+    use crate::textos::{Idioma, Texto};
+    use crate::ui::help_system::TemaDeAyuda;
+
+    /// Cómo se escribe el atajo y qué raíces delatan «centrar» en cada idioma.
+    fn atajo_y_raices(idioma: Idioma) -> (&'static str, &'static [&'static str]) {
+        match idioma {
+            Idioma::Espanol => ("Ctrl + F", &["centr", "encuadr"]),
+            Idioma::Ingles => ("Ctrl + F", &["cent", "fit"]),
+            Idioma::Frances => ("Ctrl + F", &["centr", "cadr"]),
+            Idioma::Aleman => ("Strg + F", &["zentr"]),
+            Idioma::Ruso => ("Ctrl + F", &["центр"]),
+            Idioma::ChinoSimplificado => ("Ctrl + F", &["居中", "中心"]),
+        }
+    }
+
+    let mut culpables = Vec::new();
+    for idioma in Idioma::TODOS {
+        let (atajo, raices) = atajo_y_raices(idioma);
+        for tema in TemaDeAyuda::TODOS {
+            for linea in tema.guia_completa(idioma).lines() {
+                let minusculas = linea.to_lowercase();
+                if linea.contains(atajo) && raices.iter().any(|r| minusculas.contains(r)) {
+                    culpables.push(format!("{idioma:?} / {tema:?}: {linea}"));
+                }
+            }
+        }
+        let tecla_inicio = format!("`{}`", Texto::TeclaInicio.en(idioma));
+        assert!(
+            TemaDeAyuda::AtajosYCreacionNodos
+                .guia_completa(idioma)
+                .contains(&tecla_inicio),
+            "en {idioma:?}, la guía de atajos no nombra la tecla {tecla_inicio}"
+        );
+    }
+
+    for ruta in [
+        "documentacion/funcionalidades.md",
+        "documentacion/manual-de-uso.md",
+        "documentacion/integraciones/manual-de-control-ia.md",
+    ] {
+        let texto = std::fs::read_to_string(ruta).expect("el documento tiene que existir");
+        for linea in texto.lines() {
+            let minusculas = linea.to_lowercase();
+            let nombra_el_atajo = linea.contains("Ctrl + F") || linea.contains("Ctrl+F");
+            if nombra_el_atajo && ["centr", "encuadr"].iter().any(|r| minusculas.contains(r)) {
+                culpables.push(format!("{ruta}: {linea}"));
+            }
+        }
+    }
+
+    assert!(
+        culpables.is_empty(),
+        "estas líneas siguen diciendo que Ctrl + F centra la vista:\n{}",
+        culpables.join("\n")
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// PEND-2026-10-07-1 — Aviso de versión nueva publicada en GitHub
+// ---------------------------------------------------------------------------------------------
+
+/// Respuesta mínima de `releases/latest` con la etiqueta indicada.
+///
+/// Lleva un `html_url` ajeno a propósito: el enlace del aviso no puede salir de la respuesta.
+fn respuesta_de_github(etiqueta: &str) -> String {
+    format!(
+        r#"{{"tag_name":"{etiqueta}","html_url":"https://ejemplo-malicioso.test/x","body":"<script>"}}"#
+    )
+}
+
+/// Origen de versiones con los valores de fábrica.
+fn origen_de_fabrica() -> crate::version_publicada::OrigenDeLasVersiones {
+    crate::version_publicada::OrigenDeLasVersiones::desde_ajustes(
+        &crate::preferencias::ajustes_de_version_de_fabrica(),
+    )
+    .expect("los ajustes de fábrica tienen que ser válidos")
+}
+
+/// Las versiones se comparan como números, no como texto (AV-A).
+#[test]
+fn las_versiones_se_comparan_como_numeros_y_no_como_texto() {
+    use crate::version_publicada::VersionSemantica;
+
+    let v = |texto: &str| VersionSemantica::desde_etiqueta(texto);
+    assert!(v("0.12.0") > v("0.9.9"), "0.12.0 es posterior a 0.9.9");
+    assert!(v("v0.12.10") > v("0.12.9"), "0.12.10 es posterior a 0.12.9");
+    assert!(v("v1.0.0") > v("0.99.99"));
+    assert_eq!(
+        v("v0.12.0"),
+        v("0.12.0"),
+        "la «v» delante no cambia la versión"
+    );
+
+    for invalida in [
+        "",
+        "v",
+        "0.12",
+        "0.12.0.1",
+        "v1.0.0-rc1",
+        "1.0.0+compilacion",
+        " 0.12.0",
+        "0.12.x",
+        "-1.0.0",
+        "99999999999999999999999.0.0",
+        "V0.12.0",
+    ] {
+        assert_eq!(
+            v(invalida),
+            None,
+            "«{invalida}» no es una versión que se pueda comparar"
+        );
+    }
+}
+
+/// Solo se avisa si la publicada es mayor que la local, y el enlace se construye desde la
+/// configuración, nunca desde la respuesta (AV-A, AV-D).
+#[test]
+fn solo_se_avisa_de_una_version_mayor_y_con_enlace_propio() {
+    use crate::version_publicada::decidir_aviso;
+
+    let origen = origen_de_fabrica();
+
+    let aviso = decidir_aviso("0.12.0", "v0.13.0", &origen)
+        .expect("una etiqueta válida no es un fallo")
+        .expect("0.13.0 es mayor que 0.12.0: tiene que avisar");
+    assert_eq!(aviso.version, "0.13.0");
+    assert_eq!(
+        aviso.enlace,
+        "https://github.com/celtidcs/mmcelt/releases/tag/v0.13.0"
+    );
+
+    for (local, publicada) in [
+        ("0.12.0", "v0.12.0"),
+        ("0.12.0", "0.12.0"),
+        ("0.12.0", "v0.9.0"),
+    ] {
+        assert_eq!(
+            decidir_aviso(local, publicada, &origen).expect("etiqueta válida"),
+            None,
+            "con la local {local} y la publicada {publicada} no hay nada que avisar"
+        );
+    }
+
+    assert!(
+        decidir_aviso("0.12.0", "v1.0.0-rc1", &origen).is_err(),
+        "una etiqueta que no es X.Y.Z es un fallo de la respuesta, no un aviso"
+    );
+}
+
+/// La respuesta de GitHub es un dato no fiable: solo se toma `tag_name` (AV-D).
+#[test]
+fn la_respuesta_de_github_solo_aporta_la_etiqueta() {
+    use crate::version_publicada::interpretar_respuesta;
+
+    assert_eq!(
+        interpretar_respuesta(&respuesta_de_github("v0.13.0")).expect("respuesta válida"),
+        "v0.13.0"
+    );
+    for ilegible in [
+        "",
+        "no es json",
+        "[]",
+        r#"{"name":"sin etiqueta"}"#,
+        r#"{"tag_name":13}"#,
+    ] {
+        assert!(
+            interpretar_respuesta(ilegible).is_err(),
+            "«{ilegible}» no trae una etiqueta y tiene que ser un fallo"
+        );
+    }
+}
+
+/// Repositorio y direcciones se validan antes de usarlos: solo HTTPS y un `dueño/nombre`
+/// sin rutas ni caracteres raros (AV-D, AV-E).
+#[test]
+fn el_origen_de_las_versiones_rechaza_configuraciones_peligrosas() {
+    use crate::preferencias::AjustesDeVersionNueva;
+    use crate::version_publicada::OrigenDeLasVersiones;
+
+    let origen = origen_de_fabrica();
+    assert_eq!(
+        origen.url_de_consulta(),
+        "https://api.github.com/repos/celtidcs/mmcelt/releases/latest"
+    );
+
+    let con = |cambiar: fn(&mut AjustesDeVersionNueva)| {
+        let mut ajustes = crate::preferencias::ajustes_de_version_de_fabrica();
+        cambiar(&mut ajustes);
+        OrigenDeLasVersiones::desde_ajustes(&ajustes)
+    };
+    /// Un caso: qué se estropea y cómo.
+    type AjusteMalo = (&'static str, fn(&mut AjustesDeVersionNueva));
+    let malos: [AjusteMalo; 9] = [
+        ("API por http", |a| {
+            a.url_api = "http://api.github.com".into()
+        }),
+        ("web por http", |a| a.url_web = "http://github.com".into()),
+        ("API con ruta", |a| {
+            a.url_api = "https://api.github.com/x".into()
+        }),
+        ("API con credenciales", |a| {
+            a.url_api = "https://u:p@api.github.com".into()
+        }),
+        ("repositorio con ..", |a| a.repositorio = "../mmcelt".into()),
+        ("repositorio sin dueño", |a| {
+            a.repositorio = "mmcelt".into()
+        }),
+        ("repositorio con tres partes", |a| {
+            a.repositorio = "a/b/c".into()
+        }),
+        ("repositorio con espacios", |a| {
+            a.repositorio = "celtidcs/mm celt".into()
+        }),
+        ("espera nula", |a| a.segundos_de_espera = 0),
+    ];
+    for (caso, cambiar) in malos {
+        assert!(con(cambiar).is_err(), "{caso}: tenía que rechazarse");
+    }
+}
+
+/// Consulta falsa: cuenta cuántas veces se le pide algo y devuelve lo que se le diga.
+struct ConsultaFalsa {
+    respuesta: Result<String, crate::version_publicada::FalloDeComprobacion>,
+    llamadas: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+}
+
+impl crate::comprobacion_de_version::ConsultaDeVersion for ConsultaFalsa {
+    fn pedir(&self, _url: &str) -> Result<String, crate::version_publicada::FalloDeComprobacion> {
+        self.llamadas
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.respuesta.clone()
+    }
+}
+
+/// Arranca la comprobación con una consulta falsa y espera a que termine.
+///
+/// # Devuelve
+/// El aviso que quedó (o ninguno) y cuántas veces se consultó la red.
+fn comprobar_con(
+    preferencias: &crate::preferencias::Preferencias,
+    respuesta: Result<String, crate::version_publicada::FalloDeComprobacion>,
+    version_local: &'static str,
+) -> (Option<crate::version_publicada::AvisoDeVersionNueva>, usize) {
+    use crate::ui::estado_version_nueva::EstadoVersionNueva;
+
+    let llamadas = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let contador = std::sync::Arc::clone(&llamadas);
+    let mut seguimiento = EstadoVersionNueva::arrancar_si_procede(
+        preferencias,
+        version_local,
+        egui::Context::default(),
+        move |_ajustes| {
+            Box::new(ConsultaFalsa {
+                respuesta,
+                llamadas: contador,
+            })
+        },
+    );
+
+    let limite = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while seguimiento.en_curso() && std::time::Instant::now() < limite {
+        seguimiento.atender();
+        std::thread::yield_now();
+    }
+    assert!(
+        !seguimiento.en_curso(),
+        "la comprobación no terminó en cinco segundos"
+    );
+    (
+        seguimiento.aviso().cloned(),
+        llamadas.load(std::sync::atomic::Ordering::SeqCst),
+    )
+}
+
+/// Con la opción activa se consulta una vez y se avisa si hay versión mayor (AV-A, AV-C).
+#[test]
+fn con_la_opcion_activa_se_consulta_una_vez_y_se_avisa() {
+    let preferencias = crate::preferencias::Preferencias::default();
+    assert!(
+        preferencias.comprobar_version_nueva,
+        "la comprobación viene activa de fábrica («cada inicio debe comprobar si hay una actualización»)"
+    );
+
+    let (aviso, llamadas) =
+        comprobar_con(&preferencias, Ok(respuesta_de_github("v0.13.0")), "0.12.0");
+    assert_eq!(llamadas, 1, "se consulta una sola vez por arranque");
+    assert_eq!(aviso.map(|a| a.version), Some("0.13.0".to_string()));
+}
+
+/// Con la opción desactivada no sale ni una petición a la red (AV-B).
+#[test]
+fn con_la_opcion_desactivada_no_se_consulta_nada() {
+    let preferencias = crate::preferencias::Preferencias {
+        comprobar_version_nueva: false,
+        ..Default::default()
+    };
+    let (aviso, llamadas) =
+        comprobar_con(&preferencias, Ok(respuesta_de_github("v9.0.0")), "0.12.0");
+    assert_eq!(
+        llamadas, 0,
+        "desactivada, la comprobación no puede tocar la red"
+    );
+    assert_eq!(aviso, None);
+}
+
+/// Si la consulta falla o la respuesta no sirve, no hay aviso ni pánico (AV-C).
+#[test]
+fn un_fallo_de_la_consulta_no_avisa_ni_rompe_nada() {
+    use crate::version_publicada::FalloDeComprobacion;
+
+    let preferencias = crate::preferencias::Preferencias::default();
+    for respuesta in [
+        Err(FalloDeComprobacion::Red("sin conexión".into())),
+        Ok("<html>límite de peticiones</html>".to_string()),
+        Ok(respuesta_de_github("v1.0.0-rc1")),
+    ] {
+        let (aviso, _) = comprobar_con(&preferencias, respuesta, "0.12.0");
+        assert_eq!(aviso, None);
+    }
+
+    // Unos ajustes inválidos en el archivo de preferencias tampoco consultan nada.
+    let mut preferencias = crate::preferencias::Preferencias::default();
+    preferencias.ajustes_de_version.url_api = "http://api.github.com".into();
+    let (aviso, llamadas) =
+        comprobar_con(&preferencias, Ok(respuesta_de_github("v9.0.0")), "0.12.0");
+    assert_eq!(
+        (aviso, llamadas),
+        (None, 0),
+        "con ajustes inválidos no se consulta"
+    );
+}
+
+/// La opción y sus ajustes se guardan y se leen del archivo de preferencias (AV-B, AV-E).
+#[test]
+fn la_opcion_de_comprobar_version_se_guarda_y_se_lee() {
+    let leidas = crate::preferencias::Preferencias::desde_texto(
+        r#"{"comprobar_version_nueva": false,
+            "ajustes_de_version": {"repositorio": "otro/repo", "url_api": "https://api.github.com",
+              "url_web": "https://github.com", "segundos_de_espera": 3,
+              "limite_de_respuesta_en_bytes": 4096}}"#,
+    );
+    assert!(!leidas.comprobar_version_nueva);
+    assert_eq!(leidas.ajustes_de_version.repositorio, "otro/repo");
+    assert_eq!(leidas.ajustes_de_version.segundos_de_espera, 3);
+
+    // Un archivo anterior a esta opción la trae activa.
+    assert!(crate::preferencias::Preferencias::desde_texto("{}").comprobar_version_nueva);
+}
+
+/// El aviso se ve en la barra con la versión nueva, y no aparece si no hay versión nueva; la
+/// opción para desactivarlo está en el menú «Ver y Diseño» en los seis idiomas (AV-A, AV-B).
+#[test]
+fn el_aviso_se_ve_en_la_barra_y_la_opcion_en_el_menu() {
+    use crate::textos::{Idioma, Texto};
+
+    let (mut app, _ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    let sin_aviso = crate::arnes_interfaz::textos_de_la_barra(&mut app);
+    assert!(
+        !sin_aviso.iter().any(|t| t.contains("0.13.0")),
+        "sin versión nueva no puede haber aviso"
+    );
+
+    let (aviso, _) = comprobar_con(
+        &crate::preferencias::Preferencias::default(),
+        Ok(respuesta_de_github("v0.13.0")),
+        "0.12.0",
+    );
+    for idioma in Idioma::TODOS {
+        let (mut app, _ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+        app.presentacion.preferencias.idioma = idioma;
+        app.presentacion.version_nueva =
+            crate::ui::estado_version_nueva::EstadoVersionNueva::con_aviso(
+                aviso.clone().expect("hay aviso"),
+            );
+        let barra = crate::arnes_interfaz::textos_de_la_barra(&mut app);
+        let rotulo = Texto::BarraVersionNuevaDisponible.en(idioma);
+        assert!(
+            barra
+                .iter()
+                .any(|t| t.contains(rotulo) && t.contains("0.13.0")),
+            "en {idioma:?}, la barra no avisa de la 0.13.0. Pintó: {barra:?}"
+        );
+
+        let menu =
+            crate::arnes_interfaz::textos_de(&mut app, crate::ui::toolbar::menu_ver_y_diseno);
+        let opcion = Texto::VerComprobarVersionNueva.en(idioma);
+        assert!(
+            menu.iter().any(|t| t.contains(opcion)),
+            "en {idioma:?}, el menú no ofrece «{opcion}». Pintó: {menu:?}"
+        );
+    }
+}
+
+/// Pulsar la opción del menú la desactiva (AV-B).
+#[test]
+fn la_opcion_del_menu_desactiva_la_comprobacion() {
+    let (mut app, _ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    assert!(app.presentacion.preferencias.comprobar_version_nueva);
+    let rotulo = crate::textos::Texto::VerComprobarVersionNueva.en(app.idioma());
+    assert!(
+        crate::arnes_interfaz::hacer_clic_en_texto(
+            &mut app,
+            crate::ui::toolbar::menu_ver_y_diseno,
+            rotulo
+        ),
+        "no se encontró la opción «{rotulo}» en el menú"
+    );
+    assert!(
+        !app.presentacion.preferencias.comprobar_version_nueva,
+        "tras pulsar la opción, la comprobación tiene que quedar desactivada"
+    );
+}
+
+/// La guía de ayuda de cada idioma explica la comprobación y cómo desactivarla (AV-G).
+#[test]
+fn la_ayuda_explica_el_aviso_de_version_nueva_en_los_seis_idiomas() {
+    use crate::textos::{Idioma, Texto};
+    use crate::ui::help_system::TemaDeAyuda;
+
+    for idioma in Idioma::TODOS {
+        let ayuda: String = TemaDeAyuda::TODOS
+            .iter()
+            .map(|tema| tema.guia_completa(idioma))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let opcion = Texto::VerComprobarVersionNueva.en(idioma);
+        assert!(
+            ayuda.contains(opcion),
+            "en {idioma:?}, ninguna guía nombra la opción «{opcion}»"
+        );
+    }
+}
+
+/// `comprobar` devuelve cada fallo como `Err`, sin pánico (AV-C).
+///
+/// En la compilación de publicación `panic = "abort"`: un pánico en el hilo de trabajo no se
+/// quedaría en ese hilo, cerraría el programa entero. Por eso no basta con que el hilo
+/// «termine»: cada fallo tiene que llegar como valor.
+#[test]
+fn comprobar_devuelve_cada_fallo_como_valor_sin_panico() {
+    use crate::comprobacion_de_version::comprobar;
+    use crate::version_publicada::FalloDeComprobacion;
+
+    let origen = origen_de_fabrica();
+    let consulta = |respuesta| ConsultaFalsa {
+        respuesta,
+        llamadas: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+    };
+    let casos = [
+        (Err(FalloDeComprobacion::Red("sin conexión".into())), "red"),
+        (Ok("no es json".to_string()), "respuesta"),
+        (Ok(respuesta_de_github("v1.0.0-rc1")), "etiqueta"),
+    ];
+    for (respuesta, caso) in casos {
+        assert!(
+            comprobar("0.12.0", &origen, &consulta(respuesta)).is_err(),
+            "fallo de {caso}: tenía que devolverse como Err"
+        );
+    }
+    assert!(
+        comprobar(
+            "no-es-version",
+            &origen,
+            &consulta(Ok(respuesta_de_github("v0.13.0")))
+        )
+        .is_err(),
+        "una versión local ilegible también es un fallo, no un pánico"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// PEND-2026-09-30-2 — Mini-menú al soltar un nodo sobre otro
+// ---------------------------------------------------------------------------------------------
+
+/// Mapa de prueba: raíz con dos hijas, «A» y «B», y una nieta «A1» bajo «A», separadas.
+///
+/// # Devuelve
+/// El proyecto y los identificadores `(raiz, a, b, a1)`.
+fn mapa_para_soltar() -> (
+    crate::model::Proyecto,
+    uuid::Uuid,
+    uuid::Uuid,
+    uuid::Uuid,
+    uuid::Uuid,
+) {
+    let mut proyecto = crate::model::Proyecto::nuevo_vacio("Raíz");
+    proyecto.layout_mode = crate::model::ModoDisposicion::FreeDrag;
+    let raiz = proyecto.root_id;
+    let a = proyecto.anadir_hijo(raiz, "A");
+    let b = proyecto.anadir_hijo(raiz, "B");
+    let a1 = proyecto.anadir_hijo(a, "A1");
+    for (id, pos) in [
+        (raiz, [0.0, 0.0]),
+        (a, [400.0, 0.0]),
+        (b, [0.0, 400.0]),
+        (a1, [800.0, 0.0]),
+    ] {
+        proyecto.nodes.get_mut(&id).expect("nodo de prueba").pos = pos;
+    }
+    (proyecto, raiz, a, b, a1)
+}
+
+/// La caja de un nodo, con el mismo estimador que usa el dibujado.
+fn caja_de(proyecto: &crate::model::Proyecto, id: uuid::Uuid) -> egui::Rect {
+    let nodo = &proyecto.nodes[&id];
+    let (ancho, alto) = crate::layout::estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
+    egui::Rect::from_center_size(
+        egui::pos2(nodo.pos[0], nodo.pos[1]),
+        egui::vec2(ancho, alto),
+    )
+}
+
+/// «Hacer hijo» cambia el padre y deja un árbol válido (P2-B).
+#[test]
+fn hacer_hijo_cambia_el_padre_y_conserva_un_arbol_valido() {
+    let (mut proyecto, raiz, a, b, _) = mapa_para_soltar();
+    proyecto
+        .hacer_hijo_de(b, a)
+        .expect("B se puede colgar de A");
+    assert_eq!(proyecto.nodes[&b].parent_id, Some(a));
+    assert!(proyecto.nodes[&a].children.contains(&b));
+    assert!(
+        !proyecto.nodes[&raiz].children.contains(&b),
+        "B no puede seguir colgando también de la raíz"
+    );
+    proyecto
+        .validar_estructura()
+        .expect("tras mover, el mapa tiene que seguir siendo un árbol válido");
+}
+
+/// «Hacer hijo» rechaza, con su motivo, todo lo que rompería el árbol (P2-B).
+#[test]
+fn hacer_hijo_rechaza_la_raiz_los_ciclos_y_lo_que_no_cambia_nada() {
+    use crate::model::MovimientoRechazado;
+
+    let (mut proyecto, raiz, a, b, a1) = mapa_para_soltar();
+    let antes = proyecto.clone();
+    let inexistente = uuid::Uuid::new_v4();
+    for (nodo, padre, motivo) in [
+        (raiz, a, MovimientoRechazado::EsLaRaiz),
+        (a, a, MovimientoRechazado::SobreSiMismo),
+        (a, a1, MovimientoRechazado::BajoSuDescendencia),
+        (a1, a, MovimientoRechazado::YaEsSuPadre),
+        (inexistente, a, MovimientoRechazado::NodoInexistente),
+        (b, inexistente, MovimientoRechazado::NodoInexistente),
+    ] {
+        assert_eq!(proyecto.hacer_hijo_de(nodo, padre), Err(motivo));
+    }
+    assert_eq!(
+        serde_json::to_string(&proyecto.nodes).expect("serializable"),
+        serde_json::to_string(&antes.nodes).expect("serializable"),
+        "un movimiento rechazado no puede tocar nada"
+    );
+}
+
+/// Solo cuenta como «soltar encima» si el centro del arrastrado cae dentro de otra tarjeta
+/// (P2-A).
+#[test]
+fn soltar_encima_es_que_el_centro_cae_dentro_de_otra_tarjeta() {
+    let (mut proyecto, _, a, b, _) = mapa_para_soltar();
+    assert_eq!(
+        crate::layout::nodo_bajo_el_centro(&proyecto, b),
+        None,
+        "B está en su sitio, lejos de todo"
+    );
+    proyecto.nodes.get_mut(&b).expect("B").pos = [410.0, 5.0];
+    assert_eq!(crate::layout::nodo_bajo_el_centro(&proyecto, b), Some(a));
+}
+
+/// «Mover aquí sin tapar» deja el nodo pegado al destino y sin solapar a nadie (P2-D).
+#[test]
+fn mover_sin_tapar_busca_un_hueco_junto_al_destino() {
+    let (mut proyecto, _, a, b, _) = mapa_para_soltar();
+    let punto = [410.0, 5.0];
+    proyecto.nodes.get_mut(&b).expect("B").pos = punto;
+
+    let libre = crate::layout::posicion_libre_junto_a(&proyecto, b, a, punto);
+    proyecto.nodes.get_mut(&b).expect("B").pos = libre;
+    let caja_b = caja_de(&proyecto, b);
+    for (&id, _) in proyecto.nodes.iter().filter(|(&id, _)| id != b) {
+        assert!(
+            !caja_b.intersects(caja_de(&proyecto, id)),
+            "en {libre:?}, B tapa a {:?}",
+            proyecto.nodes[&id].title
+        );
+    }
+    let distancia = caja_b.center().distance(caja_de(&proyecto, a).center());
+    assert!(
+        distancia < 400.0,
+        "B tiene que quedar junto a A, no en cualquier sitio: está a {distancia}"
+    );
+}
+
+/// Las opciones del menú hacen lo prometido sobre el mapa (P2-B, P2-C, P2-D, P2-E).
+#[test]
+fn cada_opcion_de_la_suelta_hace_lo_que_promete() {
+    use crate::ui::suelta_de_nodo::{resolver, OpcionDeSuelta, SueltaPendiente};
+
+    let preparar = || {
+        let (mut proyecto, _, a, b, _) = mapa_para_soltar();
+        let original = proyecto.nodes[&b].pos;
+        proyecto.nodes.get_mut(&b).expect("B").pos = [410.0, 5.0];
+        let suelta = SueltaPendiente {
+            arrastrado: b,
+            destino: a,
+            posicion_original: original,
+            punto: [410.0, 5.0],
+            en_pantalla: [0.0, 0.0],
+        };
+        (proyecto, suelta, original)
+    };
+
+    let (mut proyecto, suelta, _) = preparar();
+    resolver(&mut proyecto, &suelta, OpcionDeSuelta::HacerHijo).expect("posible");
+    assert_eq!(
+        proyecto.nodes[&suelta.arrastrado].parent_id,
+        Some(suelta.destino)
+    );
+
+    let (mut proyecto, suelta, original) = preparar();
+    resolver(&mut proyecto, &suelta, OpcionDeSuelta::Conectar).expect("posible");
+    assert!(
+        proyecto
+            .connections
+            .iter()
+            .any(|c| c.from == suelta.arrastrado && c.to == suelta.destino),
+        "tiene que existir la conexión cruzada arrastrado → destino"
+    );
+    assert_eq!(
+        proyecto.nodes[&suelta.arrastrado].pos, original,
+        "al conectar, el nodo vuelve a donde estaba"
+    );
+
+    let (mut proyecto, suelta, _) = preparar();
+    resolver(&mut proyecto, &suelta, OpcionDeSuelta::MoverSinTapar).expect("posible");
+    assert!(
+        !caja_de(&proyecto, suelta.arrastrado).intersects(caja_de(&proyecto, suelta.destino)),
+        "sin tapar significa sin tapar al destino"
+    );
+
+    let (mut proyecto, suelta, original) = preparar();
+    resolver(&mut proyecto, &suelta, OpcionDeSuelta::Cancelar).expect("posible");
+    assert_eq!(proyecto.nodes[&suelta.arrastrado].pos, original);
+    assert_eq!(proyecto.connections.len(), 0, "cancelar no crea nada");
+}
+
+/// Aplicación con el mapa de prueba, en «Posición Libre», y un tamaño de lienzo conocido.
+fn aplicacion_con_mapa_para_soltar() -> (
+    crate::aplicacion::AplicacionMapaMental,
+    egui::Context,
+    uuid::Uuid,
+    uuid::Uuid,
+) {
+    let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    let (proyecto, _, a, b, _) = mapa_para_soltar();
+    app.mapa.proyecto = proyecto;
+    app.lienzo.indice_espacial_del_lienzo.invalidar();
+    (app, ctx, a, b)
+}
+
+/// Ejecuta un fotograma del lienzo sin botones pulsados, con los eventos dados.
+///
+/// # Devuelve
+/// Los textos pintados. Un área flotante de `egui` solo se mide en su primer fotograma y se
+/// pinta a partir del segundo: para ver el menú hay que llamar dos veces con el mismo `ctx`.
+fn fotograma_del_lienzo(
+    app: &mut crate::aplicacion::AplicacionMapaMental,
+    ctx: &egui::Context,
+    eventos: Vec<egui::Event>,
+) -> Vec<String> {
+    let entrada = egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(
+            egui::Pos2::ZERO,
+            PANTALLA_DE_PRUEBA_DE_ATAJOS,
+        )),
+        events: eventos,
+        ..Default::default()
+    };
+    let mut salida = ctx.run_ui(entrada, |ui| dibujar_lienzo_y_suelta(app, ui));
+    let mut textos = Vec::new();
+    for forma in &salida.shapes {
+        crate::arnes_interfaz::recoger_textos(&forma.shape, &mut textos);
+    }
+    salida.textures_delta.clear();
+    textos
+}
+
+/// Lo que hace el bucle real con el lienzo: dibujarlo y, después, atender la suelta.
+fn dibujar_lienzo_y_suelta(app: &mut crate::aplicacion::AplicacionMapaMental, ui: &mut egui::Ui) {
+    crate::ui::canvas::dibujar_lienzo(app, ui);
+    crate::ui::suelta_de_nodo::atender_la_suelta(app, ui.ctx());
+}
+
+/// Soltar un nodo encima de otro abre el menú con sus cuatro opciones, en los seis idiomas;
+/// soltarlo en el vacío no abre nada (P2-A, P2-G).
+#[test]
+fn soltar_sobre_otro_nodo_abre_el_menu_y_en_el_vacio_no() {
+    use crate::textos::{Idioma, Texto};
+
+    // En el vacío: B se arrastró a un sitio libre.
+    let (mut app, ctx, _a, b) = aplicacion_con_mapa_para_soltar();
+    app.lienzo.vista.nodo_arrastrado = Some(b);
+    app.mapa.proyecto.nodes.get_mut(&b).expect("B").pos = [-900.0, -900.0];
+    fotograma_del_lienzo(&mut app, &ctx, Vec::new());
+    assert!(
+        app.lienzo.vista.suelta_pendiente.is_none(),
+        "soltar en el vacío no puede abrir el menú"
+    );
+
+    for idioma in Idioma::TODOS {
+        let (mut app, ctx, a, b) = aplicacion_con_mapa_para_soltar();
+        app.presentacion.preferencias.idioma = idioma;
+        app.lienzo.vista.nodo_arrastrado = Some(b);
+        app.mapa.proyecto.nodes.get_mut(&b).expect("B").pos = [410.0, 5.0];
+        fotograma_del_lienzo(&mut app, &ctx, Vec::new());
+        let suelta = app
+            .lienzo
+            .vista
+            .suelta_pendiente
+            .as_ref()
+            .expect("soltar B encima de A tiene que abrir el menú");
+        assert_eq!((suelta.arrastrado, suelta.destino), (b, a));
+
+        let textos = fotograma_del_lienzo(&mut app, &ctx, Vec::new());
+        for opcion in [
+            Texto::SueltaHacerHijo,
+            Texto::SueltaConectar,
+            Texto::SueltaMoverSinTapar,
+            Texto::SueltaCancelar,
+        ] {
+            let rotulo = opcion.en(idioma);
+            assert!(
+                textos.iter().any(|t| t.contains(rotulo)),
+                "en {idioma:?}, el menú no ofrece «{rotulo}». Pintó: {textos:?}"
+            );
+        }
+    }
+}
+
+/// `Esc` cierra el menú y devuelve el nodo a donde estaba (P2-E).
+#[test]
+fn escape_cierra_el_menu_y_devuelve_el_nodo() {
+    let (mut app, ctx, _a, b) = aplicacion_con_mapa_para_soltar();
+    let original = app.mapa.proyecto.nodes[&b].pos;
+    app.lienzo.vista.nodo_arrastrado = Some(b);
+    app.lienzo.vista.posicion_al_agarrar = original;
+    app.mapa.proyecto.nodes.get_mut(&b).expect("B").pos = [410.0, 5.0];
+    fotograma_del_lienzo(&mut app, &ctx, Vec::new());
+    assert!(app.lienzo.vista.suelta_pendiente.is_some(), "calibración");
+
+    fotograma_del_lienzo(
+        &mut app,
+        &ctx,
+        vec![pulsacion(egui::Key::Escape, egui::Modifiers::NONE)],
+    );
+    assert!(
+        app.lienzo.vista.suelta_pendiente.is_none(),
+        "Esc cierra el menú"
+    );
+    assert_eq!(
+        app.mapa.proyecto.nodes[&b].pos, original,
+        "y el nodo vuelve"
+    );
+}
+
+/// Con el menú abierto, `Supr` no borra el nodo seleccionado (P2-F).
+#[test]
+fn con_el_menu_de_suelta_abierto_supr_no_borra_nada() {
+    let (mut app, ctx, a, b) = aplicacion_con_mapa_para_soltar();
+    app.mapa.nodo_seleccionado = Some(a);
+    app.lienzo.vista.suelta_pendiente = Some(crate::ui::suelta_de_nodo::SueltaPendiente {
+        arrastrado: b,
+        destino: a,
+        posicion_original: [0.0, 400.0],
+        punto: [410.0, 5.0],
+        en_pantalla: [0.0, 0.0],
+    });
+    assert!(app.hay_alguna_ventana_abierta());
+    fotograma_con_teclas(
+        &mut app,
+        &ctx,
+        vec![pulsacion(egui::Key::Delete, egui::Modifiers::NONE)],
+        egui::Modifiers::NONE,
+    );
+    assert!(
+        app.mapa.proyecto.nodes.contains_key(&a),
+        "con el menú de suelta abierto, Supr ha borrado el nodo"
+    );
+}
+
+/// Un solo «deshacer» revierte «Hacer hijo» (P2-B).
+#[test]
+fn deshacer_revierte_hacer_hijo_de_una_vez() {
+    use crate::ui::suelta_de_nodo::{resolver, OpcionDeSuelta, SueltaPendiente};
+
+    let (mut app, _ctx, a, b) = aplicacion_con_mapa_para_soltar();
+    let padre_antes = app.mapa.proyecto.nodes[&b].parent_id;
+    let observar = |app: &mut crate::aplicacion::AplicacionMapaMental| {
+        let revision = app.mapa.proyecto.revision();
+        app.mapa.historial.observar_si_cambio(
+            &app.mapa.proyecto,
+            revision,
+            std::time::Instant::now(),
+        );
+    };
+    observar(&mut app);
+    let suelta = SueltaPendiente {
+        arrastrado: b,
+        destino: a,
+        posicion_original: app.mapa.proyecto.nodes[&b].pos,
+        punto: [410.0, 5.0],
+        en_pantalla: [0.0, 0.0],
+    };
+    resolver(
+        app.mapa.proyecto_para_editar(),
+        &suelta,
+        OpcionDeSuelta::HacerHijo,
+    )
+    .expect("posible");
+    observar(&mut app);
+    assert_eq!(
+        app.mapa.proyecto.nodes[&b].parent_id,
+        Some(a),
+        "calibración"
+    );
+
+    app.deshacer();
+    assert_eq!(app.mapa.proyecto.nodes[&b].parent_id, padre_antes);
+}
+
+/// La ayuda explica el menú de suelta en los seis idiomas (P2-G).
+#[test]
+fn la_ayuda_explica_el_menu_de_suelta_en_los_seis_idiomas() {
+    use crate::textos::{Idioma, Texto};
+    use crate::ui::help_system::TemaDeAyuda;
+
+    for idioma in Idioma::TODOS {
+        let ayuda: String = TemaDeAyuda::TODOS
+            .iter()
+            .map(|tema| tema.guia_completa(idioma))
+            .collect::<Vec<_>>()
+            .join("\n");
+        for opcion in [
+            Texto::SueltaHacerHijo,
+            Texto::SueltaConectar,
+            Texto::SueltaMoverSinTapar,
+        ] {
+            let rotulo = opcion.en(idioma);
+            assert!(
+                ayuda.contains(rotulo),
+                "en {idioma:?}, ninguna guía explica «{rotulo}»"
+            );
+        }
+    }
+}
+
+/// Un simple clic sin mover el nodo no abre el menú, aunque su tarjeta ya esté encima de otra
+/// (P2-A). Un clic también agarra y suelta, y abrir un menú por eso sería un estorbo.
+#[test]
+fn un_clic_sin_mover_no_abre_el_menu_de_suelta() {
+    let (mut app, ctx, _a, b) = aplicacion_con_mapa_para_soltar();
+    app.mapa.proyecto.nodes.get_mut(&b).expect("B").pos = [410.0, 5.0];
+    app.lienzo.vista.posicion_al_agarrar = [410.0, 5.0];
+    app.lienzo.vista.nodo_arrastrado = Some(b);
+    fotograma_del_lienzo(&mut app, &ctx, Vec::new());
+    assert!(
+        app.lienzo.vista.suelta_pendiente.is_none(),
+        "sin moverse no hay suelta que decidir"
+    );
+}
+
+/// «Mover aquí sin tapar» esquiva también a un tercero que ocupa el hueco más cercano (P2-D).
+#[test]
+fn mover_sin_tapar_esquiva_al_vecino_que_ocupa_el_hueco_mas_cercano() {
+    let (mut proyecto, _, a, b, a1) = mapa_para_soltar();
+    let punto = [460.0, 5.0];
+    // El hueco natural a la derecha de A, que es el más cercano al punto, lo ocupa A1.
+    let derecha = crate::layout::posicion_libre_junto_a(&proyecto, b, a, punto);
+    proyecto.nodes.get_mut(&a1).expect("A1").pos = derecha;
+    proyecto.nodes.get_mut(&b).expect("B").pos = punto;
+
+    let libre = crate::layout::posicion_libre_junto_a(&proyecto, b, a, punto);
+    proyecto.nodes.get_mut(&b).expect("B").pos = libre;
+    assert!(
+        !caja_de(&proyecto, b).intersects(caja_de(&proyecto, a1)),
+        "B no puede caer encima de A1, que ocupaba el hueco más cercano"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// PEND-2026-09-30-3 — Menú contextual con clic derecho sobre un nodo
+// ---------------------------------------------------------------------------------------------
+
+/// Estado, prioridad y control humano se cambian por operaciones con nombre que solo marcan
+/// el mapa como modificado si el valor cambia de verdad (P3-C).
+#[test]
+fn clasificar_un_nodo_solo_marca_cambios_reales() {
+    use crate::model::{EstadoNodo, EstadoRevision, PrioridadNodo};
+
+    let (mut proyecto, _, a, _, _) = mapa_para_soltar();
+    let estado = proyecto.nodes[&a].status;
+    let revision = proyecto.revision();
+    assert!(
+        !proyecto.fijar_estado(a, estado),
+        "el mismo estado no es un cambio"
+    );
+    assert_eq!(proyecto.revision(), revision, "sin cambio no se marca nada");
+
+    let otro_estado = EstadoNodo::TODOS
+        .into_iter()
+        .find(|e| *e != estado)
+        .expect("hay más de un estado");
+    assert!(proyecto.fijar_estado(a, otro_estado));
+    assert_eq!(proyecto.nodes[&a].status, otro_estado);
+    assert_ne!(
+        proyecto.revision(),
+        revision,
+        "un cambio real marca el mapa"
+    );
+
+    assert!(proyecto.fijar_prioridad(a, PrioridadNodo::Critica));
+    assert_eq!(proyecto.nodes[&a].priority, PrioridadNodo::Critica);
+    assert!(proyecto.fijar_revision(a, EstadoRevision::RequiereCorreccion));
+    assert_eq!(
+        proyecto.nodes[&a].review_status,
+        EstadoRevision::RequiereCorreccion
+    );
+    assert!(
+        !proyecto.fijar_estado(uuid::Uuid::new_v4(), otro_estado),
+        "un nodo que no existe no cambia nada"
+    );
+}
+
+/// Ejecuta un fotograma del lienzo y del menú contextual con los eventos dados.
+///
+/// # Devuelve
+/// Los textos pintados.
+fn fotograma_con_menu_contextual(
+    app: &mut crate::aplicacion::AplicacionMapaMental,
+    ctx: &egui::Context,
+    eventos: Vec<egui::Event>,
+) -> Vec<String> {
+    let entrada = egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(
+            egui::Pos2::ZERO,
+            PANTALLA_DE_PRUEBA_DE_ATAJOS,
+        )),
+        events: eventos,
+        ..Default::default()
+    };
+    let mut salida = ctx.run_ui(entrada, |ui| {
+        crate::ui::canvas::dibujar_lienzo(app, ui);
+        crate::ui::menu_contextual_nodo::atender_el_menu_contextual(app, ui.ctx());
+    });
+    let mut textos = Vec::new();
+    for forma in &salida.shapes {
+        crate::arnes_interfaz::recoger_textos(&forma.shape, &mut textos);
+    }
+    salida.textures_delta.clear();
+    textos
+}
+
+/// Dónde se ve en pantalla el centro de un nodo, con la cámara de la aplicación.
+fn centro_en_pantalla(app: &crate::aplicacion::AplicacionMapaMental, id: uuid::Uuid) -> egui::Pos2 {
+    let centro_del_lienzo =
+        egui::Rect::from_min_size(egui::Pos2::ZERO, PANTALLA_DE_PRUEBA_DE_ATAJOS).center();
+    let vista = &app.lienzo.vista;
+    let pos = app.mapa.proyecto.nodes[&id].pos;
+    centro_del_lienzo + (egui::vec2(pos[0], pos[1]) + vista.desplazamiento) * vista.zoom
+}
+
+/// Pulsa y suelta el botón derecho en `inicio` y `fin`, en dos fotogramas.
+fn clic_derecho(
+    app: &mut crate::aplicacion::AplicacionMapaMental,
+    ctx: &egui::Context,
+    inicio: egui::Pos2,
+    fin: egui::Pos2,
+) {
+    let boton = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Secondary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    fotograma_con_menu_contextual(
+        app,
+        ctx,
+        vec![egui::Event::PointerMoved(inicio), boton(inicio, true)],
+    );
+    fotograma_con_menu_contextual(
+        app,
+        ctx,
+        vec![egui::Event::PointerMoved(fin), boton(fin, false)],
+    );
+}
+
+/// Primer fotograma para que el lienzo exista y sepa su tamaño.
+fn lienzo_preparado() -> (
+    crate::aplicacion::AplicacionMapaMental,
+    egui::Context,
+    uuid::Uuid,
+    uuid::Uuid,
+) {
+    let (mut app, ctx, a, b) = aplicacion_con_mapa_para_soltar();
+    // El mapa de prueba cabe entero en la pantalla de prueba a escala natural.
+    app.lienzo.vista.desplazamiento = egui::vec2(-300.0, -200.0);
+    fotograma_con_menu_contextual(&mut app, &ctx, Vec::new());
+    (app, ctx, a, b)
+}
+
+/// Clic derecho sobre un nodo lo selecciona y abre el menú; en el vacío no abre nada (P3-A).
+#[test]
+fn clic_derecho_sobre_un_nodo_lo_selecciona_y_abre_el_menu() {
+    let (mut app, ctx, a, _b) = lienzo_preparado();
+    let sobre_a = centro_en_pantalla(&app, a);
+    clic_derecho(&mut app, &ctx, sobre_a, sobre_a);
+    assert_eq!(
+        app.mapa.nodo_seleccionado,
+        Some(a),
+        "el clic derecho selecciona el nodo"
+    );
+    assert_eq!(
+        app.lienzo.vista.menu_contextual.as_ref().map(|m| m.nodo),
+        Some(a),
+        "y abre su menú"
+    );
+
+    let (mut app, ctx, _a, _b) = lienzo_preparado();
+    let vacio = egui::pos2(5.0, 1300.0);
+    clic_derecho(&mut app, &ctx, vacio, vacio);
+    assert!(
+        app.lienzo.vista.menu_contextual.is_none(),
+        "clic derecho en el vacío no abre nada"
+    );
+}
+
+/// Un fotograma del lienzo con, encima, un área interactiva que tapa `tapa` (como la lista de un
+/// desplegable del inspector). Sin `tapa`, el lienzo a solas.
+fn fotograma_con_algo_encima(
+    app: &mut crate::aplicacion::AplicacionMapaMental,
+    ctx: &egui::Context,
+    tapa: Option<egui::Rect>,
+    eventos: Vec<egui::Event>,
+) {
+    let entrada = egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(
+            egui::Pos2::ZERO,
+            PANTALLA_DE_PRUEBA_DE_ATAJOS,
+        )),
+        events: eventos,
+        ..Default::default()
+    };
+    let mut salida = ctx.run_ui(entrada, |ui| {
+        crate::ui::canvas::dibujar_lienzo(app, ui);
+        if let Some(tapa) = tapa {
+            egui::Area::new(egui::Id::new("prueba_lista_de_un_desplegable"))
+                .order(egui::Order::Foreground)
+                .fixed_pos(tapa.min)
+                .show(ui.ctx(), |ui| {
+                    ui.allocate_exact_size(tapa.size(), egui::Sense::click());
+                });
+        }
+    });
+    salida.textures_delta.clear();
+}
+
+/// Lo que queda seleccionado tras un clic izquierdo en `punto`, con algo encima o sin nada.
+fn seleccion_tras_un_clic(tapa: bool) -> (Option<uuid::Uuid>, uuid::Uuid, uuid::Uuid) {
+    let (mut app, ctx, a, b) = lienzo_preparado();
+    app.mapa.nodo_seleccionado = Some(b);
+    let punto = centro_en_pantalla(&app, a);
+    let tapa = tapa.then(|| egui::Rect::from_center_size(punto, egui::vec2(200.0, 120.0)));
+    let boton = |pressed| egui::Event::PointerButton {
+        pos: punto,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::default(),
+    };
+    // Un área de egui no es interactiva hasta su segundo fotograma: el primero solo la mide.
+    fotograma_con_algo_encima(&mut app, &ctx, tapa, vec![egui::Event::PointerMoved(punto)]);
+    fotograma_con_algo_encima(&mut app, &ctx, tapa, Vec::new());
+    fotograma_con_algo_encima(&mut app, &ctx, tapa, vec![boton(true)]);
+    fotograma_con_algo_encima(&mut app, &ctx, tapa, vec![boton(false)]);
+    (app.mapa.nodo_seleccionado, a, b)
+}
+
+/// **PH-1007-6** — Un clic sobre algo que tapa el lienzo (la lista de un desplegable del
+/// inspector, un menú, una ventana) no selecciona el nodo que hay debajo.
+///
+/// El lienzo leía el ratón crudo del contexto: al elegir un valor en un desplegable cuya lista caía
+/// sobre un nodo, la pulsación seleccionaba ese nodo y el desplegable aplicaba el valor al nuevo.
+#[test]
+fn ph_1007_6_un_clic_sobre_lo_que_tapa_el_lienzo_no_cambia_la_seleccion() {
+    let (sin_nada_encima, a, _b) = seleccion_tras_un_clic(false);
+    assert_eq!(
+        sin_nada_encima,
+        Some(a),
+        "calibración: sin nada encima, el clic selecciona el nodo"
+    );
+    let (tapado, _a, b) = seleccion_tras_un_clic(true);
+    assert_eq!(
+        tapado,
+        Some(b),
+        "con un área encima del nodo, el clic es de esa área: la selección no cambia"
+    );
+}
+
+/// **PH-1007-6** — Una pulsación que empezó sobre algo que tapaba el lienzo no es un clic del
+/// mapa aunque, al soltar, eso ya no esté: una lista que se cierra con el botón aún bajado deja el
+/// nodo de debajo al descubierto, y el lienzo solo responde a la ventana donde se pulsó.
+#[test]
+fn ph_1007_6_lo_que_se_pulso_sobre_otra_ventana_no_es_un_clic_al_desaparecer_ella() {
+    let (mut app, ctx, a, b) = lienzo_preparado();
+    app.mapa.nodo_seleccionado = Some(b);
+    let punto = centro_en_pantalla(&app, a);
+    let tapa = Some(egui::Rect::from_center_size(
+        punto,
+        egui::vec2(200.0, 120.0),
+    ));
+    let boton = |pressed| egui::Event::PointerButton {
+        pos: punto,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::default(),
+    };
+    // Un área de egui no es interactiva hasta su segundo fotograma: el primero solo la mide.
+    fotograma_con_algo_encima(&mut app, &ctx, tapa, vec![egui::Event::PointerMoved(punto)]);
+    fotograma_con_algo_encima(&mut app, &ctx, tapa, Vec::new());
+    fotograma_con_algo_encima(&mut app, &ctx, tapa, vec![boton(true)]);
+    // La tapa desaparece con el botón bajado; un fotograma después, ya no cuenta como visible.
+    fotograma_con_algo_encima(&mut app, &ctx, None, Vec::new());
+    fotograma_con_algo_encima(&mut app, &ctx, None, Vec::new());
+    fotograma_con_algo_encima(&mut app, &ctx, None, vec![boton(false)]);
+    assert_eq!(
+        app.mapa.nodo_seleccionado,
+        Some(b),
+        "la pulsación era de la ventana que tapaba el nodo, no del mapa"
+    );
+}
+
+/// Arrastrar con el botón derecho mueve la cámara y no abre el menú (P3-A).
+#[test]
+fn arrastrar_con_el_boton_derecho_mueve_la_camara_sin_menu() {
+    let (mut app, ctx, a, _b) = lienzo_preparado();
+    let antes = app.lienzo.vista.desplazamiento;
+    let sobre_a = centro_en_pantalla(&app, a);
+    let lejos = sobre_a + egui::vec2(120.0, 80.0);
+    let boton = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Secondary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    fotograma_con_menu_contextual(
+        &mut app,
+        &ctx,
+        vec![egui::Event::PointerMoved(sobre_a), boton(sobre_a, true)],
+    );
+    fotograma_con_menu_contextual(&mut app, &ctx, vec![egui::Event::PointerMoved(lejos)]);
+    fotograma_con_menu_contextual(
+        &mut app,
+        &ctx,
+        vec![egui::Event::PointerMoved(lejos), boton(lejos, false)],
+    );
+    assert!(
+        app.lienzo.vista.menu_contextual.is_none(),
+        "un arrastre no es un clic"
+    );
+    assert_ne!(
+        app.lienzo.vista.desplazamiento, antes,
+        "y la cámara se ha movido"
+    );
+}
+
+/// El menú muestra sus opciones en los seis idiomas, con los rótulos del menú «Edición» (P3-B).
+#[test]
+fn el_menu_contextual_ofrece_sus_opciones_en_los_seis_idiomas() {
+    use crate::textos::{Idioma, Texto};
+
+    for idioma in Idioma::TODOS {
+        let (mut app, ctx, a, _b) = lienzo_preparado();
+        app.presentacion.preferencias.idioma = idioma;
+        let sobre_a = centro_en_pantalla(&app, a);
+        clic_derecho(&mut app, &ctx, sobre_a, sobre_a);
+        fotograma_con_menu_contextual(&mut app, &ctx, Vec::new());
+        let textos = fotograma_con_menu_contextual(&mut app, &ctx, Vec::new());
+        for opcion in [
+            Texto::EdicionAnadirHijo,
+            Texto::EdicionAnadirHermano,
+            Texto::EdicionCrearConexionCruzada,
+            Texto::EdicionEditarTextoDelNodo,
+            Texto::EdicionEliminarNodo,
+            Texto::InspectorEstado,
+            Texto::InspectorPrioridad,
+            Texto::InspectorControlHumano,
+        ] {
+            let rotulo = opcion.en(idioma);
+            assert!(
+                textos
+                    .iter()
+                    .any(|t| t.contains(crate::textos::sin_dos_puntos(rotulo))),
+                "en {idioma:?}, el menú contextual no ofrece «{rotulo}». Pintó: {textos:?}"
+            );
+        }
+    }
+}
+
+/// Cada acción del menú actúa sobre el nodo del clic, aunque la selección fuera otra (P3-B).
+#[test]
+fn cada_accion_del_menu_contextual_actua_sobre_su_nodo() {
+    use crate::model::{EstadoNodo, EstadoRevision, PrioridadNodo};
+    use crate::ui::menu_contextual_nodo::{aplicar, AccionDelMenu};
+
+    let preparar = || {
+        let (mut app, _ctx, a, b) = aplicacion_con_mapa_para_soltar();
+        // Seleccionado B a propósito: el menú es de A.
+        app.mapa.nodo_seleccionado = Some(b);
+        (app, a, b)
+    };
+
+    let (mut app, a, _) = preparar();
+    let hijos = app.mapa.proyecto.nodes[&a].children.len();
+    aplicar(&mut app, a, AccionDelMenu::AnadirHijo);
+    assert_eq!(app.mapa.proyecto.nodes[&a].children.len(), hijos + 1);
+
+    let (mut app, a, _) = preparar();
+    let padre = app.mapa.proyecto.nodes[&a]
+        .parent_id
+        .expect("A tiene padre");
+    let hermanos = app.mapa.proyecto.nodes[&padre].children.len();
+    aplicar(&mut app, a, AccionDelMenu::AnadirHermano);
+    assert_eq!(app.mapa.proyecto.nodes[&padre].children.len(), hermanos + 1);
+
+    let (mut app, a, _) = preparar();
+    aplicar(&mut app, a, AccionDelMenu::CrearConexion);
+    assert!(app.presentacion.ventanas.modal_conexion_cruzada);
+    assert_eq!(app.lienzo.conexion.origen, Some(a));
+
+    let (mut app, a, _) = preparar();
+    aplicar(&mut app, a, AccionDelMenu::EditarTitulo);
+    assert_eq!(app.lienzo.edicion.nodo, Some(a));
+
+    let (mut app, a, b) = preparar();
+    aplicar(&mut app, a, AccionDelMenu::Eliminar);
+    assert!(!app.mapa.proyecto.nodes.contains_key(&a), "se borra A");
+    assert!(
+        app.mapa.proyecto.nodes.contains_key(&b),
+        "y no el seleccionado antes"
+    );
+
+    let (mut app, a, _) = preparar();
+    aplicar(&mut app, a, AccionDelMenu::Estado(EstadoNodo::Completado));
+    aplicar(&mut app, a, AccionDelMenu::Prioridad(PrioridadNodo::Alta));
+    aplicar(
+        &mut app,
+        a,
+        AccionDelMenu::Revision(EstadoRevision::AprobadoPorHumano),
+    );
+    let nodo = &app.mapa.proyecto.nodes[&a];
+    assert_eq!(
+        (nodo.status, nodo.priority, nodo.review_status),
+        (
+            EstadoNodo::Completado,
+            PrioridadNodo::Alta,
+            EstadoRevision::AprobadoPorHumano
+        )
+    );
+}
+
+/// `Esc` cierra el menú sin cambiar nada, y con el menú abierto `Supr` no borra (P3-D).
+#[test]
+fn escape_cierra_el_menu_contextual_y_supr_no_actua_con_el_abierto() {
+    let (mut app, ctx, a, _b) = lienzo_preparado();
+    let sobre_a = centro_en_pantalla(&app, a);
+    clic_derecho(&mut app, &ctx, sobre_a, sobre_a);
+    assert!(app.lienzo.vista.menu_contextual.is_some(), "calibración");
+    assert!(
+        app.hay_alguna_ventana_abierta(),
+        "el menú cuenta como ventana abierta"
+    );
+
+    fotograma_con_teclas(
+        &mut app,
+        &ctx,
+        vec![pulsacion(egui::Key::Delete, egui::Modifiers::NONE)],
+        egui::Modifiers::NONE,
+    );
+    assert!(
+        app.mapa.proyecto.nodes.contains_key(&a),
+        "Supr no llega al mapa"
+    );
+
+    fotograma_con_menu_contextual(
+        &mut app,
+        &ctx,
+        vec![pulsacion(egui::Key::Escape, egui::Modifiers::NONE)],
+    );
+    assert!(
+        app.lienzo.vista.menu_contextual.is_none(),
+        "Esc cierra el menú"
+    );
+    assert!(app.mapa.proyecto.nodes.contains_key(&a));
+}
+
+/// La ayuda explica el menú contextual en los seis idiomas (P3-E).
+#[test]
+fn la_ayuda_explica_el_menu_contextual_en_los_seis_idiomas() {
+    use crate::textos::{Idioma, Texto};
+    use crate::ui::help_system::TemaDeAyuda;
+
+    for idioma in Idioma::TODOS {
+        let guia = TemaDeAyuda::AtajosYCreacionNodos.guia_completa(idioma);
+        let rotulo = Texto::MenuContextualTitulo.en(idioma);
+        assert!(
+            guia.contains(rotulo),
+            "en {idioma:?}, la guía de atajos no explica «{rotulo}»"
+        );
+    }
+}
+
+/// Con el mapa en solo lectura, el clic derecho no abre el menú contextual (P3-A).
+#[test]
+fn en_solo_lectura_el_clic_derecho_no_abre_el_menu() {
+    let (mut app, ctx, a, _b) = lienzo_preparado();
+    #[cfg(windows)]
+    let ruta_mapa_raiz = std::path::PathBuf::from(r"O:\mapa_m.mmcelt");
+    #[cfg(not(windows))]
+    let ruta_mapa_raiz = std::path::PathBuf::from("/mapa_m.mmcelt");
+    app.persistencia.ruta_actual = Some(ruta_mapa_raiz);
+    assert!(app.es_solo_lectura_por_raiz(), "calibración");
+
+    let sobre_a = centro_en_pantalla(&app, a);
+    clic_derecho(&mut app, &ctx, sobre_a, sobre_a);
+    assert!(
+        app.lienzo.vista.menu_contextual.is_none(),
+        "en solo lectura el menú contextual no se abre"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// PEND-2026-09-30-4 — Textos emergentes en los iconos de las tarjetas
+// ---------------------------------------------------------------------------------------------
+
+/// Las zonas de los iconos son las de lo que se pinta: una por icono, sin solaparse (P4-B).
+#[test]
+fn las_zonas_de_los_iconos_coinciden_con_lo_pintado_y_no_se_solapan() {
+    use crate::model::{EstadoRevision, PrioridadNodo};
+    use crate::ui::canvas::{
+        ancla_de_las_notas, ancla_del_indicador, calcular_indicadores_del_nodo,
+        zonas_de_los_iconos, IconoDelNodo,
+    };
+
+    let caja = egui::Rect::from_min_size(egui::pos2(100.0, 100.0), egui::vec2(200.0, 70.0));
+    let zoom = 1.0;
+    let indicadores =
+        calcular_indicadores_del_nodo(PrioridadNodo::Alta, EstadoRevision::PendienteRevision);
+    assert_eq!(
+        indicadores.len(),
+        2,
+        "calibración: prioridad y control humano visibles"
+    );
+    let zonas = zonas_de_los_iconos(caja, zoom, &indicadores, true, egui::vec2(18.0, 18.0));
+    let iconos: Vec<IconoDelNodo> = zonas.iter().map(|z| z.icono).collect();
+    assert_eq!(
+        iconos,
+        vec![
+            IconoDelNodo::Estado,
+            IconoDelNodo::Prioridad,
+            IconoDelNodo::Revision,
+            IconoDelNodo::Rol,
+            IconoDelNodo::Notas
+        ]
+    );
+    for (i, a) in zonas.iter().enumerate() {
+        assert!(
+            caja.contains_rect(a.caja),
+            "{:?} se sale de la tarjeta",
+            a.icono
+        );
+        for b in zonas.iter().skip(i + 1) {
+            assert!(
+                !a.caja.intersects(b.caja),
+                "{:?} y {:?} se solapan",
+                a.icono,
+                b.icono
+            );
+        }
+    }
+    // El símbolo se pinta alineado arriba a la derecha de su ancla: su esquina pertenece a la zona.
+    for (orden, zona) in zonas
+        .iter()
+        .filter(|z| matches!(z.icono, IconoDelNodo::Prioridad | IconoDelNodo::Revision))
+        .rev()
+        .enumerate()
+    {
+        let ancla = ancla_del_indicador(caja, zoom, orden);
+        assert!(
+            zona.caja.contains(ancla + egui::vec2(-1.0, 1.0)),
+            "la zona de {:?} no está donde se pinta su símbolo",
+            zona.icono
+        );
+    }
+    let notas = zonas.last().expect("hay zona de notas");
+    assert!(notas
+        .caja
+        .contains(ancla_de_las_notas(caja, zoom) + egui::vec2(-1.0, -1.0)));
+
+    let sin_nada = zonas_de_los_iconos(
+        caja,
+        zoom,
+        &calcular_indicadores_del_nodo(PrioridadNodo::Media, EstadoRevision::GeneradoPorIA),
+        false,
+        egui::vec2(18.0, 18.0),
+    );
+    assert!(
+        sin_nada.iter().all(|z| z.icono != IconoDelNodo::Notas),
+        "sin notas no hay zona de notas"
+    );
+}
+
+/// **PH-1007-4** — Ningún icono de una tarjeta pisa a otro, en ninguna tarjeta que el mapa pueda
+/// dibujar, empezando por la más pequeña.
+///
+/// La prueba anterior miraba una tarjeta de 70 de alto que no sale nunca del estimador; en la de
+/// un nodo recién creado (sin notas ni etiquetas, título corto) el rol quedaba pegado debajo de
+/// la prioridad. Aquí la tarjeta la da el mismo estimador que usa el lienzo.
+#[test]
+fn ph_1007_4_ningun_icono_pisa_a_otro_en_ninguna_tarjeta() {
+    use crate::model::{EstadoRevision, PrioridadNodo};
+    use crate::ui::canvas::{calcular_indicadores_del_nodo, zonas_de_los_iconos};
+
+    let titulos = ["Idea", "Un título bastante largo que ocupa dos líneas"];
+    let prioridades = [
+        PrioridadNodo::Baja,
+        PrioridadNodo::Media,
+        PrioridadNodo::Alta,
+        PrioridadNodo::Critica,
+    ];
+    let revisiones = [
+        EstadoRevision::GeneradoPorIA,
+        EstadoRevision::PendienteRevision,
+        EstadoRevision::AprobadoPorHumano,
+        EstadoRevision::RequiereCorreccion,
+    ];
+    let mut casos = 0;
+    for titulo in titulos {
+        for con_notas in [false, true] {
+            for etiquetas in [0, 1] {
+                let (ancho, alto) = crate::layout::estimar_tamano_del_nodo(titulo, etiquetas);
+                for zoom in [0.5, 1.0, 2.0] {
+                    let caja = egui::Rect::from_min_size(
+                        egui::pos2(100.0, 100.0),
+                        egui::vec2(ancho, alto) * zoom,
+                    );
+                    for prioridad in prioridades {
+                        for revision in revisiones {
+                            let indicadores = calcular_indicadores_del_nodo(prioridad, revision);
+                            let zonas = zonas_de_los_iconos(
+                                caja,
+                                zoom,
+                                &indicadores,
+                                con_notas,
+                                egui::vec2(16.0, 16.0) * zoom,
+                            );
+                            for (i, a) in zonas.iter().enumerate() {
+                                assert!(
+                                    caja.contains_rect(a.caja),
+                                    "{:?} se sale de la tarjeta {ancho}×{alto}",
+                                    a.icono
+                                );
+                                for b in zonas.iter().skip(i + 1) {
+                                    assert!(
+                                        !a.caja.intersects(b.caja),
+                                        "{:?} y {:?} se pisan en la tarjeta {ancho}×{alto} \
+                                         («{titulo}», notas {con_notas}, etiquetas {etiquetas}, \
+                                         {prioridad:?}, {revision:?}, zoom {zoom})",
+                                        a.icono,
+                                        b.icono
+                                    );
+                                }
+                            }
+                            casos += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(
+        casos,
+        2 * 2 * 2 * 3 * 4 * 4,
+        "calibración: se recorren todos los casos"
+    );
+}
+
+/// Ancho que alcanza la nube de un texto emergente después de unos fotogramas mostrándolo.
+fn ancho_de_la_nube_tras_mostrar(ctx: &egui::Context, texto: &str) -> f32 {
+    /// Fotogramas que se dejan para que el área termine de medirse.
+    const FOTOGRAMAS: usize = 4;
+    for _ in 0..FOTOGRAMAS {
+        let mut salida = ctx.run_ui(egui::RawInput::default(), |ui| {
+            crate::ui::canvas::pintar_el_texto_emergente(
+                ui.ctx(),
+                texto.to_string(),
+                egui::pos2(100.0, 100.0),
+            );
+        });
+        salida.textures_delta.clear();
+    }
+    ctx.memory(|m| m.area_rect(egui::Id::new("texto_emergente_de_icono")))
+        .expect("la nube se ha pintado")
+        .width()
+}
+
+/// **PH-1007-5** — La nube de un icono se ensancha para el texto que le toca, aunque antes se
+/// haya mostrado otro más corto.
+///
+/// Todas las nubes comparten un mismo `egui::Area`, que recuerda el tamaño del fotograma anterior
+/// y lo usaba como ancho máximo: tras una nube corta, la siguiente salía con tres letras por
+/// línea.
+#[test]
+fn ph_1007_5_la_nube_no_hereda_el_ancho_de_la_anterior() {
+    let largo = "Control humano: Pendiente de revisión humana";
+    let ancho_de_referencia = ancho_de_la_nube_tras_mostrar(&egui::Context::default(), largo);
+
+    let ctx = egui::Context::default();
+    ancho_de_la_nube_tras_mostrar(&ctx, "📝");
+    let ancho_tras_una_corta = ancho_de_la_nube_tras_mostrar(&ctx, largo);
+    assert!(
+        ancho_tras_una_corta >= ancho_de_referencia - 1.0,
+        "la nube del texto largo mide {ancho_tras_una_corta} tras una corta y {ancho_de_referencia} \
+         sin ella: ha heredado el ancho de la anterior"
+    );
+    assert!(
+        ancho_de_referencia > 150.0,
+        "calibración: el texto largo ocupa más que unas pocas letras ({ancho_de_referencia})"
+    );
+}
+
+/// Un nodo con prioridad alta y notas, para mirar sus iconos.
+fn aplicacion_con_nodo_de_iconos() -> (
+    crate::aplicacion::AplicacionMapaMental,
+    egui::Context,
+    uuid::Uuid,
+) {
+    let (mut app, ctx, a, _b) = lienzo_preparado();
+    {
+        let proyecto = app.mapa.proyecto_para_editar();
+        proyecto.fijar_prioridad(a, crate::model::PrioridadNodo::Alta);
+        proyecto.fijar_revision(a, crate::model::EstadoRevision::PendienteRevision);
+        proyecto.nodes.get_mut(&a).expect("A").notes = "Una nota".to_string();
+    }
+    app.lienzo.indice_espacial_del_lienzo.invalidar();
+    (app, ctx, a)
+}
+
+/// La zona en pantalla de un icono de un nodo, con la cámara de la aplicación.
+fn zona_en_pantalla(
+    app: &crate::aplicacion::AplicacionMapaMental,
+    id: uuid::Uuid,
+    icono: crate::ui::canvas::IconoDelNodo,
+) -> egui::Rect {
+    use crate::ui::canvas::{calcular_indicadores_del_nodo, zonas_de_los_iconos};
+    let nodo = &app.mapa.proyecto.nodes[&id];
+    let zoom = app.lienzo.vista.zoom;
+    let (ancho, alto) = crate::layout::estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
+    let caja =
+        egui::Rect::from_center_size(centro_en_pantalla(app, id), egui::vec2(ancho, alto) * zoom);
+    let indicadores = calcular_indicadores_del_nodo(nodo.priority, nodo.review_status);
+    zonas_de_los_iconos(
+        caja,
+        zoom,
+        &indicadores,
+        !nodo.notes.is_empty(),
+        egui::vec2(16.0, 16.0) * zoom,
+    )
+    .into_iter()
+    .find(|z| z.icono == icono)
+    .expect("el icono tiene zona")
+    .caja
+}
+
+/// Pasa el ratón por un punto y devuelve lo pintado en el segundo fotograma.
+fn pasar_el_raton(
+    app: &mut crate::aplicacion::AplicacionMapaMental,
+    ctx: &egui::Context,
+    punto: egui::Pos2,
+    eventos_extra: Vec<egui::Event>,
+) -> Vec<String> {
+    let mut eventos = vec![egui::Event::PointerMoved(punto)];
+    eventos.extend(eventos_extra);
+    fotograma_con_menu_contextual(app, ctx, eventos.clone());
+    fotograma_con_menu_contextual(app, ctx, vec![egui::Event::PointerMoved(punto)])
+}
+
+/// Encima de cada icono aparece su explicación, en los seis idiomas (P4-A, P4-D).
+#[test]
+fn cada_icono_explica_lo_que_significa_en_los_seis_idiomas() {
+    use crate::model::{EstadoRevision, PrioridadNodo};
+    use crate::textos::{sin_dos_puntos, Idioma, Texto};
+    use crate::ui::canvas::IconoDelNodo;
+
+    for idioma in Idioma::TODOS {
+        let esperado = [
+            (
+                IconoDelNodo::Prioridad,
+                format!(
+                    "{}: {}",
+                    sin_dos_puntos(Texto::InspectorPrioridad.en(idioma)),
+                    PrioridadNodo::Alta.nombre_para_interfaz(idioma)
+                ),
+            ),
+            (
+                IconoDelNodo::Revision,
+                format!(
+                    "{}: {}",
+                    sin_dos_puntos(Texto::InspectorControlHumano.en(idioma)),
+                    EstadoRevision::PendienteRevision.nombre_para_interfaz(idioma)
+                ),
+            ),
+            (
+                IconoDelNodo::Notas,
+                Texto::IconoTieneNotas.en(idioma).to_string(),
+            ),
+        ];
+        for (icono, texto) in esperado {
+            let (mut app, ctx, a) = aplicacion_con_nodo_de_iconos();
+            app.presentacion.preferencias.idioma = idioma;
+            let punto = zona_en_pantalla(&app, a, icono).center();
+            let pintado = pasar_el_raton(&mut app, &ctx, punto, Vec::new());
+            assert!(
+                pintado.iter().any(|t| t == &texto),
+                "en {idioma:?}, encima de {icono:?} no aparece «{texto}». Pintó: {pintado:?}"
+            );
+        }
+
+        let (mut app, ctx, a) = aplicacion_con_nodo_de_iconos();
+        app.presentacion.preferencias.idioma = idioma;
+        let estado = app.mapa.proyecto.nodes[&a].status;
+        let texto = format!(
+            "{}: {}",
+            sin_dos_puntos(Texto::InspectorEstado.en(idioma)),
+            estado.nombre_para_interfaz(idioma)
+        );
+        let punto = zona_en_pantalla(&app, a, IconoDelNodo::Estado).center();
+        let pintado = pasar_el_raton(&mut app, &ctx, punto, Vec::new());
+        assert!(
+            pintado.iter().any(|t| t == &texto),
+            "en {idioma:?}, encima del estado no aparece «{texto}». Pintó: {pintado:?}"
+        );
+    }
+}
+
+/// Fuera de los iconos no aparece nada, ni mientras se arrastra (P4-A, P4-C).
+#[test]
+fn fuera_de_los_iconos_o_arrastrando_no_hay_texto_emergente() {
+    use crate::textos::{sin_dos_puntos, Idioma, Texto};
+    use crate::ui::canvas::IconoDelNodo;
+
+    let prioridad = sin_dos_puntos(Texto::InspectorPrioridad.en(Idioma::Espanol)).to_string();
+    let notas = Texto::IconoTieneNotas.en(Idioma::Espanol);
+    let hay_emergente = |pintado: &[String]| {
+        pintado
+            .iter()
+            .any(|t| t.starts_with(&format!("{prioridad}: ")) || t == notas)
+    };
+
+    let (mut app, ctx, a) = aplicacion_con_nodo_de_iconos();
+    let centro = centro_en_pantalla(&app, a) + egui::vec2(0.0, 6.0);
+    let pintado = pasar_el_raton(&mut app, &ctx, centro, Vec::new());
+    assert!(
+        !hay_emergente(&pintado),
+        "en medio de la tarjeta no hay icono: {pintado:?}"
+    );
+
+    let (mut app, ctx, a) = aplicacion_con_nodo_de_iconos();
+    let punto = zona_en_pantalla(&app, a, IconoDelNodo::Prioridad).center();
+    // Un arrastre de verdad: el botón principal se pulsa sobre la tarjeta y sigue pulsado.
+    let pulsar = egui::Event::PointerButton {
+        pos: punto,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    };
+    let pintado = pasar_el_raton(&mut app, &ctx, punto, vec![pulsar]);
+    assert!(
+        app.lienzo.vista.nodo_arrastrado.is_some(),
+        "calibración: el nodo tenía que quedar agarrado"
+    );
+    assert!(
+        !hay_emergente(&pintado),
+        "arrastrando no puede aparecer: {pintado:?}"
+    );
+}
+
+/// La ayuda de cada idioma explica los textos emergentes de los iconos (P4-D).
+#[test]
+fn la_ayuda_explica_los_textos_emergentes_de_los_iconos() {
+    use crate::textos::{Idioma, Texto};
+    use crate::ui::help_system::TemaDeAyuda;
+
+    for idioma in Idioma::TODOS {
+        let guia = TemaDeAyuda::EstadosYProgreso.guia_completa(idioma);
+        let texto = Texto::IconoTieneNotas.en(idioma);
+        assert!(
+            guia.contains(texto),
+            "en {idioma:?}, la guía de estados no explica los textos emergentes («{texto}»)"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// ATAJO-INSERT — `Insert` añade un hijo, como `Tab`
+// ---------------------------------------------------------------------------------------------
+
+/// `Insert` añade un hijo al seleccionado con el teclado libre, y no mientras se escribe (I-A).
+#[test]
+fn insert_anade_un_hijo_solo_con_el_teclado_libre() {
+    let (mut app, ctx, a, _b) = aplicacion_con_mapa_para_soltar();
+    app.mapa.nodo_seleccionado = Some(a);
+    let hijos = app.mapa.proyecto.nodes[&a].children.len();
+    fotograma_con_teclas(
+        &mut app,
+        &ctx,
+        vec![pulsacion(egui::Key::Insert, egui::Modifiers::NONE)],
+        egui::Modifiers::NONE,
+    );
+    assert_eq!(
+        app.mapa.proyecto.nodes[&a].children.len(),
+        hijos + 1,
+        "con el teclado libre, Insert añade un hijo"
+    );
+
+    let (mut app, ctx, a, _b) = aplicacion_con_mapa_para_soltar();
+    app.mapa.nodo_seleccionado = Some(a);
+    ctx.memory_mut(|m| m.request_focus(crate::ui::sidebar::id_del_buscador()));
+    fotograma_con_teclas(&mut app, &ctx, Vec::new(), egui::Modifiers::NONE);
+    let hijos = app.mapa.proyecto.nodes[&a].children.len();
+    fotograma_con_teclas(
+        &mut app,
+        &ctx,
+        vec![pulsacion(egui::Key::Insert, egui::Modifiers::NONE)],
+        egui::Modifiers::NONE,
+    );
+    assert_eq!(
+        app.mapa.proyecto.nodes[&a].children.len(),
+        hijos,
+        "escribiendo en un campo, Insert no puede tocar el mapa"
+    );
+}
+
+/// Menú «Edición», ventana de atajos y menú contextual anuncian `Insert` traducido (I-B).
+#[test]
+fn los_menus_y_la_tabla_anuncian_insert_junto_a_tab() {
+    use crate::textos::{Idioma, Texto};
+
+    for idioma in Idioma::TODOS {
+        let tecla = Texto::TeclaInsertar.en(idioma);
+        let hijo = Texto::EdicionAnadirHijo.en(idioma);
+
+        let fila = crate::ui::ai_modal::ATAJOS_DE_TECLADO
+            .iter()
+            .find(|(_, que_hace)| *que_hace == Texto::ModalAnadirNodoHijoAl)
+            .map(|(t, _)| t.rotulo(idioma))
+            .expect("la tabla tiene la fila de añadir hijo");
+        assert!(
+            fila.contains("Tab") && fila.contains(tecla),
+            "en {idioma:?}, la tabla de atajos dice «{fila}» para añadir hijo"
+        );
+
+        let (mut app, _ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+        app.presentacion.preferencias.idioma = idioma;
+        let menu = crate::arnes_interfaz::textos_de(&mut app, crate::ui::toolbar::menu_edicion);
+        assert!(
+            menu.iter()
+                .any(|t| t.contains(hijo) && t.contains("Tab") && t.contains(tecla)),
+            "en {idioma:?}, el menú «Edición» no anuncia «{tecla}». Pintó: {menu:?}"
+        );
+
+        let (mut app, ctx, a, _b) = lienzo_preparado();
+        app.presentacion.preferencias.idioma = idioma;
+        let sobre_a = centro_en_pantalla(&app, a);
+        clic_derecho(&mut app, &ctx, sobre_a, sobre_a);
+        fotograma_con_menu_contextual(&mut app, &ctx, Vec::new());
+        let contextual = fotograma_con_menu_contextual(&mut app, &ctx, Vec::new());
+        assert!(
+            contextual
+                .iter()
+                .any(|t| t.contains(hijo) && t.contains(tecla)),
+            "en {idioma:?}, el menú contextual no anuncia «{tecla}». Pintó: {contextual:?}"
+        );
+    }
+}
+
+/// La guía de atajos de cada idioma nombra `Insert` traducido (I-C).
+#[test]
+fn la_guia_de_atajos_nombra_insert_en_los_seis_idiomas() {
+    use crate::textos::{Idioma, Texto};
+    use crate::ui::help_system::TemaDeAyuda;
+
+    for idioma in Idioma::TODOS {
+        let tecla = format!("`{}`", Texto::TeclaInsertar.en(idioma));
+        assert!(
+            TemaDeAyuda::AtajosYCreacionNodos
+                .guia_completa(idioma)
+                .contains(&tecla),
+            "en {idioma:?}, la guía de atajos no nombra {tecla}"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// PH-1007-1 a PH-1007-3 — Correcciones de la 0.13.0
+// ---------------------------------------------------------------------------------------------
+
+/// «Hacer hermano» cuelga el nodo del padre del destino, justo detrás de él (H-A).
+#[test]
+fn hacer_hermano_lo_deja_detras_del_destino_con_su_mismo_padre() {
+    let (mut proyecto, raiz, a, b, a1) = mapa_para_soltar();
+    // B pasa a ser hermano de A1, bajo A.
+    proyecto
+        .hacer_hermano_de(b, a1)
+        .expect("B puede ser hermano de A1");
+    assert_eq!(proyecto.nodes[&b].parent_id, Some(a));
+    assert_eq!(
+        proyecto.nodes[&a].children,
+        vec![a1, b],
+        "B va justo detrás de A1"
+    );
+    assert!(!proyecto.nodes[&raiz].children.contains(&b));
+    proyecto.validar_estructura().expect("árbol válido");
+
+    // Entre nodos que ya son hermanos ya no se reordena: se rechaza (PH-1007-7, más abajo).
+
+    // Detrás del destino, no al final: A1 pasa a hermano de A y queda entre A y B.
+    let (mut proyecto, raiz, a, b, a1) = mapa_para_soltar();
+    proyecto
+        .hacer_hermano_de(a1, a)
+        .expect("A1 puede ser hermano de A");
+    assert_eq!(
+        proyecto.nodes[&raiz].children,
+        vec![a, a1, b],
+        "A1 tiene que ir justo detrás de A, no al final"
+    );
+}
+
+/// «Hacer hermano» rechaza, con su motivo, lo que rompería el árbol (H-A).
+#[test]
+fn hacer_hermano_rechaza_la_raiz_y_los_ciclos() {
+    use crate::model::MovimientoRechazado;
+
+    let (mut proyecto, raiz, a, b, a1) = mapa_para_soltar();
+    let a11 = proyecto.anadir_hijo(a1, "A11");
+    let antes = serde_json::to_string(&proyecto.nodes).expect("serializable");
+    for (nodo, destino, motivo) in [
+        (b, raiz, MovimientoRechazado::DestinoSinPadre),
+        (raiz, a, MovimientoRechazado::EsLaRaiz),
+        (b, b, MovimientoRechazado::SobreSiMismo),
+        (a, a11, MovimientoRechazado::BajoSuDescendencia),
+        // PH-1007-7: A y B ya cuelgan de la raíz. Antes se aceptaba y solo cambiaba el orden; el
+        // menú lo ofrece deshabilitado, igual que «Hacer hijo» cuando ya lo es.
+        (a, b, MovimientoRechazado::YaSonHermanos),
+    ] {
+        assert_eq!(proyecto.hacer_hermano_de(nodo, destino), Err(motivo));
+    }
+    assert_eq!(
+        serde_json::to_string(&proyecto.nodes).expect("serializable"),
+        antes,
+        "un movimiento rechazado no puede tocar nada"
+    );
+}
+
+/// El menú de suelta ofrece «Hacer hermano» y lo aplica (H-A).
+#[test]
+fn el_menu_de_suelta_ofrece_hacer_hermano() {
+    use crate::textos::{Idioma, Texto};
+    use crate::ui::suelta_de_nodo::{resolver, OpcionDeSuelta, SueltaPendiente};
+
+    let (mut proyecto, _, a, b, a1) = mapa_para_soltar();
+    let suelta = SueltaPendiente {
+        arrastrado: b,
+        destino: a1,
+        posicion_original: proyecto.nodes[&b].pos,
+        punto: proyecto.nodes[&a1].pos,
+        en_pantalla: [0.0, 0.0],
+    };
+    resolver(&mut proyecto, &suelta, OpcionDeSuelta::HacerHermano).expect("posible");
+    assert_eq!(proyecto.nodes[&b].parent_id, Some(a));
+
+    for idioma in Idioma::TODOS {
+        let (mut app, ctx, _a, b) = aplicacion_con_mapa_para_soltar();
+        app.presentacion.preferencias.idioma = idioma;
+        app.lienzo.vista.nodo_arrastrado = Some(b);
+        app.mapa.proyecto.nodes.get_mut(&b).expect("B").pos = [410.0, 5.0];
+        fotograma_del_lienzo(&mut app, &ctx, Vec::new());
+        let textos = fotograma_del_lienzo(&mut app, &ctx, Vec::new());
+        let rotulo = Texto::SueltaHacerHermano.en(idioma);
+        assert!(
+            textos.iter().any(|t| t.contains(rotulo)),
+            "en {idioma:?}, el menú de suelta no ofrece «{rotulo}». Pintó: {textos:?}"
+        );
+    }
+}
+
+/// **PH-1007-7** — Entre dos hermanos el menú de suelta no ofrece «Hacer hermano», igual que no
+/// ofrece «Hacer hijo» cuando ya lo es; y el botón deshabilitado explica su propio motivo.
+#[test]
+fn ph_1007_7_entre_hermanos_no_se_ofrece_hacer_hermano() {
+    use crate::textos::{Idioma, Texto};
+    use crate::ui::suelta_de_nodo::{
+        explicacion_si_no_se_puede, opciones_disponibles, OpcionDeSuelta, SueltaPendiente,
+    };
+
+    let (proyecto, _raiz, a, b, a1) = mapa_para_soltar();
+    let suelta = |arrastrado: uuid::Uuid, destino: uuid::Uuid| SueltaPendiente {
+        arrastrado,
+        destino,
+        posicion_original: proyecto.nodes[&arrastrado].pos,
+        punto: proyecto.nodes[&destino].pos,
+        en_pantalla: [0.0, 0.0],
+    };
+    let entre_hermanos = opciones_disponibles(&proyecto, &suelta(a, b));
+    assert!(!entre_hermanos.hermano, "A y B ya son hermanos");
+    assert!(entre_hermanos.hijo, "pero A sí puede pasar a ser hijo de B");
+    assert!(
+        opciones_disponibles(&proyecto, &suelta(b, a1)).hermano,
+        "calibración: B, que no es hermano de A1, sí puede serlo"
+    );
+    assert!(
+        !opciones_disponibles(&proyecto, &suelta(a1, a)).hijo,
+        "calibración: A1 ya es hijo de A, y «Hacer hijo» ya salía deshabilitado"
+    );
+
+    assert_eq!(
+        explicacion_si_no_se_puede(OpcionDeSuelta::HacerHermano),
+        Some(Texto::SueltaNoSePuedeHacerHermano),
+        "«Hacer hermano» deshabilitado explica su propio motivo, no el de «Hacer hijo»"
+    );
+    for idioma in Idioma::TODOS {
+        let hermano = Texto::SueltaNoSePuedeHacerHermano.en(idioma);
+        assert!(
+            !hermano.is_empty(),
+            "en {idioma:?}, la explicación está vacía"
+        );
+        assert_ne!(
+            hermano,
+            Texto::SueltaNoSePuedeHacerHijo.en(idioma),
+            "en {idioma:?}, la explicación de «Hacer hermano» copia la de «Hacer hijo»"
+        );
+        if idioma != Idioma::Espanol {
+            assert_ne!(
+                hermano,
+                Texto::SueltaNoSePuedeHacerHermano.en(Idioma::Espanol),
+                "en {idioma:?}, la explicación no está traducida"
+            );
+        }
+    }
+}
+
+/// La interfaz no admite una conexión cruzada que repita la jerarquía u otra conexión (E-A).
+///
+/// El modelo sí la admite (lo necesitan los importadores: el formato publicado para los agentes
+/// trae una relación raíz → hijo); lo que se comprueba es la pregunta que hace la interfaz.
+#[test]
+fn la_interfaz_no_admite_conexiones_que_repitan_la_jerarquia_ni_otra_conexion() {
+    let (mut proyecto, raiz, a, b, a1) = mapa_para_soltar();
+    assert!(
+        !proyecto.conexion_cruzada_admitida(a1, a),
+        "hijo → padre no"
+    );
+    assert!(
+        !proyecto.conexion_cruzada_admitida(raiz, a),
+        "padre → hijo no"
+    );
+    assert!(
+        !proyecto.conexion_cruzada_admitida(a, a),
+        "consigo mismo no"
+    );
+    assert!(
+        proyecto.conexion_cruzada_admitida(a1, b),
+        "nodos sin rama directa sí"
+    );
+    assert!(proyecto
+        .anadir_conexion_cruzada(a1, b, "", Default::default())
+        .is_some());
+    assert!(
+        !proyecto.conexion_cruzada_admitida(a1, b),
+        "la misma pareja dos veces no"
+    );
+    assert!(!proyecto.conexion_cruzada_admitida(b, a1), "ni al revés");
+    assert!(
+        proyecto.conexion_cruzada_admitida(raiz, a1),
+        "abuelo → nieto sí"
+    );
+    assert!(
+        proyecto
+            .anadir_conexion_cruzada(a1, a, "contiene", Default::default())
+            .is_some(),
+        "el modelo sigue aceptando lo que trae un archivo"
+    );
+}
+
+/// El cuadro de conexión cruzada tampoco crea una conexión hijo → padre (E-A).
+#[test]
+fn el_cuadro_de_conexion_cruzada_no_duplica_la_jerarquia() {
+    let (mut app, _ctx, a, _b) = aplicacion_con_mapa_para_soltar();
+    let a1 = app.mapa.proyecto.nodes[&a].children[0];
+    app.lienzo.conexion.origen = Some(a1);
+    app.lienzo.conexion.destino = Some(a);
+    app.presentacion.ventanas.modal_conexion_cruzada = true;
+    let rotulo = crate::textos::Texto::ModalCrearRelacion.en(app.idioma());
+    assert!(
+        crate::arnes_interfaz::hacer_clic_en_texto(
+            &mut app,
+            |app, ui| crate::ui::ai_modal::dibujar_botones_de_conexion_para_prueba(app, ui, a1),
+            rotulo
+        ),
+        "no se encontró el botón «{rotulo}»"
+    );
+    assert!(
+        app.mapa.proyecto.connections.is_empty(),
+        "el cuadro creó una conexión que repite la jerarquía"
+    );
+}
+
+/// Al soltar un hijo sobre su padre, «Conectar con enlace» no crea nada y lo dice (E-A).
+#[test]
+fn conectar_un_hijo_con_su_padre_desde_la_suelta_no_hace_nada() {
+    use crate::ui::suelta_de_nodo::{resolver, OpcionDeSuelta, SueltaPendiente};
+
+    let (mut proyecto, _, a, _, a1) = mapa_para_soltar();
+    let original = proyecto.nodes[&a1].pos;
+    let suelta = SueltaPendiente {
+        arrastrado: a1,
+        destino: a,
+        posicion_original: original,
+        punto: proyecto.nodes[&a].pos,
+        en_pantalla: [0.0, 0.0],
+    };
+    assert!(!proyecto.conexion_cruzada_admitida(a1, a));
+    assert!(resolver(&mut proyecto, &suelta, OpcionDeSuelta::Conectar).is_err());
+    assert!(proyecto.connections.is_empty(), "no hay línea duplicada");
+    assert_eq!(
+        proyecto.nodes[&a1].pos, original,
+        "y el nodo vuelve a su sitio"
+    );
+}
+
+/// Cada rol tiene símbolo, y es el mismo con el que empieza su nombre en el inspector (R-A).
+#[test]
+fn el_simbolo_de_cada_rol_es_el_de_su_nombre() {
+    use crate::model::RolNodo;
+    use crate::textos::Idioma;
+
+    for rol in RolNodo::TODOS {
+        assert!(!rol.simbolo().is_empty(), "{rol:?} no tiene símbolo");
+        for idioma in Idioma::TODOS {
+            assert!(
+                rol.nombre_para_interfaz(idioma).starts_with(rol.simbolo()),
+                "{rol:?} en {idioma:?}: el símbolo «{}» no encabeza «{}»",
+                rol.simbolo(),
+                rol.nombre_para_interfaz(idioma)
+            );
+        }
+    }
+}
+
+/// La tarjeta pinta el icono de su rol y explica el rol al pasar el ratón (R-A).
+#[test]
+fn la_tarjeta_muestra_el_rol_y_lo_explica() {
+    use crate::model::RolNodo;
+    use crate::textos::{sin_dos_puntos, Idioma, Texto};
+    use crate::ui::canvas::IconoDelNodo;
+
+    for idioma in Idioma::TODOS {
+        let (mut app, ctx, a) = aplicacion_con_nodo_de_iconos();
+        app.presentacion.preferencias.idioma = idioma;
+        app.mapa
+            .proyecto_para_editar()
+            .fijar_rol(a, RolNodo::RecursoHerramienta);
+        let punto = zona_en_pantalla(&app, a, IconoDelNodo::Rol).center();
+        let pintado = pasar_el_raton(&mut app, &ctx, punto, Vec::new());
+        assert!(
+            pintado
+                .iter()
+                .any(|t| t == RolNodo::RecursoHerramienta.simbolo()),
+            "en {idioma:?}, la tarjeta no pinta el icono del rol. Pintó: {pintado:?}"
+        );
+        let texto = format!(
+            "{}: {}",
+            sin_dos_puntos(Texto::InspectorRol.en(idioma)),
+            RolNodo::RecursoHerramienta.nombre_para_interfaz(idioma)
+        );
+        assert!(
+            pintado.iter().any(|t| t == &texto),
+            "en {idioma:?}, encima del rol no aparece «{texto}». Pintó: {pintado:?}"
+        );
+    }
+}
+
+/// El rol se cambia desde el clic derecho, solo marcando cambios reales (R-B).
+#[test]
+fn el_rol_se_cambia_desde_el_menu_contextual() {
+    use crate::model::RolNodo;
+    use crate::textos::{sin_dos_puntos, Idioma, Texto};
+    use crate::ui::menu_contextual_nodo::{aplicar, AccionDelMenu};
+
+    let (mut app, _ctx, a, _b) = aplicacion_con_mapa_para_soltar();
+    let actual = app.mapa.proyecto.nodes[&a].role;
+    let revision = app.mapa.proyecto.revision();
+    assert!(!app.mapa.proyecto_para_editar().fijar_rol(a, actual));
+    assert_eq!(
+        app.mapa.proyecto.revision(),
+        revision,
+        "el mismo rol no es un cambio"
+    );
+    aplicar(&mut app, a, AccionDelMenu::Rol(RolNodo::HipotesisDuda));
+    assert_eq!(app.mapa.proyecto.nodes[&a].role, RolNodo::HipotesisDuda);
+
+    for idioma in Idioma::TODOS {
+        let (mut app, ctx, a, _b) = lienzo_preparado();
+        app.presentacion.preferencias.idioma = idioma;
+        let sobre_a = centro_en_pantalla(&app, a);
+        clic_derecho(&mut app, &ctx, sobre_a, sobre_a);
+        fotograma_con_menu_contextual(&mut app, &ctx, Vec::new());
+        let textos = fotograma_con_menu_contextual(&mut app, &ctx, Vec::new());
+        let rotulo = sin_dos_puntos(Texto::InspectorRol.en(idioma));
+        assert!(
+            textos.iter().any(|t| t.contains(rotulo)),
+            "en {idioma:?}, el clic derecho no ofrece el submenú «{rotulo}». Pintó: {textos:?}"
+        );
+    }
+}
+
+/// Los títulos raíz de los ejemplos no empiezan por un emoji que parezca un icono (R-C).
+#[test]
+fn los_titulos_de_los_ejemplos_no_llevan_emoji() {
+    use crate::textos::{Idioma, Texto};
+
+    for idioma in Idioma::TODOS {
+        for clave in [
+            Texto::EjemploAhorcadoRaizTitulo,
+            Texto::EjemploNegocioRaizTitulo,
+        ] {
+            let titulo = clave.en(idioma);
+            let primero = titulo.chars().next().expect("título no vacío");
+            assert!(
+                primero.is_alphanumeric(),
+                "en {idioma:?}, «{titulo}» empieza por «{primero}», que parece un icono"
+            );
+        }
+    }
+}
+
+/// La ayuda explica «Hacer hermano» y el icono de rol en los seis idiomas (G).
+#[test]
+fn la_ayuda_explica_hacer_hermano_y_el_icono_de_rol() {
+    use crate::textos::{sin_dos_puntos, Idioma, Texto};
+    use crate::ui::help_system::TemaDeAyuda;
+
+    for idioma in Idioma::TODOS {
+        let disposicion = TemaDeAyuda::ModosDeDisposicion.guia_completa(idioma);
+        let hermano = Texto::SueltaHacerHermano.en(idioma);
+        assert!(
+            disposicion.contains(hermano),
+            "en {idioma:?}, la guía de disposición no explica «{hermano}»"
+        );
+        let estados = TemaDeAyuda::EstadosYProgreso.guia_completa(idioma);
+        let rol = sin_dos_puntos(Texto::InspectorRol.en(idioma));
+        assert!(
+            estados.contains(&format!("**{rol}**")),
+            "en {idioma:?}, la guía de iconos no menciona el **{rol}**"
+        );
+    }
+}
+
+/// Los rótulos sin sus dos puntos no conservan ningún signo de dos puntos, tampoco el de ancho
+/// completo «：» del chino (defecto propio de PEND-2026-09-30-4: salía «状态：: …»).
+///
+/// La comprobación no usa `sin_dos_puntos` para calcular lo esperado: así no puede compartir su
+/// error.
+#[test]
+fn los_rotulos_sin_dos_puntos_no_conservan_ningun_signo_de_dos_puntos() {
+    use crate::textos::{sin_dos_puntos, Idioma, Texto};
+
+    for idioma in Idioma::TODOS {
+        for clave in [
+            Texto::InspectorEstado,
+            Texto::InspectorPrioridad,
+            Texto::InspectorControlHumano,
+            Texto::InspectorRol,
+        ] {
+            let limpio = sin_dos_puntos(clave.en(idioma));
+            let ultimo = limpio.chars().last().expect("rótulo no vacío");
+            assert!(
+                ![':', '：'].contains(&ultimo) && !ultimo.is_whitespace(),
+                "en {idioma:?}, «{limpio}» conserva «{ultimo}» al final"
+            );
+        }
+    }
+}
+
+/// Un fotograma de la interfaz real, en el orden del bucle de la aplicación: barra, inspector,
+/// lienzo y los menús que se atienden después de él.
+///
+/// # Devuelve
+/// Cada texto pintado con su rectángulo en pantalla, para poder pulsar donde se ve.
+fn fotograma_de_la_interfaz_real(
+    app: &mut crate::aplicacion::AplicacionMapaMental,
+    ctx: &egui::Context,
+    eventos: Vec<egui::Event>,
+) -> Vec<(String, egui::Rect)> {
+    /// Pantalla en la que el inspector tapa parte del mapa de prueba.
+    const PANTALLA: egui::Vec2 = egui::vec2(1600.0, 1000.0);
+    fn recoger(forma: &egui::Shape, textos: &mut Vec<(String, egui::Rect)>) {
+        match forma {
+            egui::Shape::Text(texto) => textos.push((
+                texto.galley.text().to_string(),
+                texto.galley.rect.translate(texto.pos.to_vec2()),
+            )),
+            egui::Shape::Vec(formas) => formas.iter().for_each(|f| recoger(f, textos)),
+            _ => {}
+        }
+    }
+    let entrada = egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, PANTALLA)),
+        events: eventos,
+        ..Default::default()
+    };
+    let mut salida = ctx.run_ui(entrada, |ui| {
+        crate::ui::toolbar::dibujar_barra_de_herramientas(app, ui);
+        crate::ui::sidebar::dibujar_panel_lateral(app, ui);
+        crate::ui::canvas::dibujar_lienzo(app, ui);
+        crate::ui::suelta_de_nodo::atender_la_suelta(app, ui.ctx());
+        crate::ui::menu_contextual_nodo::atender_el_menu_contextual(app, ui.ctx());
+    });
+    let mut textos = Vec::new();
+    for forma in &salida.shapes {
+        recoger(&forma.shape, &mut textos);
+    }
+    salida.textures_delta.clear();
+    textos
+}
+
+/// Dónde se pintó por primera vez un texto que contiene `buscado`.
+fn donde_se_ve(textos: &[(String, egui::Rect)], buscado: &str) -> egui::Pos2 {
+    textos
+        .iter()
+        .find(|(texto, _)| texto.contains(buscado))
+        .map(|(_, caja)| caja.center())
+        .unwrap_or_else(|| panic!("«{buscado}» no se ve en pantalla"))
+}
+
+/// El botón principal, pulsado o soltado en `punto`.
+fn boton_principal(punto: egui::Pos2, pressed: bool) -> egui::Event {
+    egui::Event::PointerButton {
+        pos: punto,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::default(),
+    }
+}
+
+/// La interfaz real con el mapa de prueba, A seleccionado, y A1 movido para que su título quede
+/// justo en el punto que devuelve `donde` a partir de lo pintado.
+fn interfaz_con_a1_detras_de(
+    donde: impl Fn(&[(String, egui::Rect)]) -> egui::Pos2,
+) -> (
+    crate::aplicacion::AplicacionMapaMental,
+    egui::Context,
+    uuid::Uuid,
+    uuid::Uuid,
+    egui::Pos2,
+) {
+    let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    let (proyecto, _raiz, a, _b, a1) = mapa_para_soltar();
+    app.mapa.proyecto = proyecto;
+    app.mapa.nodo_seleccionado = Some(a);
+    app.lienzo.indice_espacial_del_lienzo.invalidar();
+    fotograma_de_la_interfaz_real(&mut app, &ctx, Vec::new());
+    let textos = fotograma_de_la_interfaz_real(&mut app, &ctx, Vec::new());
+    let objetivo = donde(&textos);
+    let desfase = (objetivo - donde_se_ve(&textos, "💡 A1")) / app.lienzo.vista.zoom;
+    {
+        let nodo = app.mapa.proyecto.nodes.get_mut(&a1).expect("A1");
+        nodo.pos[0] += desfase.x;
+        nodo.pos[1] += desfase.y;
+    }
+    app.lienzo.indice_espacial_del_lienzo.invalidar();
+    let textos =
+        fotograma_de_la_interfaz_real(&mut app, &ctx, vec![egui::Event::PointerMoved(objetivo)]);
+    assert!(
+        donde_se_ve(&textos, "💡 A1").distance(objetivo) < 1.0,
+        "calibración: el título de A1 queda justo detrás del punto que se va a pulsar"
+    );
+    (app, ctx, a, a1, objetivo)
+}
+
+/// Pulsa y suelta en `punto`, en dos fotogramas, como una persona.
+fn pulsar_y_soltar(
+    app: &mut crate::aplicacion::AplicacionMapaMental,
+    ctx: &egui::Context,
+    punto: egui::Pos2,
+) -> Vec<(String, egui::Rect)> {
+    fotograma_de_la_interfaz_real(app, ctx, vec![boton_principal(punto, true)]);
+    fotograma_de_la_interfaz_real(app, ctx, vec![boton_principal(punto, false)]);
+    fotograma_de_la_interfaz_real(app, ctx, Vec::new())
+}
+
+/// **PH-1007-6** — Pulsar un desplegable del inspector con un nodo oculto detrás del panel no
+/// selecciona ese nodo.
+///
+/// El inspector comparte capa con el lienzo y el mapa sigue detrás de él: el lienzo atendía la
+/// pulsación porque el nodo estaba bajo el puntero, aunque no se viera. Es el caso que siguió
+/// fallando tras el primer arreglo, que solo miraba las capas de encima.
+#[test]
+fn ph_1007_6_pulsar_el_inspector_no_selecciona_un_nodo_oculto_detras() {
+    use crate::textos::Idioma;
+    let media = crate::model::PrioridadNodo::Media.nombre_para_interfaz(Idioma::Espanol);
+    let (mut app, ctx, a, _a1, boton) =
+        interfaz_con_a1_detras_de(|textos| donde_se_ve(textos, media));
+    pulsar_y_soltar(&mut app, &ctx, boton);
+    assert_eq!(
+        app.mapa.nodo_seleccionado,
+        Some(a),
+        "pulsar el desplegable de Prioridad no puede seleccionar A1, oculto detrás del inspector"
+    );
+}
+
+/// **PH-1007-6** — Elegir un valor en la lista real de un desplegable del inspector, con un nodo
+/// detrás de la opción, cambia el nodo seleccionado y no la selección.
+#[test]
+fn ph_1007_6_elegir_en_el_desplegable_real_cambia_el_nodo_seleccionado() {
+    use crate::model::PrioridadNodo;
+    use crate::textos::Idioma;
+    let media = PrioridadNodo::Media.nombre_para_interfaz(Idioma::Espanol);
+    let critica = PrioridadNodo::Critica.nombre_para_interfaz(Idioma::Espanol);
+
+    // Primero se abre la lista en una sonda para saber dónde sale la opción.
+    let (mut sonda, ctx_sonda) = crate::arnes_interfaz::aplicacion_de_prueba();
+    let (proyecto, _raiz, a, _b, _a1) = mapa_para_soltar();
+    sonda.mapa.proyecto = proyecto;
+    sonda.mapa.nodo_seleccionado = Some(a);
+    fotograma_de_la_interfaz_real(&mut sonda, &ctx_sonda, Vec::new());
+    let textos = fotograma_de_la_interfaz_real(&mut sonda, &ctx_sonda, Vec::new());
+    let textos = pulsar_y_soltar(&mut sonda, &ctx_sonda, donde_se_ve(&textos, media));
+    let opcion = textos
+        .iter()
+        .rev()
+        .find(|(texto, _)| texto.contains(critica))
+        .map(|(_, caja)| caja.center())
+        .expect("la lista del desplegable está abierta");
+
+    // Después, en limpio, A1 detrás de esa opción.
+    let (mut app, ctx, a, a1, _) = interfaz_con_a1_detras_de(|_| opcion);
+    let boton = donde_se_ve(
+        &fotograma_de_la_interfaz_real(&mut app, &ctx, Vec::new()),
+        media,
+    );
+    pulsar_y_soltar(&mut app, &ctx, boton);
+    pulsar_y_soltar(&mut app, &ctx, opcion);
+    assert_eq!(
+        app.mapa.nodo_seleccionado,
+        Some(a),
+        "la selección no se mueve"
+    );
+    assert_eq!(
+        app.mapa.proyecto.nodes[&a].priority,
+        PrioridadNodo::Critica,
+        "el valor va al nodo seleccionado"
+    );
+    assert_eq!(
+        app.mapa.proyecto.nodes[&a1].priority,
+        PrioridadNodo::Media,
+        "y no al que había detrás"
+    );
+}
+
+/// **PH-1007-6** — El lienzo solo responde a la ventana donde se pulsó: pulsar en el inspector y
+/// soltar encima de un nodo del mapa no lo selecciona. Solo cuenta la ventana en la que
+/// estaba el ratón al pulsar.
+#[test]
+fn ph_1007_6_pulsar_fuera_y_soltar_en_el_mapa_no_es_un_clic() {
+    let (mut app, ctx) = crate::arnes_interfaz::aplicacion_de_prueba();
+    let (proyecto, _raiz, a, b, _a1) = mapa_para_soltar();
+    app.mapa.proyecto = proyecto;
+    app.mapa.nodo_seleccionado = Some(a);
+    app.lienzo.indice_espacial_del_lienzo.invalidar();
+    fotograma_de_la_interfaz_real(&mut app, &ctx, Vec::new());
+    let textos = fotograma_de_la_interfaz_real(&mut app, &ctx, Vec::new());
+    let en_el_inspector = donde_se_ve(&textos, "Prioridad:");
+    let sobre_b = donde_se_ve(&textos, "💡 B");
+
+    fotograma_de_la_interfaz_real(&mut app, &ctx, vec![egui::Event::PointerMoved(sobre_b)]);
+    pulsar_y_soltar(&mut app, &ctx, sobre_b);
+    assert_eq!(
+        app.mapa.nodo_seleccionado,
+        Some(b),
+        "calibración: pulsar y soltar sobre B lo selecciona"
+    );
+
+    app.mapa.nodo_seleccionado = Some(a);
+    fotograma_de_la_interfaz_real(
+        &mut app,
+        &ctx,
+        vec![
+            egui::Event::PointerMoved(en_el_inspector),
+            boton_principal(en_el_inspector, true),
+        ],
+    );
+    fotograma_de_la_interfaz_real(&mut app, &ctx, vec![egui::Event::PointerMoved(sobre_b)]);
+    fotograma_de_la_interfaz_real(&mut app, &ctx, vec![boton_principal(sobre_b, false)]);
+    fotograma_de_la_interfaz_real(&mut app, &ctx, Vec::new());
+    assert_eq!(
+        app.mapa.nodo_seleccionado,
+        Some(a),
+        "una pulsación empezada en el inspector no es un clic del mapa"
+    );
+}
+
+/// El script de preparación de Windows se puede ejecutar en Windows PowerShell 5.1.
+///
+/// PowerShell 5.1 lee un script UTF-8 **sin BOM** con la página de códigos ANSI del sistema: las
+/// tildes y las comillas tipográficas del archivo se convierten en bytes sueltos que rompen las
+/// cadenas, y el script entero no llega a analizarse («Falta la cadena en el terminador»). Pasó de
+/// verdad: la guía de clonado lo recomendaba y no arrancaba. Con la marca de orden de bytes al
+/// principio, 5.1 lo lee como UTF-8. Fuente: documentación de Microsoft, `about_Character_Encoding`.
+#[test]
+fn el_script_de_preparacion_de_windows_lleva_bom_para_powershell_5() {
+    /// La marca de orden de bytes de UTF-8.
+    const BOM_UTF8: [u8; 3] = [0xEF, 0xBB, 0xBF];
+    let script = include_bytes!("../documentacion/infraestructura/preparar-entorno.ps1");
+    assert!(
+        script.iter().any(|byte| !byte.is_ascii()),
+        "calibración: el script tiene caracteres fuera de ASCII, que es cuando el BOM hace falta"
+    );
+    assert!(
+        script.starts_with(&BOM_UTF8),
+        "preparar-entorno.ps1 tiene que empezar por el BOM de UTF-8 o PowerShell 5.1 no lo analiza"
+    );
 }

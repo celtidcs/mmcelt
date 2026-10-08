@@ -46,7 +46,8 @@ Qué componentes existen, dónde se ejecuta cada uno y cómo se comunican.
 | Modelos de IA | Nube | Fuera del alcance del proyecto | — |
 
 **No hay nada en la nube que pertenezca a MMCelt.** Ni servidor, ni base de datos, ni
-cuenta de usuario, ni telemetría.
+cuenta de usuario, ni telemetría. Lo único externo que consulta es la página pública de
+versiones de GitHub, al arrancar y si el usuario no lo ha desactivado.
 
 ---
 
@@ -79,18 +80,19 @@ los mismos archivos sin abrir consola. El retorno estructurado ocurre por el ser
 
 ## 4. Superficie de red
 
-**Cero.**
+**Una petición saliente, desactivable, y nada más.**
 
 | Comprobación | Resultado |
 |---|---|
-| Dependencias HTTP en `Cargo.toml` | Ninguna |
-| Sockets o peticiones en el código | Ninguna |
+| Dependencias HTTP en `Cargo.toml` | `ureq` (solo `rustls`), para la comprobación de versión nueva |
+| Peticiones en el código | Una: `GET` por HTTPS a `releases/latest` de GitHub al arrancar, si la opción está activa ([`servicios.md`](servicios.md#comprobación-de-versión-nueva)) |
 | Puertos abiertos | Ninguno |
-| Telemetría | Ninguna |
+| Telemetría | Ninguna: la petición no lleva datos del usuario ni del mapa |
 | Ejecución de procesos externos | Solo la CLI oficial elegida tras confirmación; argumentos separados y sin el prompt completo |
 
-Es una decisión de diseño con consecuencias directas: no hay credenciales que filtrar,
-peticiones que interceptar ni datos que exfiltrar.
+Es una decisión de diseño con consecuencias directas: no hay credenciales que filtrar ni datos
+que exfiltrar. La única petición es anónima, solo lee un dato público, acepta solo HTTPS con
+certificado verificado y trata la respuesta como no fiable.
 
 La CLI puede conectarse por su cuenta al proveedor usando la sesión del usuario, pero esa red no
 la abre ni la controla MMCelt. **Si algún día se añade una integración API directa**, este análisis

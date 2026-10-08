@@ -499,7 +499,7 @@ fn entrada_de_prueba() -> egui::RawInput {
 /// # Parámetros
 /// - `forma`: la forma que se examina.
 /// - `recogidos`: donde se acumulan los textos encontrados.
-fn recoger_textos(forma: &egui::Shape, recogidos: &mut Vec<String>) {
+pub(crate) fn recoger_textos(forma: &egui::Shape, recogidos: &mut Vec<String>) {
     match forma {
         egui::Shape::Text(texto) => {
             let escrito = texto.galley.text().trim().to_string();

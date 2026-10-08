@@ -13,7 +13,8 @@ Une carte mentale est une représentation graphique de vos idées : vous débu
 - **Déplacement (Pan) :** Maintenez enfoncé le **bouton central de la souris** (molette) ou le **bouton droit** et glissez dans n'importe quelle direction pour déplacer la vue.
 - **Zoom :** Tournez la **molette de la souris** vers l'avant ou vers l'arrière. Le zoom se centre sur la position de votre curseur.
 - **Sélectionner un nœud :** Faites **un clic gauche** sur la boîte d'un nœud.
-- **Centrer la vue :** Appuyez sur `Ctrl + F` à tout moment (ou allez dans `🎨 Affichage et disposition` → `🎯 Centrer la vue sur le nœud central`).
+- **Rechercher un nœud :** Appuyez sur `Ctrl + F` et tapez une partie de son titre ou d'une étiquette.
+- **Centrer la vue :** Appuyez sur `Origine` à tout moment (ou allez dans `🎨 Affichage et disposition` → `🎯 Centrer la vue sur le nœud central`).
 - **🍪 Bulles d'aide pour débutants :** MMCelt comprend des notes contextuelles flottantes qui vous guident discrètement avec des conseils et astuces. Si vous les fermez et souhaitez les revoir, réactivez-les à tout moment via `❓ Aide` → `🍪 Bulles d'aide pour débutants`.
 
 ### 🧭 Par où poursuivre :

@@ -8,7 +8,7 @@ Versiones exactas necesarias para compilar y ejecutar MMCelt.
 
 | Componente | Versión mínima | Verificado con | Obligatorio |
 |---|---|---|---|
-| **Rust** (`rustc` y `cargo`) | 1.85 | 1.85+ | ✅ Sí |
+| **Rust** (`rustc` y `cargo`) | 1.95 | 1.96.0 | ✅ Sí |
 | **Git** | 2.30 | — | Para clonar el repositorio |
 
 La versión mínima de Rust viene impuesta por `eframe`/`egui` 0.36 y por el uso de
@@ -73,10 +73,16 @@ Todas se descargan solas al compilar. No hay que instalar nada a mano.
 | `uuid` | 1.10 (con `v4`, `serde`) | Identificadores únicos de nodos |
 | `chrono` | 0.4 (con `serde`) | Marcas de tiempo en UTC |
 | `notify` | 8.0 | Observador reactivo del sistema de archivos para vigilancia en bucle cerrado |
+| `ureq` | 3.4 (sin opciones por defecto, solo `rustls`) | Cliente HTTPS para la comprobación de versión nueva al arrancar |
 | `winresource` | 0.1 | **Solo al compilar en Windows.** Incrusta el icono como recurso del ejecutable. No forma parte del programa |
 
-**No hay ninguna dependencia de red.** Ni `reqwest`, ni `hyper`, ni equivalentes: la
-aplicación no se conecta a internet.
+**Una sola dependencia de red: `ureq`**, y para una sola cosa. Al arrancar, si el usuario no lo
+ha desactivado, MMCelt hace **una** petición `GET` por HTTPS a la API de GitHub para saber cuál es
+la última versión publicada (ver [`servicios.md`](servicios.md#comprobación-de-versión-nueva)).
+No descarga nada ni envía datos del usuario. `ureq` se compila sin sus opciones por defecto y solo
+con `rustls` (TLS en Rust, con las raíces de `webpki-roots`): ni `gzip`, ni cookies, ni proxys.
+Licencias: `ureq` MIT/Apache-2.0, `rustls` Apache-2.0/MIT/ISC, `webpki-roots`
+CDLA-Permissive-2.0.
 
 ---
 
@@ -114,7 +120,7 @@ Opcionales, pero recomendadas si vas a modificar el código:
 ## 7. Comprobar el entorno
 
 ```bash
-rustc --version     # >= 1.85
+rustc --version     # >= 1.95
 cargo --version
 git --version
 ```
@@ -205,7 +211,8 @@ son varios minutos de espera y un susto evitable.
 ## 9. Cuentas y accesos externos
 
 **Ninguno es necesario.** MMCelt funciona por completo sin conexión y sin registrarse en
-ningún servicio.
+ningún servicio. Con conexión, consulta al arrancar la última versión publicada en GitHub, de
+forma anónima y sin cuenta; se puede desactivar en el menú «🎨 Ver y Diseño».
 
 Las integraciones con IA usan las cuentas que ya tengas en ChatGPT, Claude o Gemini, pero
 **la aplicación nunca ve esas credenciales**: el intercambio ocurre en tu navegador o en

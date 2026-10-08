@@ -19,3 +19,8 @@ When managing local builds, portable USB copies, and working directories, file p
 
 ### ⚠️ "Uncommitted changes" notice
 If shown, the executable was compiled with uncommitted repository modifications: that binary does not map to a clean git commit.
+
+### ⬆ New version notice
+At startup, MMCelt asks GitHub for the latest published version. If it is newer than yours, the top bar shows `⬆ New version available:` with the version number. It is a link: clicking it opens that version's page in your browser. **The program does not download or install anything**; updating is your decision.
+
+If there is no connection or GitHub does not answer, nothing happens: there is simply no notice. To stop the check, untick `Check for a new version at startup` in the `🎨 View and Design` menu; when it is off, the program does not connect to the internet at startup.

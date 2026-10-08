@@ -1,5 +1,10 @@
 # Conectar MMCelt con tu inteligencia artificial
 
+> **Qué conecta MMCelt hoy.** Desde la versión 0.11.6 el programa se conecta con tres agentes de
+> consola: **Claude Code**, **Codex CLI** y **Gemini CLI**. Lo que esta guía cuenta de
+> Claude Desktop, Antigravity, Cursor y Windsurf se conserva como referencia de cómo funciona cada plataforma: **ya no se conectan desde
+> MMCelt** (el motivo está en el [README](../../README.md#por-qué-ya-no-están-antigravity-cursor-windsurf-y-claude-desktop)).
+
 MMCelt funciona solo, sin conectarse a nada. Pero su razón de ser es el ida y vuelta con
 un modelo de IA: tú dibujas el plano y la IA lo programa, o la IA propone y tú corriges el
 rumbo sobre el mapa.

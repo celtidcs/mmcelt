@@ -11,9 +11,11 @@ use crate::preferencias::Preferencias;
 use crate::textos::Texto;
 use crate::theme::{AppThemeMode, ThemeConfig};
 use crate::ui::{
-    ai_modal, canvas, conexiones_modal, dialogos, estado_agentes, estado_persistencia, help_system,
-    proyecto_ia_modal, sesion_agente_modal, sidebar, toolbar,
+    ai_modal, canvas, conexiones_modal, dialogos, estado_agentes, estado_persistencia,
+    estado_version_nueva, help_system, menu_contextual_nodo, proyecto_ia_modal,
+    sesion_agente_modal, sidebar, suelta_de_nodo, toolbar,
 };
+use estado_version_nueva::EstadoVersionNueva;
 use help_system::TemaDeAyuda;
 use std::path::PathBuf;
 use uuid::Uuid;
@@ -214,6 +216,19 @@ pub struct VistaDelLienzo {
     /// simple clic para seleccionar, y en el árbol horizontal el nodo se quedaba descolocado
     /// hasta la siguiente reorganización.
     pub agarre_del_arrastre: egui::Vec2,
+    /// Dónde estaba el nodo arrastrado al agarrarlo.
+    pub posicion_al_agarrar: [f32; 2],
+    /// Nodo que se acaba de soltar en este fotograma y dónde se ve en pantalla.
+    ///
+    /// Lo anota el lienzo al soltar y lo recoge `ui::suelta_de_nodo` en el mismo fotograma,
+    /// que es quien decide si cayó encima de otro nodo.
+    pub nodo_recien_soltado: Option<(Uuid, egui::Pos2)>,
+    /// Suelta encima de otro nodo que espera a que el usuario elija qué hacer.
+    pub suelta_pendiente: Option<suelta_de_nodo::SueltaPendiente>,
+    /// Clic derecho sin arrastre de este fotograma: dónde cayó en el lienzo y en pantalla.
+    pub clic_derecho: Option<(egui::Pos2, egui::Pos2)>,
+    /// Menú contextual abierto sobre un nodo.
+    pub menu_contextual: Option<menu_contextual_nodo::MenuContextual>,
 }
 
 impl Default for VistaDelLienzo {
@@ -229,6 +244,11 @@ impl Default for VistaDelLienzo {
             tamano_visible: egui::Vec2::ZERO,
             nodo_arrastrado: None,
             agarre_del_arrastre: egui::Vec2::ZERO,
+            posicion_al_agarrar: [0.0, 0.0],
+            nodo_recien_soltado: None,
+            suelta_pendiente: None,
+            clic_derecho: None,
+            menu_contextual: None,
         }
     }
 }
@@ -445,6 +465,14 @@ pub(crate) struct EstadoDePresentacion {
     /// Es **un solo valor** y no tres sueltos —texto, estado y prioridad— porque son una sola
     /// petición: separarlos no obligaría a nadie a mantenerlos coherentes.
     filtro_de_busqueda: FiltroDeBusqueda,
+    /// Si alguien ha pulsado `Ctrl+F` y el buscador todavía no ha tomado el foco.
+    ///
+    /// Los atajos se atienden fuera del panel, que es quien tiene el campo: la petición queda
+    /// anotada aquí hasta que el panel se dibuja y la recoge con
+    /// [`EstadoDePresentacion::recoger_peticion_de_foco_al_buscador`].
+    foco_al_buscador_pedido: bool,
+    /// Comprobación de versión nueva de este arranque y el aviso que haya dejado.
+    version_nueva: EstadoVersionNueva,
 }
 
 impl EstadoDePresentacion {
@@ -501,6 +529,21 @@ impl EstadoDePresentacion {
     /// Presta lo que se le está pidiendo al buscador mientras el usuario lo cambia.
     pub(crate) fn filtro_de_busqueda(&mut self) -> &mut FiltroDeBusqueda {
         &mut self.filtro_de_busqueda
+    }
+    /// Pide que el buscador tome el foco del teclado con su texto seleccionado (`Ctrl+F`).
+    pub(crate) fn pedir_foco_al_buscador(&mut self) {
+        self.foco_al_buscador_pedido = true;
+    }
+    /// Recoge la petición de foco al buscador, si la hay, y la da por atendida.
+    ///
+    /// # Devuelve
+    /// `true` una sola vez por cada [`Self::pedir_foco_al_buscador`].
+    pub(crate) fn recoger_peticion_de_foco_al_buscador(&mut self) -> bool {
+        std::mem::take(&mut self.foco_al_buscador_pedido)
+    }
+    /// Consulta la comprobación de versión nueva de este arranque.
+    pub(crate) fn version_nueva(&self) -> &EstadoVersionNueva {
+        &self.version_nueva
     }
 }
 
@@ -756,13 +799,18 @@ impl AplicacionMapaMental {
             Texto::MensajeBienvenida.en(preferencias.idioma).to_string()
         };
 
-        Self::nueva_interna(
+        let mut aplicacion = Self::nueva_interna(
             ctx,
             preferencias,
             recuperacion,
             mensaje_bienvenida,
             carpeta_datos,
-        )
+        );
+        // Solo el arranque real pregunta a GitHub; las construcciones de prueba no salen a
+        // la red. Si el usuario lo ha desactivado, aquí no se crea ni la consulta.
+        aplicacion.presentacion.version_nueva =
+            EstadoVersionNueva::arrancar_en_este_equipo(&aplicacion.presentacion.preferencias, ctx);
+        aplicacion
     }
 
     /// Construcción interna común de [`AplicacionMapaMental`].
@@ -826,6 +874,8 @@ impl AplicacionMapaMental {
                 preferencias,
                 escala_aplicada: false,
                 filtro_de_busqueda: FiltroDeBusqueda::default(),
+                foco_al_buscador_pedido: false,
+                version_nueva: EstadoVersionNueva::inactivo(),
             },
             servicios: servicios_aplicacion::ServiciosAplicacion::locales(),
             agentes: estado_agentes::EstadoAgentes::nuevo(ctx.clone(), espacio_trabajo_ia),
@@ -1633,6 +1683,9 @@ impl eframe::App for AplicacionMapaMental {
         // Atiende eventos de vigilancia externa de archivos (.mmcelt modificado por IA)
         self.procesar_eventos_de_vigilancia();
 
+        // Recoge, sin esperar, el resultado de la comprobación de versión nueva.
+        self.presentacion.version_nueva.atender();
+
         // Top Toolbar
         toolbar::dibujar_barra_de_herramientas(self, ui);
 
@@ -1643,6 +1696,10 @@ impl eframe::App for AplicacionMapaMental {
 
         // El lienzo infinito, en el centro
         canvas::dibujar_lienzo(self, ui);
+        // Si se acaba de soltar un nodo encima de otro, el menú para decidir qué hacer.
+        suelta_de_nodo::atender_la_suelta(self, &ctx);
+        // Si se acaba de hacer clic derecho sobre un nodo, su menú contextual.
+        menu_contextual_nodo::atender_el_menu_contextual(self, &ctx);
 
         // Diálogos y ventanas emergentes
         ai_modal::dibujar_modales(self, &ctx);
@@ -1662,8 +1719,9 @@ impl eframe::App for AplicacionMapaMental {
 /// Decide si los atajos que alteran la estructura del mapa pueden actuar.
 ///
 /// Los que crean, borran o abren un título en edición (`Tab`, `Enter`, `Supr`, `Retroceso`,
-/// `Espacio`, `F2`) solo valen con el teclado libre. Los de archivo y vista (`Ctrl+S`,
-/// `Ctrl+E`, `Ctrl+F`) no pasan por aquí: siguen valiendo mientras se escribe.
+/// `Espacio`, `F2`) solo valen con el teclado libre, igual que `Inicio`, que centra la vista.
+/// Los de archivo y búsqueda (`Ctrl+S`, `Ctrl+E`, `Ctrl+F`) no pasan por aquí: siguen valiendo
+/// mientras se escribe.
 ///
 /// Está aparte, y recibe tres `bool` en vez del contexto de `egui`, para poder comprobarla sin
 /// levantar una ventana. La batería no ejercita la interfaz, y esta regla estuvo mal escrita
@@ -1918,9 +1976,8 @@ impl AplicacionMapaMental {
     /// Vuelve a colocar el mapa si lo coloca el programa.
     ///
     /// Hay que llamarla después de cambiar **el contenido** de un nodo, no solo su
-    /// estructura: el ancho y el alto de una tarjeta salen de su título, de si tiene notas y
-    /// de cuántas etiquetas lleva, así que escribir en cualquiera de esos campos cambia el
-    /// sitio que ocupa.
+    /// estructura: el ancho y el alto de una tarjeta salen de su título y de cuántas etiquetas
+    /// lleva, así que escribir en cualquiera de esos campos cambia el sitio que ocupa.
     ///
     /// Antes solo se recolocaba al añadir o borrar nodos. Desde que la separación entre la
     /// idea central y sus pilares depende del ancho de la raíz, renombrarla dejaba el mapa
@@ -2037,6 +2094,11 @@ impl AplicacionMapaMental {
             // No es un `mostrar_modal_*`, pero se dibuja igual: es el aviso de que hay una
             // copia de recuperación de una sesión anterior esperando decisión.
             || self.persistencia.recuperacion.is_some()
+            // El menú que aparece al soltar un nodo encima de otro: mientras espera respuesta,
+            // `Supr` no puede llegar al mapa.
+            || self.lienzo.vista.suelta_pendiente.is_some()
+            // Y el menú contextual del clic derecho, por lo mismo.
+            || self.lienzo.vista.menu_contextual.is_some()
     }
 
     /// Muestra el diálogo modal visible de error al abrir «Proyecto e instrucciones».
@@ -2107,11 +2169,14 @@ impl AplicacionMapaMental {
 
     /// Procesa los atajos de teclado globales de la aplicación.
     ///
-    /// Los atajos van en dos grupos, y la diferencia importa:
+    /// Los atajos van en tres grupos, y la diferencia importa:
     ///
-    /// - Los **de archivo y vista** (`Ctrl+S`, `Ctrl+E`, `Ctrl+F`) no alteran la estructura
-    ///   del mapa ni roban el foco, así que siguen valiendo mientras se escribe.
-    /// - Los **de estructura** (`Tab`, `Enter`, `Supr`, `Retroceso`, `Espacio`, `F2`) crean,
+    /// - Los **de archivo y búsqueda** (`Ctrl+S`, `Ctrl+E`, `Ctrl+F`) no alteran la estructura
+    ///   del mapa, así que siguen valiendo mientras se escribe. `Ctrl+F` lleva el foco al
+    ///   buscador del panel lateral.
+    /// - El **de vista** (`Inicio`) centra el mapa, pero solo con el teclado libre: en un campo
+    ///   de texto esa tecla es del campo. Vale también en solo lectura.
+    /// - Los **de estructura** (`Tab`/`Insert`, `Enter`, `Supr`, `Retroceso`, `Espacio`, `F2`) crean,
     ///   borran o abren un título en edición, y se ignoran en cuanto cualquier campo de
     ///   texto tiene el foco.
     ///
@@ -2142,7 +2207,7 @@ impl AplicacionMapaMental {
         let mut nuevo_mapa_solicitado = false;
 
         ctx.input(|i| {
-            // Archivo y vista: valen siempre.
+            // Archivo y búsqueda: valen siempre.
             if i.modifiers.command && i.key_pressed(egui::Key::S) {
                 guardar_solicitado = true;
             }
@@ -2150,7 +2215,7 @@ impl AplicacionMapaMental {
                 exportar_solicitado = true;
             }
             if i.modifiers.command && i.key_pressed(egui::Key::F) {
-                self.centrar_en_la_raiz();
+                self.presentacion.pedir_foco_al_buscador();
             }
             // Deshacer y rehacer valen aunque se esté escribiendo: son de archivo, no de
             // estructura, y quien acaba de equivocarse escribiendo es justo quien los busca.
@@ -2166,6 +2231,13 @@ impl AplicacionMapaMental {
                 }
             }
 
+            // Vista con el teclado libre: dentro de un campo, `Inicio` lleva el cursor al
+            // principio de la línea y no puede mover además el mapa. No altera el mapa, así
+            // que vale también en solo lectura.
+            if permitir_estructura && !i.modifiers.any() && i.key_pressed(egui::Key::Home) {
+                self.centrar_en_la_raiz();
+            }
+
             if !permitir_estructura || self.es_solo_lectura_por_raiz() {
                 return;
             }
@@ -2174,7 +2246,10 @@ impl AplicacionMapaMental {
             if i.modifiers.command && i.key_pressed(egui::Key::N) {
                 nuevo_mapa_solicitado = true;
             }
-            if i.key_pressed(egui::Key::Tab) && !i.modifiers.shift {
+            // `Insert` es el alias de `Tab` que suelen tener otros programas de mapas mentales.
+            if (i.key_pressed(egui::Key::Tab) && !i.modifiers.shift)
+                || (i.key_pressed(egui::Key::Insert) && !i.modifiers.any())
+            {
                 self.anadir_hijo_al_seleccionado();
             }
             if i.key_pressed(egui::Key::Enter) && !i.modifiers.any() {

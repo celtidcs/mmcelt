@@ -13,7 +13,8 @@ Eine Mindmap ist eine grafische Darstellung Ihrer Gedanken: Sie beginnen mit ein
 - **Verschieben (Pan):** Halten Sie die **mittlere Maustaste** (Mausrad) oder die **rechte Maustaste** gedrückt und ziehen Sie in eine beliebige Richtung, um die Ansicht zu verschieben.
 - **Zoom:** Drehen Sie das **Mausrad** vor oder zurück. Der Zoom zentriert sich auf die Cursorposition.
 - **Einen Knoten auswählen:** Klicken Sie mit der **linken Maustaste** einmal auf ein Knotenfeld.
-- **Ansicht zentrieren:** Drücken Sie jederzeit `Strg + F` (oder wählen Sie `🎨 Ansicht und Layout` → `🎯 Ansicht auf den zentralen Knoten zentrieren`).
+- **Knoten suchen:** Drücken Sie `Strg + F` und tippen Sie einen Teil seines Titels oder eines Schlagworts.
+- **Ansicht zentrieren:** Drücken Sie jederzeit `Pos1` (oder wählen Sie `🎨 Ansicht und Layout` → `🎯 Ansicht auf den zentralen Knoten zentrieren`).
 - **🍪 Einsteiger-Hinweise:** MMCelt bietet dezente schwebende Notizen mit nützlichen Tipps und Tastenkürzeln. Wenn Sie diese ausgeblendet haben und wieder einblenden möchten, reaktivieren Sie sie jederzeit über `❓ Hilfe` → `🍪 Einsteiger-Hinweise`.
 
 ### 🧭 So geht es weiter:

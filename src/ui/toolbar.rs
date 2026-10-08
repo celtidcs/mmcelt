@@ -133,6 +133,17 @@ fn indicadores_del_lado_derecho(app: &mut AplicacionMapaMental, ui: &mut egui::U
         app.abrir_aviso_mapa_en_raiz();
     }
 
+    if let Some(aviso) = app.presentacion().version_nueva().aviso() {
+        // Solo se enlaza: abrir la página es decisión del usuario y no se descarga nada.
+        let rotulo = format!(
+            "{} {}",
+            Texto::BarraVersionNuevaDisponible.en(idioma),
+            aviso.version
+        );
+        let enlace = aviso.enlace.clone();
+        ui.hyperlink_to(RichText::new(rotulo).small().strong(), enlace);
+    }
+
     if app.persistencia_mut().vigilante.is_some() {
         ui.label(RichText::new("🟢").small())
             .on_hover_text(Texto::IaVigilandoCambios.en(idioma));
@@ -575,7 +586,11 @@ fn entradas_de_edicion_de_nodos(app: &mut AplicacionMapaMental, ui: &mut egui::U
     if ui
         .add_enabled(
             !solo_lectura,
-            egui::Button::new(format!("{}\tTab", Texto::EdicionAnadirHijo.en(idioma))),
+            egui::Button::new(format!(
+                "{}\tTab / {}",
+                Texto::EdicionAnadirHijo.en(idioma),
+                Texto::TeclaInsertar.en(idioma)
+            )),
         )
         .clicked()
     {
@@ -902,6 +917,37 @@ pub(crate) fn menu_ver_y_diseno(app: &mut AplicacionMapaMental, ui: &mut egui::U
     eleccion_del_tema(app, ui, idioma);
     ui.separator();
     intervalo_de_autoguardado(app, ui, idioma);
+    ui.separator();
+    comprobacion_de_version_nueva(app, ui, idioma);
+}
+
+/// Opción para comprobar, en cada arranque, si hay una versión nueva publicada.
+///
+/// # Parámetros
+/// - `app`: estado de la aplicación; la opción se guarda en sus preferencias.
+/// - `ui`: el `Ui` del desplegable ya abierto.
+/// - `idioma`: el del usuario, para el rótulo.
+fn comprobacion_de_version_nueva(
+    app: &mut AplicacionMapaMental,
+    ui: &mut egui::Ui,
+    idioma: Idioma,
+) {
+    let mut activa = app
+        .presentacion()
+        .preferencias_ref()
+        .comprobar_version_nueva;
+    if ui
+        .checkbox(&mut activa, Texto::VerComprobarVersionNueva.en(idioma))
+        .changed()
+    {
+        // Se guarda al momento, como el idioma. Surte efecto en el siguiente arranque.
+        app.presentacion_mut()
+            .preferencias()
+            .comprobar_version_nueva = activa;
+        if let Err(error) = app.guardar_preferencias() {
+            crate::error::registrar(&error, "guardar la opción de comprobar versión nueva");
+        }
+    }
 }
 
 /// Sección «Tamaño de la interfaz» del menú «Ver y Diseño».
@@ -1042,7 +1088,11 @@ fn disposicion_de_los_nodos(app: &mut AplicacionMapaMental, ui: &mut egui::Ui, i
 /// - `idioma`: el del usuario, para los rótulos.
 fn encuadre_del_mapa(app: &mut AplicacionMapaMental, ui: &mut egui::Ui, idioma: Idioma) {
     if ui
-        .button(format!("{}\tCtrl+F", Texto::VerCentrarVista.en(idioma)))
+        .button(format!(
+            "{}\t{}",
+            Texto::VerCentrarVista.en(idioma),
+            Texto::TeclaInicio.en(idioma)
+        ))
         .clicked()
     {
         app.centrar_en_la_raiz();

@@ -8,6 +8,53 @@ Los cambios de cada versión, de la más reciente a la más antigua. Sigue el cr
 archivo y el protocolo MCP pueden cambiar entre versiones. El **1.0.0** llegará cuando ambos
 se declaren estables y el programa se haya probado también en macOS.
 
+## [0.13.0] — 2026-10-08
+
+**Menú al soltar un nodo encima de otro.** Arrastrar un nodo y soltarlo con su centro sobre otra
+tarjeta ofrece «Hacer hijo», «Hacer hermano» (lo cuelga del mismo padre, justo detrás del de debajo),
+«Conectar con enlace», «Mover aquí sin tapar» y «Cancelar». Lo que el árbol no admite aparece
+deshabilitado y explica por qué al pasar el ratón: «Hacer hijo» si ya es su hijo, «Hacer hermano» si
+el de debajo es la raíz o si ya son hermanos. «Conectar con enlace» no crea una segunda línea entre
+padre e hijo ni repite una conexión que ya existe. `Esc`, un clic fuera o «Cancelar» devuelven el
+nodo a su sitio, y todo se deshace con `Ctrl+Z`.
+
+**Menú contextual con clic derecho.** Un clic derecho sin arrastrar sobre una tarjeta la selecciona
+y abre «Acciones del nodo»: añadir hijo o hermano, conexión cruzada, editar el título, eliminar, y
+submenús de estado, prioridad, control humano y rol. Arrastrar con el botón derecho sigue moviendo
+la vista.
+
+**El rol, a la vista, y cada icono explicado.** Cada tarjeta muestra abajo a la derecha el icono de
+su rol. Al pasar el ratón por el icono de estado, prioridad, control humano, rol o notas aparece qué
+significa, con los nombres del inspector («Prioridad: ⚡ Alta»). Todas las tarjetas reservan la fila
+inferior de iconos, así que miden lo mismo tengan notas o no. Los títulos de los mapas de ejemplo
+pierden el emoji, que parecía un icono.
+
+**`Ctrl+F` busca, `Inicio` centra e `Insert` crea un hijo.** `Ctrl+F` lleva el cursor al buscador con
+lo que hubiera escrito ya seleccionado, y sigue valiendo mientras se escribe en otro campo. Centrar
+la vista pasa a la tecla `Inicio`, que dentro de un campo de texto lleva el cursor al principio de la
+línea sin mover el mapa. `Insert` añade un hijo, como `Tab`. Los nombres de las teclas salen
+traducidos en cada idioma.
+
+**Aviso de versión nueva.** Al arrancar, MMCelt pregunta a GitHub por la última versión publicada y,
+si es más nueva, lo indica en la barra superior con un enlace a su página. No descarga ni instala
+nada. La consulta va en un hilo aparte y solo por HTTPS verificado; si falla, no molesta. Se
+desactiva en `🎨 Ver y Diseño`, y desactivada no hay ningún tráfico de red. Limitaciones conocidas en
+[defectos conocidos](defectos-conocidos.md).
+
+**El mapa solo responde a lo que se hace sobre él.** Elegir un valor en un desplegable del
+inspector cuya lista caía encima de un nodo, o con un nodo oculto detrás del panel, seleccionaba ese
+nodo y el valor iba a parar al nuevo. Ahora el mapa solo atiende el ratón dentro de su zona, sin nada
+encima, y solo las pulsaciones que empezaron en él.
+
+**Correcciones.** En chino, el texto emergente de los iconos ya no sale con dos signos de dos puntos.
+Los textos emergentes ya no salen estrechos, con tres letras por línea, después de haber mostrado
+uno corto.
+
+**Para quien compila.** La versión mínima de Rust es la **1.95**, la que exigen `egui` y `eframe`
+0.36; la documentación decía 1.85, y con ella los scripts de preparación daban el visto bueno y la
+compilación fallaba después. `preparar-entorno.ps1` ya se ejecuta en Windows PowerShell 5.1. Los
+flujos de integración continua y de publicación piden solo los permisos que necesitan.
+
 ## [0.12.0] — 2026-09-25
 
 **Indicadores de prioridad y supervisión humana, homogéneos en todo el nodo.** El lienzo

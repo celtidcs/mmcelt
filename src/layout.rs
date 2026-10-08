@@ -17,8 +17,18 @@ use uuid::Uuid;
 pub const ANCHO_MINIMO_NODO: f32 = 120.0;
 /// Ancho máximo antes de truncar o envolver texto.
 pub const ANCHO_MAXIMO_NODO: f32 = 240.0;
-/// Altura base de un nodo estándar.
-pub const ALTURA_BASE_NODO: f32 = 48.0;
+/// Alto del título en una línea con sus márgenes, sin la fila inferior de iconos.
+const ALTURA_DEL_TITULO_EN_UNA_LINEA: f32 = 48.0;
+
+/// Alto de la fila inferior de la tarjeta, la del icono de rol y el de notas.
+///
+/// El rol se pinta en todas las tarjetas, así que la fila se reserva siempre. Antes solo la
+/// reservaban las notas: en una tarjeta sin ellas el rol quedaba pegado debajo de la prioridad
+/// (PH-1007-4).
+const ALTURA_DE_LA_FILA_DE_ICONOS: f32 = 14.0;
+
+/// Altura base de un nodo estándar: el título en una línea y la fila de iconos.
+pub const ALTURA_BASE_NODO: f32 = ALTURA_DEL_TITULO_EN_UNA_LINEA + ALTURA_DE_LA_FILA_DE_ICONOS;
 /// Separación horizontal entre niveles de profundidad.
 pub const SEPARACION_HORIZONTAL: f32 = 80.0;
 /// Separación vertical entre ramas adyacentes.
@@ -43,9 +53,6 @@ const CARACTERES_PARA_SEGUNDA_LINEA: usize = 25;
 
 /// Altura extra cuando el título no cabe en una línea.
 const ALTURA_EXTRA_POR_TITULO_LARGO: f32 = 16.0;
-
-/// Altura extra cuando el nodo tiene notas, que se anuncian con una línea más.
-const ALTURA_EXTRA_POR_NOTAS: f32 = 14.0;
 
 /// Altura extra cuando el nodo lleva etiquetas, que ocupan su propia línea.
 const ALTURA_EXTRA_POR_ETIQUETAS: f32 = 18.0;
@@ -84,7 +91,9 @@ const FACTOR_DE_CURVATURA: f32 = 0.5;
 const CURVATURA_MINIMA: f32 = 35.0;
 
 /// Estima las dimensiones `(ancho, alto)` que ocupará un nodo en el lienzo
-/// según la longitud de su título, la presencia de notas y la cantidad de etiquetas.
+/// según la longitud de su título y la cantidad de etiquetas.
+///
+/// Las notas no cuentan: su icono va en la fila inferior, que se reserva siempre para el rol.
 ///
 /// Es una estimación y no una medida: calcular el tamaño real exigiría medir el texto con
 /// la fuente y la escala del momento, y esta función se usa también fuera del dibujado,
@@ -92,16 +101,11 @@ const CURVATURA_MINIMA: f32 = 35.0;
 ///
 /// # Parámetros
 /// - `title`: el título del nodo, del que se toma la longitud.
-/// - `tiene_notas`: si el nodo tiene notas, que ocupan una línea más.
 /// - `numero_de_etiquetas`: cuántas etiquetas lleva, que ocupan otra línea si hay alguna.
 ///
 /// # Devuelve
 /// El par `(ancho, alto)` en puntos del lienzo, sin aplicar el zoom.
-pub fn estimar_tamano_del_nodo(
-    title: &str,
-    tiene_notas: bool,
-    numero_de_etiquetas: usize,
-) -> (f32, f32) {
+pub fn estimar_tamano_del_nodo(title: &str, numero_de_etiquetas: usize) -> (f32, f32) {
     let caracteres = title.chars().count();
     let ancho = (caracteres as f32 * ANCHO_POR_CARACTER + MARGEN_HORIZONTAL_DEL_TITULO)
         .clamp(ANCHO_MINIMO_NODO, ANCHO_MAXIMO_NODO);
@@ -109,9 +113,6 @@ pub fn estimar_tamano_del_nodo(
     let mut alto = ALTURA_BASE_NODO;
     if caracteres > CARACTERES_PARA_SEGUNDA_LINEA {
         alto += ALTURA_EXTRA_POR_TITULO_LARGO;
-    }
-    if tiene_notas {
-        alto += ALTURA_EXTRA_POR_NOTAS;
     }
     if numero_de_etiquetas > 0 {
         alto += ALTURA_EXTRA_POR_ETIQUETAS;
@@ -216,7 +217,7 @@ fn separacion_del_primer_nivel(proyecto: &Proyecto, root_id: Uuid) -> f32 {
     let (ancho_de_la_raiz, _) = proyecto
         .nodes
         .get(&root_id)
-        .map(|r| estimar_tamano_del_nodo(&r.title, !r.notes.is_empty(), r.tags.len()))
+        .map(|r| estimar_tamano_del_nodo(&r.title, r.tags.len()))
         .unwrap_or((ANCHO_MINIMO_NODO, ALTURA_BASE_NODO));
 
     // La mitad del ancho es lo que la raíz ocupa hacia ese lado; el resto es hueco.
@@ -313,8 +314,7 @@ fn calcular_altura_de_la_rama(
             continue;
         };
 
-        let (_, altura_propia) =
-            estimar_tamano_del_nodo(&nodo.title, !nodo.notes.is_empty(), nodo.tags.len());
+        let (_, altura_propia) = estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
 
         if nodo.children.is_empty() || nodo.collapsed {
             alturas.insert(id_actual, altura_propia);
@@ -388,8 +388,7 @@ fn disponer_rama(
         };
 
         nodo.pos = [pos_x, pos_y];
-        let (ancho, _) =
-            estimar_tamano_del_nodo(&nodo.title, !nodo.notes.is_empty(), nodo.tags.len());
+        let (ancho, _) = estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
         let hijos = nodo.children.clone();
         let plegado = nodo.collapsed;
 
@@ -444,8 +443,7 @@ pub fn caja_del_mapa(proyecto: &Proyecto) -> Option<egui::Rect> {
             continue;
         }
 
-        let (ancho, alto) =
-            estimar_tamano_del_nodo(&nodo.title, !nodo.notes.is_empty(), nodo.tags.len());
+        let (ancho, alto) = estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
         let centro = Pos2::new(nodo.pos[0], nodo.pos[1]);
         let del_nodo = egui::Rect::from_center_size(centro, egui::Vec2::new(ancho, alto));
 
@@ -471,7 +469,7 @@ pub fn caja_del_mapa(proyecto: &Proyecto) -> Option<egui::Rect> {
 /// # Devuelve
 /// El arco, en unidades del lienzo, que hay que reservarle sobre la circunferencia.
 fn arco_propio_del_nodo(nodo: &crate::model::Nodo) -> f32 {
-    let (ancho, _) = estimar_tamano_del_nodo(&nodo.title, !nodo.notes.is_empty(), nodo.tags.len());
+    let (ancho, _) = estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
     ancho + SEPARACION_VERTICAL
 }
 
@@ -747,4 +745,131 @@ pub fn calcular_curva_bezier(from: Pos2, to: Pos2) -> [Pos2; 4] {
     };
 
     [from, ctrl1, ctrl2, to]
+}
+
+/// Separación, en puntos del lienzo, entre la tarjeta destino y el nodo que se deja junto a
+/// ella con «Mover aquí sin tapar». La misma holgura visual que deja entre hermanos la
+/// disposición automática a escala natural.
+const SEPARACION_AL_DEJAR_JUNTO: f32 = 24.0;
+
+/// Cuántas vueltas de huecos alrededor del destino se prueban antes de rendirse.
+///
+/// Cada vuelta aleja los candidatos una tarjeta más. Ocho vueltas cubren de sobra un vecindario
+/// abarrotado; si ni así hay sitio, se usa el primer candidato y se acepta el solape.
+const VUELTAS_DE_BUSQUEDA_DE_HUECO: usize = 8;
+
+/// La caja que ocupa la tarjeta de un nodo en coordenadas del lienzo.
+fn caja_del_nodo(nodo: &crate::model::Nodo) -> egui::Rect {
+    let (ancho, alto) = estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
+    egui::Rect::from_center_size(
+        Pos2::new(nodo.pos[0], nodo.pos[1]),
+        egui::Vec2::new(ancho, alto),
+    )
+}
+
+/// El nodo visible sobre cuya tarjeta ha caído el centro del nodo arrastrado.
+///
+/// Se mira el **centro** y no el simple roce: pasar rozando otra tarjeta no es «soltar
+/// encima», y abrir un menú por eso sería un estorbo.
+///
+/// # Parámetros
+/// - `proyecto`: el mapa, con el arrastrado ya en su posición de suelta.
+/// - `arrastrado`: el nodo que se acaba de soltar.
+///
+/// # Devuelve
+/// El nodo de debajo, o `None` si el centro cae en el vacío. Si caen varios, el primero por
+/// orden de identificador, para que el resultado no dependa del orden de una tabla hash.
+pub fn nodo_bajo_el_centro(proyecto: &Proyecto, arrastrado: Uuid) -> Option<Uuid> {
+    let centro = caja_del_nodo(proyecto.nodes.get(&arrastrado)?).center();
+    nodo_en_el_punto(proyecto, [centro.x, centro.y], Some(arrastrado))
+}
+
+/// El nodo visible cuya tarjeta contiene un punto del lienzo.
+///
+/// # Parámetros
+/// - `proyecto`: el mapa.
+/// - `punto`: el punto, en coordenadas del lienzo.
+/// - `excluido`: un nodo que no cuenta, como el que se está arrastrando.
+///
+/// # Devuelve
+/// El primero por orden de identificador, para que el resultado no dependa del orden de una
+/// tabla hash; `None` si el punto cae en el vacío.
+pub fn nodo_en_el_punto(
+    proyecto: &Proyecto,
+    punto: [f32; 2],
+    excluido: Option<Uuid>,
+) -> Option<Uuid> {
+    let punto = Pos2::new(punto[0], punto[1]);
+    let ocultos = proyecto.nodos_ocultos_por_plegado();
+    proyecto
+        .nodes
+        .iter()
+        .filter(|(id, _)| Some(**id) != excluido && !ocultos.contains(id))
+        .find(|(_, nodo)| caja_del_nodo(nodo).contains(punto))
+        .map(|(id, _)| *id)
+}
+
+/// Posición libre junto al nodo `destino`, lo más cerca posible de `punto`.
+///
+/// Prueba huecos alrededor de la tarjeta destino —a la derecha, debajo, a la izquierda y
+/// encima, y luego en vueltas cada vez más alejadas— y se queda con el que no solapa ninguna
+/// tarjeta visible y está más cerca del punto donde el usuario soltó.
+///
+/// # Parámetros
+/// - `proyecto`: el mapa.
+/// - `arrastrado`: el nodo que hay que colocar; su propia tarjeta no cuenta como obstáculo.
+/// - `destino`: junto a quién hay que dejarlo.
+/// - `punto`: dónde lo soltó el usuario, para elegir el lado.
+///
+/// # Devuelve
+/// El centro donde colocar el nodo. Si alguno de los dos no existe, `punto` tal cual.
+pub fn posicion_libre_junto_a(
+    proyecto: &Proyecto,
+    arrastrado: Uuid,
+    destino: Uuid,
+    punto: [f32; 2],
+) -> [f32; 2] {
+    let (Some(movido), Some(junto_a)) = (
+        proyecto.nodes.get(&arrastrado),
+        proyecto.nodes.get(&destino),
+    ) else {
+        return punto;
+    };
+    let tamano = caja_del_nodo(movido).size();
+    let caja_destino = caja_del_nodo(junto_a);
+    let ocultos = proyecto.nodos_ocultos_por_plegado();
+    let obstaculos: Vec<egui::Rect> = proyecto
+        .nodes
+        .iter()
+        .filter(|(id, _)| **id != arrastrado && !ocultos.contains(id))
+        .map(|(_, nodo)| caja_del_nodo(nodo))
+        .collect();
+    let objetivo = Pos2::new(punto[0], punto[1]);
+
+    let paso_x = (caja_destino.width() + tamano.x) / 2.0 + SEPARACION_AL_DEJAR_JUNTO;
+    let paso_y = (caja_destino.height() + tamano.y) / 2.0 + SEPARACION_AL_DEJAR_JUNTO;
+    let mut primero = None;
+    for vuelta in 1..=VUELTAS_DE_BUSQUEDA_DE_HUECO {
+        let lejania = vuelta as f32;
+        let candidatos = [
+            egui::vec2(paso_x * lejania, 0.0),
+            egui::vec2(0.0, paso_y * lejania),
+            egui::vec2(-paso_x * lejania, 0.0),
+            egui::vec2(0.0, -paso_y * lejania),
+        ]
+        .map(|desplazamiento| caja_destino.center() + desplazamiento);
+        primero.get_or_insert(candidatos[0]);
+        let libre = candidatos
+            .into_iter()
+            .filter(|centro| {
+                let caja = egui::Rect::from_center_size(*centro, tamano);
+                !obstaculos.iter().any(|otra| caja.intersects(*otra))
+            })
+            .min_by(|a, b| a.distance(objetivo).total_cmp(&b.distance(objetivo)));
+        if let Some(centro) = libre {
+            return [centro.x, centro.y];
+        }
+    }
+    let centro = primero.unwrap_or(objetivo);
+    [centro.x, centro.y]
 }

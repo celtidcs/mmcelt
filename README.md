@@ -120,6 +120,16 @@ archivo propio de MMCelt recupera al reimportarlo estado, prioridad, rol, revisi
 posición y conexiones cruzadas exactos; uno ajeno entra con valores por defecto y se
 distribuye automáticamente en el lienzo para no amontonar los nodos en un punto.
 
+**Manejo directo sobre el lienzo.** Clic derecho sobre un nodo para sus acciones (hijo, hermano,
+conexión, título, eliminar, y los submenús de estado, prioridad, control humano y rol). Soltar un
+nodo encima de otro ofrece hacerlo hijo o hermano, conectarlos o dejarlo al lado; lo que el árbol
+no admite sale deshabilitado con su motivo. Cada icono de una tarjeta explica qué significa al
+pasar el ratón, y cada tarjeta muestra el icono de su rol.
+
+**Aviso de versión nueva.** Al arrancar, una consulta anónima a GitHub avisa si hay una versión
+más reciente, con el enlace para descargarla. No descarga nada y se desactiva en `🎨 Ver y Diseño`.
+Es la única conexión a internet que hace el programa.
+
 **Tamaño de interfaz ajustable.** Con `Ctrl` `+`, `Ctrl` `-` y `Ctrl` `0` se agranda o
 reduce toda la interfaz, entre el 50 % y el 300 %, pensando en monitores 4K y en
 televisores. El ajuste se recuerda entre sesiones.
@@ -146,7 +156,7 @@ leer, y traducirlos rompería los mapas guardados y la conexión con los agentes
 
 | Atajo | Acción |
 | :--- | :--- |
-| <kbd>Tab</kbd> | Crear un nodo hijo del seleccionado |
+| <kbd>Tab</kbd> / <kbd>Insert</kbd> | Crear un nodo hijo del seleccionado |
 | <kbd>Enter</kbd> | Crear un nodo hermano, al mismo nivel |
 | <kbd>Supr</kbd> / <kbd>Retroceso</kbd> | Borrar el nodo y todo lo que cuelga de él |
 | <kbd>Espacio</kbd> / <kbd>F2</kbd> / doble clic | Editar el título en el lienzo |
@@ -155,7 +165,8 @@ leer, y traducirlos rompería los mapas guardados y la conexión con los agentes
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> | Deshacer / rehacer |
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Guardar |
 | <kbd>Ctrl</kbd>+<kbd>E</kbd> | Exportar el Markdown para la IA |
-| <kbd>Ctrl</kbd>+<kbd>F</kbd> | Volver al nodo raíz |
+| <kbd>Ctrl</kbd>+<kbd>F</kbd> | Buscar un nodo: lleva el cursor al buscador |
+| <kbd>Inicio</kbd> | Centrar la vista en el mapa |
 | <kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> / <kbd>Ctrl</kbd>+<kbd>0</kbd> | Agrandar, reducir o restablecer la interfaz |
 
 ## El documento que recibe la IA

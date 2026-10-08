@@ -779,6 +779,22 @@ pub(crate) fn dibujar_selector_tipo_relacion_para_prueba(
     selector_del_tipo_de_relacion(app, ui, app.idioma());
 }
 
+/// Dibuja los botones de crear y cancelar de la conexión cruzada, para las pruebas.
+///
+/// # Parámetros
+/// - `app`: el estado.
+/// - `ui`: donde se dibujan.
+/// - `id_del_origen`: el nodo de origen de la conexión.
+#[cfg(test)]
+pub(crate) fn dibujar_botones_de_conexion_para_prueba(
+    app: &mut AplicacionMapaMental,
+    ui: &mut egui::Ui,
+    id_del_origen: uuid::Uuid,
+) {
+    let idioma = app.idioma();
+    botones_de_la_conexion_cruzada(app, ui, idioma, id_del_origen);
+}
+
 /// Los botones de crear y cancelar de la ventana de conexión cruzada.
 ///
 /// # Qué se comprueba antes de dar el parte de éxito
@@ -814,6 +830,18 @@ fn botones_de_la_conexion_cruzada(
                 return;
             };
 
+            // La interfaz no crea una segunda línea encima de la jerarquía ni repite una
+            // conexión que ya existe (PH-1007-2); el modelo lo admitiría, porque los
+            // importadores conservan lo que trae el archivo.
+            if !app
+                .mapa()
+                .proyecto()
+                .conexion_cruzada_admitida(id_del_origen, id_del_destino)
+            {
+                app.establecer_estado(Texto::SueltaNoSePuedeConectar.en(app.idioma()));
+                app.lienzo_mut().editar_conexion().destino = None;
+                return;
+            }
             let motivo = app.lienzo().conexion().motivo.clone();
             let tipo = app.lienzo().conexion().tipo;
             let creada = app
@@ -864,7 +892,7 @@ fn olvidar_la_conexion_en_curso(app: &mut AplicacionMapaMental) {
 ///
 /// Hacen falta tres formas porque no todas las teclas se dicen igual en los seis idiomas.
 /// `Ctrl + S` es `Ctrl + S` en todas partes; «Supr» y «Espacio» no.
-enum TeclaDelAtajo {
+pub(crate) enum TeclaDelAtajo {
     /// El nombre es el mismo en cualquier idioma: `Tab`, `Enter`, `Ctrl + S`.
     Literal(&'static str),
     /// El nombre se traduce, porque cambia de un idioma a otro.
@@ -872,6 +900,9 @@ enum TeclaDelAtajo {
     /// Un nombre traducible seguido de una alternativa que no se traduce, como
     /// «Supr / Backspace».
     TraducibleMas(Texto, &'static str),
+    /// Un nombre que no se traduce seguido de una alternativa traducible, como
+    /// «Tab / Insertar».
+    LiteralMas(&'static str, Texto),
 }
 
 impl TeclaDelAtajo {
@@ -882,12 +913,15 @@ impl TeclaDelAtajo {
     ///
     /// # Devuelve
     /// El texto listo para pintar en la primera columna de la tabla.
-    fn rotulo(&self, idioma: crate::textos::Idioma) -> String {
+    pub(crate) fn rotulo(&self, idioma: crate::textos::Idioma) -> String {
         match self {
             TeclaDelAtajo::Literal(texto) => (*texto).to_string(),
             TeclaDelAtajo::Traducible(texto) => texto.en(idioma).to_string(),
             TeclaDelAtajo::TraducibleMas(texto, sufijo) => {
                 format!("{} / {sufijo}", texto.en(idioma))
+            }
+            TeclaDelAtajo::LiteralMas(prefijo, texto) => {
+                format!("{prefijo} / {}", texto.en(idioma))
             }
         }
     }
@@ -903,8 +937,11 @@ impl TeclaDelAtajo {
 ///
 /// El orden es el de la interfaz: primero lo que se usa construyendo el mapa, después el
 /// ratón, y al final los `Ctrl` de archivo, deshacer y tamaño.
-const ATAJOS_DE_TECLADO: [(TeclaDelAtajo, Texto); 14] = [
-    (TeclaDelAtajo::Literal("Tab"), Texto::ModalAnadirNodoHijoAl),
+pub(crate) const ATAJOS_DE_TECLADO: [(TeclaDelAtajo, Texto); 15] = [
+    (
+        TeclaDelAtajo::LiteralMas("Tab", Texto::TeclaInsertar),
+        Texto::ModalAnadirNodoHijoAl,
+    ),
     (
         TeclaDelAtajo::Literal("Enter"),
         Texto::ModalAnadirNodoHermanoMismo,
@@ -938,9 +975,10 @@ const ATAJOS_DE_TECLADO: [(TeclaDelAtajo, Texto); 14] = [
         Texto::ModalExportarArchivoMarkdownMd,
     ),
     (
-        TeclaDelAtajo::Literal("Ctrl + F"),
+        TeclaDelAtajo::Traducible(Texto::TeclaInicio),
         Texto::ModalCentrarLaVistaEn,
     ),
+    (TeclaDelAtajo::Literal("Ctrl + F"), Texto::ModalBuscarUnNodo),
     (
         TeclaDelAtajo::Literal("Ctrl + Z"),
         Texto::ModalDeshacerElUltimoCambio,

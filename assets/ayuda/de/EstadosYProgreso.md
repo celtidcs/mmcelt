@@ -26,3 +26,6 @@ Die Zustände Ihrer Knoten sind nicht bloß Farben für Ihr Auge; die künstlich
 - **Respekt vor Verworfenem:** Wenn Sie einen Zweig als **`⛔ Verworfen`** kennzeichnen, versteht die KI, dass dieser Pfad bewusst abgelehnt wurde, und wird ihn Ihnen nicht erneut vorschlagen.
 - **Kontext des Fertiggestellten:** Die Knoten **`✅ Abgeschlossen`** signalisieren der KI, welche Systemteile bereits existieren und funktionieren, damit sie darauf aufbaut, ohne doppelten Aufwand zu betreiben.
 - **Automatische Metriken:** Im Export-Header berechnet MMCelt eine globale Übersicht (Fortschritt in Prozent, erledigte vs. offene Aufgaben), damit das Modell den genauen Reifegrad des Projekts kennt.
+
+### 💡 Was jedes Symbol der Karte bedeutet
+Fahren Sie mit der Maus über ein Symbol, um seine Bedeutung zu sehen: Das Emoji vor dem Titel ist der **Status**; die Symbole oben rechts sind die **Priorität** und die **menschliche Kontrolle**; unten rechts die **Rolle** des Knotens (das ⚡ von „Aufgabe / Aktion“ ist nicht das der hohen Priorität: der eingeblendete Text unterscheidet sie); und das 📝 unten sagt `📝 Enthält Notizen: auswählen, um sie im Inspektor zu lesen`. Während Sie einen Knoten ziehen, erscheint nichts.

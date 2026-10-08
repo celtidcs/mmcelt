@@ -26,3 +26,6 @@ Los estados de tus nodos no son solo colores para ti; la inteligencia artificial
 - **Respeto a lo descartado:** Si marcas una rama como **`⛔ Descartado`**, la IA entenderá que esa vía fue rechazada intencionadamente y no insistirá en proponértela.
 - **Contexto de lo terminado:** Los nodos **`✅ Completado`** le indican a la IA qué partes de tu sistema ya existen y funcionan, para que construya sobre ellas sin duplicar esfuerzos.
 - **Métricas automáticas:** En la cabecera de la exportación, MMCelt calcula un resumen global (porcentaje de avance, tareas completadas vs pendientes) para que el modelo sepa la fase exacta de madurez del proyecto.
+
+### 💡 Qué significa cada icono de la tarjeta
+Pasa el ratón por encima de un icono y verás su significado: el emoji de delante del título es el **estado**; los de la esquina superior derecha, la **prioridad** y el **control humano**, por ejemplo `Prioridad: ⚡ Alta`; abajo a la derecha, el del **Rol** del nodo, por ejemplo `Rol: 📌 Subtema / Módulo` (el ⚡ de «Tarea / Acción» no es el de prioridad Alta: el texto emergente los distingue); y el 📝 de abajo dice `📝 Tiene notas: selecciónalo para leerlas en el inspector`. Mientras arrastras un nodo no aparece.

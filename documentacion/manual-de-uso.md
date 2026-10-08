@@ -226,18 +226,19 @@ el «para qué».
 ### Flujo básico
 
 1. Selecciona un nodo con un clic.
-2. `Tab` crea un hijo; `Enter` crea un hermano.
+2. `Tab` (o `Insertar`) crea un hijo; `Enter` crea un hermano.
 3. Escribe el título y pulsa `Enter`.
 4. Repite.
 
 Se puede construir un mapa entero sin soltar el teclado.
 
 Los atajos que tocan el mapa —`Tab`, `Enter`, `Supr`, `Retroceso`, `Espacio`, `F2` y
-`Ctrl + N`— solo actúan con el teclado libre. En cuanto se escribe en un campo de texto, esas
-teclas hacen lo propio de escribir: `Retroceso` borra una letra, no el nodo.
+`Ctrl + N`— solo actúan con el teclado libre, igual que `Inicio`, que centra la vista. En cuanto
+se escribe en un campo de texto, esas teclas hacen lo propio de escribir: `Retroceso` borra una
+letra, no el nodo, e `Inicio` lleva el cursor al principio de la línea.
 
 `Ctrl + S`, `Ctrl + E` y `Ctrl + F` sí siguen valiendo mientras se escribe, porque no alteran
-el mapa: guardan, exportan y centran la vista.
+el mapa: guardan, exportan y llevan el cursor al buscador.
 
 ### Empezar de cero, cargar un ejemplo o abrir otro mapa
 
@@ -262,9 +263,37 @@ El título dice **qué** es un nodo. Lo que hace útil el mapa para una IA es el
 - **Estado y prioridad**: dónde está cada cosa y qué es urgente. Ambos campos cuentan con iconos homogéneos en los selectores del inspector y se pintan directamente sobre el lienzo antes del título: Prioridad (`🔽 Baja`, `🔷 Media`, `⚡ Alta`, `🔥 Crítica`) y Estado (`💡 Idea`, `🔍 Investigando`, `⏳ En Progreso`, `❓ Duda / Bloqueo`, `✅ Completado`, `⛔ Descartado`).
 - **Control humano**: supervisión del trabajo de la IA (`🤖 Generado por IA`, `⏳ Pendiente de Revisión`, `🛡️ Aprobado por Usuario`, `⚠️ Requiere Corrección`). La aprobación caduca de forma automática a `⏳ Pendiente de Revisión` si la IA modifica el contenido del nodo.
 
+### Qué significa cada icono
+
+Si no recuerdas qué indica un icono de una tarjeta, pasa el ratón por encima: el emoji de delante
+del título es el estado, los de arriba a la derecha la prioridad y el control humano, abajo a la
+derecha está el rol del nodo, y el 📝 avisa de que tiene notas. El rol se cambia en el inspector o
+con el clic derecho → Rol.
+
+### El clic derecho sobre un nodo
+
+Haz clic derecho sobre cualquier tarjeta: queda seleccionada y aparece **Acciones del nodo**,
+con añadir hijo o hermano, crear una conexión, editar el título, eliminar y los submenús de
+estado, prioridad, control humano y rol. Es lo mismo que ofrecen el menú `✏️ Edición` y el inspector,
+pero sin ir a buscarlo. Para mover la vista, arrastra con el botón derecho como siempre: eso no
+abre el menú.
+
+### Cambiar una rama de sitio con el ratón
+
+Arrastra el nodo y suéltalo encima del que quieres que sea su nuevo padre. Aparece un menú
+pequeño: elige `➕ Hacer hijo` y la rama entera pasa a colgar de él, o `↔ Hacer hermano` para
+que cuelgue del mismo padre que el de debajo, justo detrás de él. Lo que el árbol no admite sale
+deshabilitado y explica por qué al pasar el ratón: «Hacer hijo» si ya es su hijo, «Hacer hermano»
+si el de debajo es la raíz o si ya son hermanos. Si lo que querías era
+relacionarlos sin cambiar la jerarquía, elige `🔗 Conectar con enlace`; si solo querías dejarlo
+cerca, `➡ Mover aquí sin tapar`. `↩ Cancelar` (o `Esc`) lo devuelve a donde estaba, y cualquier
+opción se deshace con `Ctrl + Z`.
+
 ### Buscar y filtrar nodos
 
-En el panel lateral dispones del buscador de nodos (`🔍 Buscar por título o etiqueta`):
+En el panel lateral dispones del buscador de nodos (`🔍 Buscar por título o etiqueta`). Con
+`Ctrl + F` el cursor salta a él desde cualquier sitio, con lo que hubiera escrito ya seleccionado
+para buscar otra cosa encima:
 
 - **Búsqueda por texto**: localiza términos en títulos o etiquetas.
 - **Filtrado por estado y prioridad**: permite aislar rápidamente, por ejemplo, solo los nodos en `⏳ En Progreso` o con prioridad `🔥 Crítica`.
@@ -488,8 +517,12 @@ MMCelt se integra exclusivamente con los tres agentes oficiales de consola: **Cl
 ventana de terminal con la sesión preparada, el expediente redactado y la vigilancia activa.
 
 > ⚠️ **Estado de compatibilidad y acceso en Gemini CLI:**
-> Sobre el acceso interactivo con cuenta personal de Google conviven tres hechos documentados: el 13 de septiembre de 2026 la consola rechazó el acceso interactivo con cuentas personales estándar individuales; al probarlo a mano en la versión 0.11.6 funcionó de principio a fin utilizando una **clave de API gratuita de Google AI Studio** (`https://aistudio.google.com/app/apikey`), creando nodos y conexiones comprobados en disco; y el 18 de septiembre de 2026 la documentación oficial de Gemini CLI (`geminicli.com`) indicó que las cuentas individuales sí tienen acceso.
-> Como la compatibilidad interactiva puede variar según la versión del cliente instalada en cada equipo, el uso de la clave de API gratuita mediante `$env:GEMINI_API_KEY="tu_clave"` (PowerShell) o `export GEMINI_API_KEY="tu_clave"` (Bash/Zsh) es la vía comprobada y más directa para trabajar sin fricciones.
+> Confirmado: desde el 18 de junio de 2026, Google retiró el inicio de sesión interactivo («Sign in with
+> Google») de Gemini CLI para cuentas personales, incluidas las gratuitas, Google AI Pro y Ultra. Se
+> probó también con versiones anteriores de la consola, con el mismo resultado. La vía comprobada de
+> principio a fin es una **clave de API gratuita de Google AI Studio**
+> (`https://aistudio.google.com/app/apikey`), con `$env:GEMINI_API_KEY="tu_clave"` (PowerShell) o
+> `export GEMINI_API_KEY="tu_clave"` (Bash/Zsh): así creó nodos y conexiones comprobados en disco.
 
 **Retirada de conectores gráficos:** Los clientes de entorno gráfico o editores sin consola
 oficial (como Antigravity, Claude Desktop, Cursor o Windsurf) han sido retirados del catálogo
@@ -686,8 +719,15 @@ cambia la ventana entera —lienzo, menús, paneles y diálogos— y **se recuer
 reiniciar**.
 
 **¿Puedo trabajar sin conexión a internet?**
-Sí, siempre. La aplicación nunca se conecta a la red. Solo la necesitas para hablar con
-el modelo, y eso ocurre en tu navegador o en tu agente, no en MMCelt.
+Sí, siempre. Lo único que hace MMCelt en la red es preguntar a GitHub, al arrancar, si hay una
+versión nueva; sin conexión simplemente no avisa. Se desactiva en `🎨 Ver y Diseño` →
+`Comprobar al arrancar si hay una versión nueva`. Para hablar con el modelo sí necesitas
+conexión, y eso ocurre en tu navegador o en tu agente, no en MMCelt.
+
+**¿Cómo sé si hay una versión nueva?**
+Al arrancar, si hay una más nueva publicada en GitHub, la barra superior muestra
+`⬆ Nueva versión disponible:` con su número. Pulsándolo se abre su página en el navegador; el
+programa no descarga ni instala nada.
 
 **¿Dónde se guardan mis mapas?**
 Donde tú elijas. No hay almacenamiento en la nube ni base de datos: son archivos `.mmcelt`

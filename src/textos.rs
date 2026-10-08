@@ -407,6 +407,37 @@ pub enum Texto {
     // combinaciones con `Ctrl` se escriben igual en los dos y no necesitan clave.
     TeclaSuprimir,
     TeclaEspacio,
+    /// La tecla que centra la vista. Se nombra como la rotula el teclado o la guía de estilo
+    /// de Microsoft de cada idioma: «Origine» en francés, «Pos1» en alemán.
+    TeclaInicio,
+    /// La tecla `Insert`, alias de `Tab` para añadir un hijo. Nombre según la guía de estilo de
+    /// Microsoft de cada idioma donde existe (es, fr, zh) y la rotulación del teclado en el resto.
+    TeclaInsertar,
+    /// Aviso en la barra de que hay una versión publicada más nueva.
+    BarraVersionNuevaDisponible,
+    /// Opción del menú «Ver y Diseño» que activa o desactiva la comprobación al arrancar.
+    VerComprobarVersionNueva,
+    /// Opción del menú de suelta: colgar el nodo arrastrado del nodo destino.
+    SueltaHacerHijo,
+    /// Opción del menú de suelta: crear una conexión cruzada hacia el destino.
+    SueltaConectar,
+    /// Opción del menú de suelta: dejarlo junto al destino sin taparlo.
+    SueltaMoverSinTapar,
+    /// Opción del menú de suelta: deshacer el arrastre.
+    SueltaCancelar,
+    /// Opción del menú de suelta: colgar el nodo arrastrado del padre del destino, detrás de él.
+    SueltaHacerHermano,
+    /// Por qué «Conectar con enlace» no está disponible en el menú de suelta.
+    SueltaNoSePuedeConectar,
+    /// Por qué «Hacer hijo» no está disponible en el menú de suelta.
+    SueltaNoSePuedeHacerHijo,
+    /// Por qué «Hacer hermano» no está disponible en el menú de suelta: el destino es la raíz, ya
+    /// son hermanos o se formaría un bucle (PH-1007-7).
+    SueltaNoSePuedeHacerHermano,
+    /// Título del menú contextual que abre el clic derecho sobre un nodo.
+    MenuContextualTitulo,
+    /// Texto emergente del icono 📝 de una tarjeta que tiene notas.
+    IconoTieneNotas,
 
     // -- Menú Inteligencia Artificial --
     IaConectarConMisIas,
@@ -700,6 +731,8 @@ pub enum Texto {
     ModalExportarArchivoMarkdownMd,
     /// Centrar la vista en el nodo principal
     ModalCentrarLaVistaEn,
+    /// Buscar un nodo por título o etiqueta
+    ModalBuscarUnNodo,
     ModalDeshacerElUltimoCambio,
     ModalRehacerLoDeshecho,
     /// Agrandar o reducir toda la interfaz (letras, botones y paneles)
@@ -1509,6 +1542,20 @@ impl Texto {
 
             Texto::TeclaSuprimir => "Supr",
             Texto::TeclaEspacio => "Espacio",
+            Texto::TeclaInicio => "Inicio",
+            Texto::TeclaInsertar => "Insertar",
+            Texto::BarraVersionNuevaDisponible => "⬆ Nueva versión disponible:",
+            Texto::VerComprobarVersionNueva => "Comprobar al arrancar si hay una versión nueva",
+            Texto::SueltaHacerHijo => "➕ Hacer hijo",
+            Texto::SueltaConectar => "🔗 Conectar con enlace",
+            Texto::SueltaMoverSinTapar => "➡ Mover aquí sin tapar",
+            Texto::SueltaCancelar => "↩ Cancelar",
+            Texto::SueltaHacerHermano => "↔ Hacer hermano",
+            Texto::SueltaNoSePuedeConectar => "No hace falta: ya están unidos por la jerarquía o por otra conexión.",
+            Texto::SueltaNoSePuedeHacerHijo => "No se puede: es la raíz, ya cuelga de este nodo o se formaría un bucle.",
+            Texto::SueltaNoSePuedeHacerHermano => "No se puede: el de debajo es la raíz, ya son hermanos o se formaría un bucle.",
+            Texto::MenuContextualTitulo => "Acciones del nodo",
+            Texto::IconoTieneNotas => "📝 Tiene notas: selecciónalo para leerlas en el inspector",
 
             Texto::IaConectarConMisIas => "🔌 Conectar MMCelt con mis IAs...",
             Texto::IaConectarConMisIasAyuda => {
@@ -1694,6 +1741,7 @@ impl Texto {
             Texto::ModalGuardarMapaMentalMmcelt => "Guardar mapa mental (.mmcelt)",
             Texto::ModalExportarArchivoMarkdownMd => "Exportar archivo Markdown (.md) para IA",
             Texto::ModalCentrarLaVistaEn => "Centrar la vista en el nodo principal",
+            Texto::ModalBuscarUnNodo => "Buscar un nodo por título o etiqueta",
             Texto::ModalDeshacerElUltimoCambio => "Deshacer el último cambio",
             Texto::ModalRehacerLoDeshecho => "Rehacer lo deshecho",
             Texto::ModalAgrandarOReducirToda => "Agrandar o reducir toda la interfaz (letras, botones y paneles)",
@@ -1942,7 +1990,7 @@ impl Texto {
             Texto::EjemploAhorcadoVision => "Quiero programar el juego del ahorcado como primer proyecto completo: algo pequeño que pueda terminar de verdad, pero con todas las piezas de una aplicación real (lógica, interfaz, datos y pruebas). Me interesa más aprender a estructurar el código que añadir funcionalidades.",
             Texto::EjemploAhorcadoMetas => "Un juego jugable en la terminal, con al menos 100 palabras, que registre las partidas ganadas y perdidas. Terminado en dos fines de semana.",
             Texto::EjemploAhorcadoContexto => "Uso personal y como ejercicio de aprendizaje. Un solo jugador, sin red.",
-            Texto::EjemploAhorcadoRaizTitulo => "🎮 Juego del Ahorcado",
+            Texto::EjemploAhorcadoRaizTitulo => "Juego del Ahorcado",
             Texto::EjemploAhorcadoRaizNotas => "Adivinar una palabra oculta letra a letra, con un número limitado de fallos.",
             Texto::EjemploAhorcadoLogica => "Lógica del juego",
             Texto::EjemploAhorcadoLogicaNotas => "El núcleo, sin nada de interfaz. Debe poder probarse sin escribir ni leer por pantalla.",
@@ -1976,7 +2024,7 @@ impl Texto {
             Texto::EjemploNegocioVision => "Cocino bien y quiero vender comida casera preparada, del tipo que la gente no tiene tiempo de hacer entre semana. No quiero abrir un local ni endeudarme: empezar pequeño desde mi cocina, ver si hay clientes de verdad, y crecer solo si funciona.",
             Texto::EjemploNegocioMetas => "Vender 30 comidas a la semana en tres meses, cubriendo costes y pagándome el tiempo. Inversión inicial por debajo de 1.500 €.",
             Texto::EjemploNegocioContexto => "Gente que trabaja fuera y come en casa: parejas jóvenes y familias del barrio. Reparto en un radio de 3 km.",
-            Texto::EjemploNegocioRaizTitulo => "🍲 Comida casera a domicilio",
+            Texto::EjemploNegocioRaizTitulo => "Comida casera a domicilio",
             Texto::EjemploNegocioRaizNotas => "Comida preparada, casera y de temporada, entregada lista para calentar.",
             Texto::EjemploNegocioProducto => "Producto",
             Texto::EjemploNegocioProductoNotas => "Pocos platos, bien hechos y que aguanten bien el transporte y el recalentado.",
@@ -2160,6 +2208,20 @@ impl Texto {
 
             Texto::TeclaSuprimir => "Del",
             Texto::TeclaEspacio => "Space",
+            Texto::TeclaInicio => "Home",
+            Texto::TeclaInsertar => "Insert",
+            Texto::BarraVersionNuevaDisponible => "⬆ New version available:",
+            Texto::VerComprobarVersionNueva => "Check for a new version at startup",
+            Texto::SueltaHacerHijo => "➕ Make child",
+            Texto::SueltaConectar => "🔗 Connect with a link",
+            Texto::SueltaMoverSinTapar => "➡ Move here without covering",
+            Texto::SueltaCancelar => "↩ Cancel",
+            Texto::SueltaHacerHermano => "↔ Make sibling",
+            Texto::SueltaNoSePuedeConectar => "Not needed: they are already linked by the hierarchy or by another connection.",
+            Texto::SueltaNoSePuedeHacerHijo => "Not possible: it is the root, it already hangs from this node, or it would create a loop.",
+            Texto::SueltaNoSePuedeHacerHermano => "Not possible: the node below is the root, they are already siblings, or it would create a loop.",
+            Texto::MenuContextualTitulo => "Node actions",
+            Texto::IconoTieneNotas => "📝 Has notes: select it to read them in the inspector",
 
             Texto::IaConectarConMisIas => "🔌 Connect MMCelt with my AIs...",
             Texto::IaConectarConMisIasAyuda => {
@@ -2349,6 +2411,7 @@ impl Texto {
             Texto::ModalGuardarMapaMentalMmcelt => "Save mind map (.mmcelt)",
             Texto::ModalExportarArchivoMarkdownMd => "Export Markdown file (.md) for AI",
             Texto::ModalCentrarLaVistaEn => "Center view on root node",
+            Texto::ModalBuscarUnNodo => "Search for a node by title or tag",
             Texto::ModalDeshacerElUltimoCambio => "Undo the last change",
             Texto::ModalRehacerLoDeshecho => "Redo what was undone",
             Texto::ModalAgrandarOReducirToda => "Scale entire interface (text, buttons, and panels)",
@@ -2597,7 +2660,7 @@ impl Texto {
             Texto::EjemploAhorcadoVision => "I want to program the hangman game as a first complete project: something small that I can truly finish, but with all parts of a real app (logic, UI, data, and tests). I care more about learning how to structure code than adding features.",
             Texto::EjemploAhorcadoMetas => "A playable terminal game with at least 100 words, tracking wins and losses. Finished in two weekends.",
             Texto::EjemploAhorcadoContexto => "Personal use and learning exercise. Single player, offline.",
-            Texto::EjemploAhorcadoRaizTitulo => "🎮 Hangman Game",
+            Texto::EjemploAhorcadoRaizTitulo => "Hangman Game",
             Texto::EjemploAhorcadoRaizNotas => "Guess a hidden word letter by letter, with a limited number of misses.",
             Texto::EjemploAhorcadoLogica => "Game Logic",
             Texto::EjemploAhorcadoLogicaNotas => "The core, without any UI. Must be testable without reading or writing to the screen.",
@@ -2631,7 +2694,7 @@ impl Texto {
             Texto::EjemploNegocioVision => "I cook well and want to sell homemade prepared food that people do not have time to make on weekdays. No physical store or debt: start small from my kitchen, validate real demand, and scale only if it works.",
             Texto::EjemploNegocioMetas => "Sell 30 meals per week in 3 months, covering costs and paying for my time. Initial investment under €1,500.",
             Texto::EjemploNegocioContexto => "People working outside eating at home: young couples and neighborhood families. Delivery within 3 km.",
-            Texto::EjemploNegocioRaizTitulo => "🍲 Homemade Food Delivery",
+            Texto::EjemploNegocioRaizTitulo => "Homemade Food Delivery",
             Texto::EjemploNegocioRaizNotas => "Fresh seasonal homemade prepared food, delivered ready to heat.",
             Texto::EjemploNegocioProducto => "Product",
             Texto::EjemploNegocioProductoNotas => "Few dishes, well made, holding up well during delivery and reheating.",
@@ -2785,6 +2848,20 @@ impl Texto {
             Texto::EdicionEditarTextoDelNodo => "✏️ Modifier le texte du nœud",
             Texto::TeclaSuprimir => "Suppr",
             Texto::TeclaEspacio => "Espace",
+            Texto::TeclaInicio => "Origine",
+            Texto::TeclaInsertar => "Inser",
+            Texto::BarraVersionNuevaDisponible => "⬆ Nouvelle version disponible :",
+            Texto::VerComprobarVersionNueva => "Vérifier au démarrage s'il existe une nouvelle version",
+            Texto::SueltaHacerHijo => "➕ En faire un enfant",
+            Texto::SueltaConectar => "🔗 Relier par un lien",
+            Texto::SueltaMoverSinTapar => "➡ Déplacer ici sans recouvrir",
+            Texto::SueltaCancelar => "↩ Annuler",
+            Texto::SueltaHacerHermano => "↔ En faire un frère",
+            Texto::SueltaNoSePuedeConectar => "Inutile : ils sont déjà reliés par la hiérarchie ou par une autre connexion.",
+            Texto::SueltaNoSePuedeHacerHijo => "Impossible : c'est la racine, il dépend déjà de ce nœud, ou cela créerait une boucle.",
+            Texto::SueltaNoSePuedeHacerHermano => "Impossible : le nœud du dessous est la racine, ils sont déjà frères, ou cela créerait une boucle.",
+            Texto::MenuContextualTitulo => "Actions du nœud",
+            Texto::IconoTieneNotas => "📝 Contient des notes : sélectionnez-le pour les lire dans l'inspecteur",
             Texto::IaConectarConMisIas => "🔌 Connecter MMCelt à mes IA...",
             Texto::IaConectarConMisIasAyuda => "Détecte les agents en console installés (Claude Code, Codex CLI, Gemini CLI) et les connecte à MMCelt en un clic",
             Texto::IaMenuEnviarA => "📤 Envoyer à...",
@@ -2953,6 +3030,7 @@ impl Texto {
             Texto::ModalGuardarMapaMentalMmcelt => "Enregistrer la carte heuristique (.mmcelt)",
             Texto::ModalExportarArchivoMarkdownMd => "Exporter le fichier Markdown (.md) pour l'IA",
             Texto::ModalCentrarLaVistaEn => "Centrer la vue sur le nœud principal",
+            Texto::ModalBuscarUnNodo => "Rechercher un nœud par titre ou étiquette",
             Texto::ModalDeshacerElUltimoCambio => "Annuler la dernière modification",
             Texto::ModalRehacerLoDeshecho => "Rétablir ce qui a été annulé",
             Texto::ModalAgrandarOReducirToda => "Agrandir ou réduire l'interface entière (textes, boutons et panneaux)",
@@ -3201,7 +3279,7 @@ impl Texto {
             Texto::EjemploAhorcadoVision => "Je veux programmer le jeu du pendu comme premier projet complet : quelque chose de petit que je peux vraiment terminer, avec toutes les pièces d'une vraie application (logique, interface, données et tests).",
             Texto::EjemploAhorcadoMetas => "Un jeu jouable dans le terminal avec au moins 100 mots, enregistrant les victoires et défaites. Terminé en deux week-ends.",
             Texto::EjemploAhorcadoContexto => "Usage personnel et exercice d'apprentissage. Un seul joueur, hors ligne.",
-            Texto::EjemploAhorcadoRaizTitulo => "🎮 Jeu du Pendu",
+            Texto::EjemploAhorcadoRaizTitulo => "Jeu du Pendu",
             Texto::EjemploAhorcadoRaizNotas => "Deviner un mot caché lettre par lettre, avec un nombre limité d'erreurs.",
             Texto::EjemploAhorcadoLogica => "Logique du jeu",
             Texto::EjemploAhorcadoLogicaNotas => "Le cœur, sans interface. Doit pouvoir être testé sans affichage à l'écran.",
@@ -3235,7 +3313,7 @@ impl Texto {
             Texto::EjemploNegocioVision => "Je cuisine bien et veux vendre des plats faits maison livrés. Pas de local ni de dette : commencer petit depuis ma cuisine et valider la demande.",
             Texto::EjemploNegocioMetas => "Vendre 30 repas par semaine en 3 mois, rentabiliser mon temps. Investissement initial sous 1 500 €.",
             Texto::EjemploNegocioContexto => "Personnes actives mangeant chez elles : jeunes couples et familles du quartier. Livraison dans un rayon de 3 km.",
-            Texto::EjemploNegocioRaizTitulo => "🍲 Plats maison livrés à domicile",
+            Texto::EjemploNegocioRaizTitulo => "Plats maison livrés à domicile",
             Texto::EjemploNegocioRaizNotas => "Plats préparés maison et de saison, livrés prêts à réchauffer.",
             Texto::EjemploNegocioProducto => "Produit",
             Texto::EjemploNegocioProductoNotas => "Peu de plats, bien préparés et supportant bien le transport et le réchauffage.",
@@ -3389,6 +3467,20 @@ impl Texto {
             Texto::EdicionEditarTextoDelNodo => "✏️ Knotentext bearbeiten",
             Texto::TeclaSuprimir => "Entf",
             Texto::TeclaEspacio => "Leertaste",
+            Texto::TeclaInicio => "Pos1",
+            Texto::TeclaInsertar => "Einfg",
+            Texto::BarraVersionNuevaDisponible => "⬆ Neue Version verfügbar:",
+            Texto::VerComprobarVersionNueva => "Beim Start nach einer neuen Version suchen",
+            Texto::SueltaHacerHijo => "➕ Zum Kind machen",
+            Texto::SueltaConectar => "🔗 Mit Verknüpfung verbinden",
+            Texto::SueltaMoverSinTapar => "➡ Hierher verschieben, ohne zu verdecken",
+            Texto::SueltaCancelar => "↩ Abbrechen",
+            Texto::SueltaHacerHermano => "↔ Zum Geschwister machen",
+            Texto::SueltaNoSePuedeConectar => "Nicht nötig: Sie sind bereits durch die Hierarchie oder eine andere Verbindung verknüpft.",
+            Texto::SueltaNoSePuedeHacerHijo => "Nicht möglich: Es ist die Wurzel, hängt bereits an diesem Knoten oder es entstünde eine Schleife.",
+            Texto::SueltaNoSePuedeHacerHermano => "Nicht möglich: Der Knoten darunter ist die Wurzel, sie sind bereits Geschwister oder es entstünde eine Schleife.",
+            Texto::MenuContextualTitulo => "Knotenaktionen",
+            Texto::IconoTieneNotas => "📝 Enthält Notizen: auswählen, um sie im Inspektor zu lesen",
             Texto::IaConectarConMisIas => "🔌 MMCelt mit meinen KIs verbinden...",
             Texto::IaConectarConMisIasAyuda => "Erkennt installierte Konsolen-Agenten (Claude Code, Codex CLI, Gemini CLI) und verbindet sie mit einem Klick mit MMCelt",
             Texto::IaMenuEnviarA => "📤 Senden an...",
@@ -3557,6 +3649,7 @@ impl Texto {
             Texto::ModalGuardarMapaMentalMmcelt => "Mindmap speichern (.mmcelt)",
             Texto::ModalExportarArchivoMarkdownMd => "Markdown-Datei (.md) für KI exportieren",
             Texto::ModalCentrarLaVistaEn => "Ansicht auf Hauptknoten zentrieren",
+            Texto::ModalBuscarUnNodo => "Knoten nach Titel oder Schlagwort suchen",
             Texto::ModalDeshacerElUltimoCambio => "Letzte Änderung rückgängig machen",
             Texto::ModalRehacerLoDeshecho => "Rückgängig gemachte Änderung wiederholen",
             Texto::ModalAgrandarOReducirToda => "Gesamte Benutzeroberfläche skalieren (Schrift, Schaltflächen, Leisten)",
@@ -3805,7 +3898,7 @@ impl Texto {
             Texto::EjemploAhorcadoVision => "Ich möchte das Galgenmännchen-Spiel als erstes vollständiges Projekt programmieren: etwas Kleines, das ich wirklich abschließen kann, aber mit allen Teilen einer echten Anwendung (Logik, UI, Daten und Tests).",
             Texto::EjemploAhorcadoMetas => "Ein im Terminal spielbares Spiel mit mindestens 100 Wörtern, das Siege und Niederlagen erfasst. Fertiggestellt in zwei Wochenenden.",
             Texto::EjemploAhorcadoContexto => "Persönliche Nutzung und Lernübung. Einzelspieler, offline.",
-            Texto::EjemploAhorcadoRaizTitulo => "🎮 Galgenmännchen-Spiel",
+            Texto::EjemploAhorcadoRaizTitulo => "Galgenmännchen-Spiel",
             Texto::EjemploAhorcadoRaizNotas => "Ein verstecktes Wort Buchstabe für Buchstabe erraten, mit begrenzten Fehlversuchen.",
             Texto::EjemploAhorcadoLogica => "Spiellogik",
             Texto::EjemploAhorcadoLogicaNotas => "Der Kern, ohne UI. Muss ohne Bildschirmausgabe testbar sein.",
@@ -3839,7 +3932,7 @@ impl Texto {
             Texto::EjemploNegocioVision => "Ich koche gut und möchte hausgemachtes Essen verkaufen, für das die Leute unter der Woche keine Zeit haben. Kein Lokal, keine Schulden: klein in meiner Küche starten und wachsen, wenn es funktioniert.",
             Texto::EjemploNegocioMetas => "30 Mahlzeiten pro Woche in 3 Monaten verkaufen, Kosten decken und Zeit entlohnen. Anfangsinvestition unter 1.500 €.",
             Texto::EjemploNegocioContexto => "Berufstätige, die zu Hause essen: junge Paare und Familien im Viertel. Lieferung im 3-km-Radius.",
-            Texto::EjemploNegocioRaizTitulo => "🍲 Hausgemachtes Essen auf Bestellung",
+            Texto::EjemploNegocioRaizTitulo => "Hausgemachtes Essen auf Bestellung",
             Texto::EjemploNegocioRaizNotas => "Frisch zubereitetes, saisonales Essen, verzehrfertig geliefert.",
             Texto::EjemploNegocioProducto => "Produkt",
             Texto::EjemploNegocioProductoNotas => "Wenige Gerichte, hervorragend zubereitet, transport- und aufwärmstabil.",
@@ -3995,6 +4088,20 @@ impl Texto {
             Texto::EdicionEditarTextoDelNodo => "✏️ Изменить текст узла",
             Texto::TeclaSuprimir => "Del",
             Texto::TeclaEspacio => "Пробел",
+            Texto::TeclaInicio => "Home",
+            Texto::TeclaInsertar => "Insert",
+            Texto::BarraVersionNuevaDisponible => "⬆ Доступна новая версия:",
+            Texto::VerComprobarVersionNueva => "Проверять наличие новой версии при запуске",
+            Texto::SueltaHacerHijo => "➕ Сделать дочерним",
+            Texto::SueltaConectar => "🔗 Соединить связью",
+            Texto::SueltaMoverSinTapar => "➡ Переместить сюда без перекрытия",
+            Texto::SueltaCancelar => "↩ Отмена",
+            Texto::SueltaHacerHermano => "↔ Сделать соседним",
+            Texto::SueltaNoSePuedeConectar => "Не требуется: узлы уже связаны иерархией или другой связью.",
+            Texto::SueltaNoSePuedeHacerHijo => "Невозможно: это корень, узел уже подчинён этому узлу или образуется цикл.",
+            Texto::SueltaNoSePuedeHacerHermano => "Невозможно: нижний узел — корень, узлы уже соседние или образуется цикл.",
+            Texto::MenuContextualTitulo => "Действия с узлом",
+            Texto::IconoTieneNotas => "📝 Есть заметки: выберите узел, чтобы прочитать их в инспекторе",
             Texto::IaConectarConMisIas => "🔌 Подключить MMCelt к моим ИИ...",
             Texto::IaConectarConMisIasAyuda => "Определяет установленные консольные агенты (Claude Code, Codex CLI, Gemini CLI) и подключает их к MMCelt в один клик",
             Texto::IaMenuEnviarA => "📤 Отправить в...",
@@ -4163,6 +4270,7 @@ impl Texto {
             Texto::ModalGuardarMapaMentalMmcelt => "Сохранить интеллект-карту (.mmcelt)",
             Texto::ModalExportarArchivoMarkdownMd => "Экспорт файла Markdown (.md) для ИИ",
             Texto::ModalCentrarLaVistaEn => "Центрировать вид на главном узле",
+            Texto::ModalBuscarUnNodo => "Найти узел по названию или метке",
             Texto::ModalDeshacerElUltimoCambio => "Отменить последнее изменение",
             Texto::ModalRehacerLoDeshecho => "Повторить отменённое действие",
             Texto::ModalAgrandarOReducirToda => "Масштабирование всего интерфейса (текст, кнопки, панели)",
@@ -4411,7 +4519,7 @@ impl Texto {
             Texto::EjemploAhorcadoVision => "Я хочу запрограммировать игру в виселицу как первый завершенный проект: небольшой, но со всеми компонентами реального приложения (логика, интерфейс, данные и тесты).",
             Texto::EjemploAhorcadoMetas => "Играбельная консольная игра с базой минимум из 100 слов, сохраняющая статистику побед и поражений. Завершить за два уикенда.",
             Texto::EjemploAhorcadoContexto => "Личное использование и обучающее упражнение. Один игрок, без сети.",
-            Texto::EjemploAhorcadoRaizTitulo => "🎮 Игра «Виселица»",
+            Texto::EjemploAhorcadoRaizTitulo => "Игра «Виселица»",
             Texto::EjemploAhorcadoRaizNotas => "Угадать скрытое слово по буквам при ограниченном числе ошибок.",
             Texto::EjemploAhorcadoLogica => "Логика игры",
             Texto::EjemploAhorcadoLogicaNotas => "Ядро без интерфейса. Должно тестироваться без ввода/вывода на экран.",
@@ -4445,7 +4553,7 @@ impl Texto {
             Texto::EjemploNegocioVision => "Я хочу продавать домашнюю готовую еду. Без аренды помещения и долгов: начать со своей кухни, проверить спрос и расти только при успехе.",
             Texto::EjemploNegocioMetas => "Продавать 30 обедов в неделю через 3 месяца, покрывая расходы. Начальные инвестиции до 1 500 €.",
             Texto::EjemploNegocioContexto => "Работающие люди, питающиеся дома: молодые пары и семьи района. Доставка в радиусе 3 км.",
-            Texto::EjemploNegocioRaizTitulo => "🍲 Домашняя еда с доставкой",
+            Texto::EjemploNegocioRaizTitulo => "Домашняя еда с доставкой",
             Texto::EjemploNegocioRaizNotas => "Свежая сезонная домашняя еда, готовая к разогреву.",
             Texto::EjemploNegocioProducto => "Продукт",
             Texto::EjemploNegocioProductoNotas => "Немного блюд, качественно приготовленных и сохраняющих вкус при доставке.",
@@ -4599,6 +4707,20 @@ impl Texto {
             Texto::EdicionEditarTextoDelNodo => "✏️ 编辑节点文本",
             Texto::TeclaSuprimir => "Del",
             Texto::TeclaEspacio => "空格",
+            Texto::TeclaInicio => "Home",
+            Texto::TeclaInsertar => "Insert",
+            Texto::BarraVersionNuevaDisponible => "⬆ 有新版本可用：",
+            Texto::VerComprobarVersionNueva => "启动时检查是否有新版本",
+            Texto::SueltaHacerHijo => "➕ 设为子节点",
+            Texto::SueltaConectar => "🔗 用连接线关联",
+            Texto::SueltaMoverSinTapar => "➡ 移到此处且不遮挡",
+            Texto::SueltaCancelar => "↩ 取消",
+            Texto::SueltaHacerHermano => "↔ 设为同级节点",
+            Texto::SueltaNoSePuedeConectar => "无需连接：它们已通过层级关系或其他连接相连。",
+            Texto::SueltaNoSePuedeHacerHijo => "无法执行：这是根节点、已是该节点的子节点，或会形成循环。",
+            Texto::SueltaNoSePuedeHacerHermano => "无法执行：下方节点是根节点、两者已是同级节点，或会形成循环。",
+            Texto::MenuContextualTitulo => "节点操作",
+            Texto::IconoTieneNotas => "📝 包含备注：选中该节点即可在检查器中阅读",
             Texto::IaConectarConMisIas => "🔌 将MMCelt连接到我的AI...",
             Texto::IaConectarConMisIasAyuda => "自动检测已安装的控制台智能体（Claude Code、Codex CLI、Gemini CLI）并一键连接到MMCelt",
             Texto::IaMenuEnviarA => "📤 发送到...",
@@ -4767,6 +4889,7 @@ impl Texto {
             Texto::ModalGuardarMapaMentalMmcelt => "保存思维导图 (.mmcelt)",
             Texto::ModalExportarArchivoMarkdownMd => "导出供AI使用的 Markdown 文件 (.md)",
             Texto::ModalCentrarLaVistaEn => "视角居中于根节点",
+            Texto::ModalBuscarUnNodo => "按标题或标签搜索节点",
             Texto::ModalDeshacerElUltimoCambio => "撤销上一次更改",
             Texto::ModalRehacerLoDeshecho => "重做已撤销的更改",
             Texto::ModalAgrandarOReducirToda => "缩放完整界面（字体、按钮与面板）",
@@ -5015,7 +5138,7 @@ impl Texto {
             Texto::EjemploAhorcadoVision => "我想把猜单词（刽子手）游戏作为第一个完整项目来开发：体量虽小但能真正完成，且具备真实应用的所有组成部分（业务逻辑、界面、数据与测试）。相比堆砌功能，我更注重学习如何规范地组织代码结构。",
             Texto::EjemploAhorcadoMetas => "一个可在终端游玩的游戏，包含至少 100 个词汇，并能记录胜负场次。计划在两个周末内完成。",
             Texto::EjemploAhorcadoContexto => "个人使用与学习练习。单人模式，无需联网。",
-            Texto::EjemploAhorcadoRaizTitulo => "🎮 猜单词游戏 (Hangman)",
+            Texto::EjemploAhorcadoRaizTitulo => "猜单词游戏 (Hangman)",
             Texto::EjemploAhorcadoRaizNotas => "逐字猜测隐藏的单词，允许犯错的次数有限。",
             Texto::EjemploAhorcadoLogica => "游戏核心逻辑",
             Texto::EjemploAhorcadoLogicaNotas => "核心算法，与界面完全独立。必须无需控制台交互即可独立进行单元测试。",
@@ -5049,7 +5172,7 @@ impl Texto {
             Texto::EjemploNegocioVision => "我擅长烹调，想出售大家在工作日没时间做的家常便饭。不想开实体店或负债：从小做起直接在自家厨房备餐，验证是否有真实客户需求，只有在模式走通后再行扩张。",
             Texto::EjemploNegocioMetas => "在 3 个月内达到每周售出 30 份餐食，覆盖成本并获得合理工时回报。初始启动资金控制在 1,500 欧元以内。",
             Texto::EjemploNegocioContexto => "在外上班但在家就餐的人群：年轻情侣及社区家庭。配送范围设定在方圆 3 公里内。",
-            Texto::EjemploNegocioRaizTitulo => "🍲 家常菜外送服务",
+            Texto::EjemploNegocioRaizTitulo => "家常菜外送服务",
             Texto::EjemploNegocioRaizNotas => "新鲜、应季的家常预制餐品，送达即热即食。",
             Texto::EjemploNegocioProducto => "产品规划",
             Texto::EjemploNegocioProductoNotas => "精简菜品，注重品质，确保在配送及二次加热后依然保持良好口感。",
@@ -5105,7 +5228,7 @@ impl Texto {
     /// no era cierto: una clave nueva que no llegara a esta lista se escapaba en silencio de
     /// las dos comprobaciones que la usan.
     #[cfg(test)]
-    pub const TODOS: [Texto; 581] = [
+    pub const TODOS: [Texto; 596] = [
         Texto::MenuArchivo,
         Texto::ArchivoNuevoMapa,
         Texto::ArchivoEjemplos,
@@ -5205,6 +5328,20 @@ impl Texto {
         Texto::EdicionEditarTextoDelNodo,
         Texto::TeclaSuprimir,
         Texto::TeclaEspacio,
+        Texto::TeclaInicio,
+        Texto::TeclaInsertar,
+        Texto::BarraVersionNuevaDisponible,
+        Texto::VerComprobarVersionNueva,
+        Texto::SueltaHacerHijo,
+        Texto::SueltaConectar,
+        Texto::SueltaMoverSinTapar,
+        Texto::SueltaCancelar,
+        Texto::SueltaHacerHermano,
+        Texto::SueltaNoSePuedeConectar,
+        Texto::SueltaNoSePuedeHacerHijo,
+        Texto::SueltaNoSePuedeHacerHermano,
+        Texto::MenuContextualTitulo,
+        Texto::IconoTieneNotas,
         Texto::IaConectarConMisIas,
         Texto::IaConectarConMisIasAyuda,
         Texto::IaMenuEnviarA,
@@ -5370,6 +5507,7 @@ impl Texto {
         Texto::ModalGuardarMapaMentalMmcelt,
         Texto::ModalExportarArchivoMarkdownMd,
         Texto::ModalCentrarLaVistaEn,
+        Texto::ModalBuscarUnNodo,
         Texto::ModalDeshacerElUltimoCambio,
         Texto::ModalRehacerLoDeshecho,
         Texto::ModalAgrandarOReducirToda,
@@ -6242,6 +6380,27 @@ impl ClaveError {
                 Idioma::Ruso => format!("Не удалось отслеживать «{}»: {origen}. Убедитесь, что папка существует и остаётся доступной.", ruta.display()),
                 Idioma::ChinoSimplificado => format!("无法监视 «{}»：{origen}。请检查文件夹是否存在且可用。", ruta.display()),
             },
+            ClaveError::ComprobacionDeVersion { detalle } => match idioma {
+                Idioma::Espanol => format!("No se pudo comprobar si hay una versión nueva: {detalle}."),
+                Idioma::Ingles => format!("Could not check for a new version: {detalle}."),
+                Idioma::Frances => format!("Impossible de vérifier s'il existe une nouvelle version : {detalle}."),
+                Idioma::Aleman => format!("Es konnte nicht geprüft werden, ob es eine neue Version gibt: {detalle}."),
+                Idioma::Ruso => format!("Не удалось проверить наличие новой версии: {detalle}."),
+                Idioma::ChinoSimplificado => format!("无法检查是否有新版本：{detalle}。"),
+            },
         }
     }
+}
+
+/// Quita los dos puntos finales de un rótulo pensado para ir delante de un campo.
+///
+/// Los rótulos del inspector («Estado:», «Prioridad:») se reutilizan como título de submenú y
+/// como categoría de un texto emergente, donde los dos puntos sobran o se ponen aparte. Se
+/// quitan también los espacios que el francés pone antes de ellos y los dos puntos de ancho
+/// completo «：» del chino, que la primera versión dejaba («状态：: …»).
+///
+/// # Parámetros
+/// - `rotulo`: el rótulo tal cual sale de [`Texto::en`].
+pub fn sin_dos_puntos(rotulo: &str) -> &str {
+    rotulo.trim_end_matches(|c: char| c == ':' || c == '：' || c.is_whitespace())
 }

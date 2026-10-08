@@ -187,22 +187,71 @@ struct PulsacionesDelPuntero {
 
 /// Lee de una vez todo lo que hace el puntero en el fotograma.
 ///
+/// El ratón se lee crudo del contexto, así que hay que descartar lo que no es del lienzo
+/// (PH-1007-6). El clic es de otro si el puntero está fuera de la zona del mapa —el inspector y
+/// la barra comparten capa con el lienzo, y detrás de ellos sigue habiendo nodos que no se ven—
+/// o si encima hay otra capa interactiva: la lista de un desplegable, un menú, una ventana. Sin
+/// este filtro, pulsar un desplegable del inspector con un nodo oculto detrás lo seleccionaba y el
+/// valor se aplicaba al nodo nuevo. Un arrastre ya empezado conserva la posición, para que pasar
+/// por encima de algo no lo suelte.
+///
 /// # Parámetros
 /// - `ctx`: el contexto de `egui` del fotograma en curso.
+/// - `capa_del_lienzo`: la capa en la que se dibuja el lienzo.
+/// - `zona_del_mapa`: el rectángulo en pantalla que ocupa el lienzo.
 ///
 /// # Devuelve
 /// La foto del ratón con la que van a decidir todas las tarjetas.
-fn leer_las_pulsaciones(ctx: &egui::Context) -> PulsacionesDelPuntero {
+fn leer_las_pulsaciones(
+    ctx: &egui::Context,
+    capa_del_lienzo: egui::LayerId,
+    zona_del_mapa: Rect,
+) -> PulsacionesDelPuntero {
+    let posicion = ctx.input(|i| i.pointer.hover_pos());
+    let tapado = posicion.is_some_and(|punto| {
+        !zona_del_mapa.contains(punto) || ctx.layer_id_at(punto) != Some(capa_del_lienzo)
+    });
+    let boton_pulsado = ctx.input(|i| i.pointer.primary_down());
+    let recien_pulsado = ctx.input(|i| i.pointer.primary_pressed());
+    let empezo_en_el_mapa = pulsacion_empezada_en_el_mapa(ctx, recien_pulsado, !tapado);
     PulsacionesDelPuntero {
-        posicion: ctx.input(|i| i.pointer.hover_pos()),
-        boton_pulsado: ctx.input(|i| i.pointer.primary_down()),
-        clic_completo: ctx.input(|i| i.pointer.primary_clicked()),
-        recien_pulsado: ctx.input(|i| i.pointer.primary_pressed()),
-        doble_clic: ctx.input(|i| {
-            i.pointer
-                .button_double_clicked(egui::PointerButton::Primary)
-        }),
+        posicion: posicion.filter(|_| !tapado || (boton_pulsado && empezo_en_el_mapa)),
+        boton_pulsado,
+        clic_completo: !tapado && empezo_en_el_mapa && ctx.input(|i| i.pointer.primary_clicked()),
+        recien_pulsado: !tapado && recien_pulsado,
+        doble_clic: !tapado
+            && empezo_en_el_mapa
+            && ctx.input(|i| {
+                i.pointer
+                    .button_double_clicked(egui::PointerButton::Primary)
+            }),
     }
+}
+
+/// Recuerda si la última pulsación del botón principal empezó sobre el mapa.
+///
+/// El lienzo solo responde a la ventana en la que se pulsó: pulsar en el inspector y soltar
+/// encima de un nodo no es un clic del mapa. `egui` olvida dónde empezó la pulsación al soltar,
+/// así que se anota en su memoria temporal en el fotograma en que se pulsa.
+///
+/// # Parámetros
+/// - `ctx`: el contexto de `egui`, en cuya memoria temporal se guarda la marca.
+/// - `recien_pulsado`: el botón se ha bajado en este fotograma.
+/// - `sobre_el_mapa`: el puntero está ahora sobre el mapa y no hay nada encima.
+///
+/// # Devuelve
+/// `true` si la pulsación en curso (o la que acaba de terminar) empezó sobre el mapa.
+fn pulsacion_empezada_en_el_mapa(
+    ctx: &egui::Context,
+    recien_pulsado: bool,
+    sobre_el_mapa: bool,
+) -> bool {
+    let marca = egui::Id::new("pulsacion_empezada_en_el_mapa");
+    if recien_pulsado {
+        ctx.data_mut(|datos| datos.insert_temp(marca, sobre_el_mapa));
+    }
+    ctx.data(|datos| datos.get_temp::<bool>(marca))
+        .unwrap_or(false)
 }
 
 /// Lo que no cambia mientras se dibuja un fotograma del lienzo.
@@ -231,6 +280,12 @@ struct Fotograma<'a> {
     ocultos: &'a HashSet<Uuid>,
     /// Lo que hace el ratón en este fotograma.
     puntero: PulsacionesDelPuntero,
+    /// Si el mapa admite cambios en este fotograma (no está en solo lectura).
+    ///
+    /// Se pregunta **una vez** por fotograma y viaja con él: antes el lienzo lo repreguntaba
+    /// en cada sitio que cambiaba el mapa (arrastre, botón «+», hijo rápido), y cada sitio
+    /// nuevo era una guarda más que alguien podía olvidar (barrera P7, «solo-lectura»).
+    editable: bool,
 }
 
 /// Lo que el usuario ha pedido sobre el lienzo y todavía está sin aplicar.
@@ -249,6 +304,8 @@ struct AccionesDelLienzo {
     nodo_para_hijo_rapido: Option<Uuid>,
     /// Nodo cuyo título se ha terminado de editar, con el texto nuevo.
     nodo_a_renombrar: Option<(Uuid, String)>,
+    /// Texto emergente del icono que tiene el puntero encima, y dónde está el puntero.
+    texto_emergente: Option<(String, Pos2)>,
 }
 
 /// Índice de las tarjetas por región, reconstruido solo cuando cambia el mapa.
@@ -275,8 +332,7 @@ impl IndiceEspacialLienzo {
         self.orden.clear();
         for (posicion, (&id, nodo)) in proyecto.nodes.iter().enumerate() {
             self.orden.insert(id, posicion);
-            let (ancho, alto) =
-                estimar_tamano_del_nodo(&nodo.title, !nodo.notes.is_empty(), nodo.tags.len());
+            let (ancho, alto) = estimar_tamano_del_nodo(&nodo.title, nodo.tags.len());
             let minimo_x = celda_de(nodo.pos[0] - ancho / 2.0);
             let maximo_x = celda_de(nodo.pos[0] + ancho / 2.0);
             let minimo_y = celda_de(nodo.pos[1] - alto / 2.0);
@@ -392,6 +448,8 @@ struct DatosDeLaTarjeta {
     priority: PrioridadNodo,
     /// Estado de supervisión humana para indicadores de control.
     review_status: EstadoRevision,
+    /// Rol del nodo, que se pinta abajo a la derecha (PH-1007-3).
+    role: crate::model::RolNodo,
     /// Posición en las coordenadas del mapa.
     pos: [f32; 2],
     /// El nodo no tiene hijos, así que no lleva botón de plegar.
@@ -515,15 +573,50 @@ fn dibujar_fotograma_del_lienzo(
         a_pantalla: &a_pantalla,
         a_mundo: &a_mundo,
         ocultos: &ocultos,
-        puntero: leer_las_pulsaciones(ui.ctx()),
+        puntero: leer_las_pulsaciones(ui.ctx(), ui.layer_id(), response.rect),
+        editable: !app.es_solo_lectura_por_raiz(),
     };
+    anotar_el_clic_derecho(app, response, &fotograma);
 
     // Las conexiones se pintan primero para que las tarjetas queden encima.
     dibujar_las_conexiones_de_la_jerarquia(app, &fotograma);
     dibujar_las_conexiones_cruzadas(app, &fotograma);
     let mut acciones = AccionesDelLienzo::default();
     dibujar_las_tarjetas(app, ui, &fotograma, &mut acciones);
-    aplicar_las_acciones_del_lienzo(app, acciones, response, fotograma.puntero);
+    if let Some((texto, puntero)) = acciones.texto_emergente.take() {
+        pintar_el_texto_emergente(ui.ctx(), texto, puntero);
+    }
+    aplicar_las_acciones_del_lienzo(
+        app,
+        acciones,
+        response,
+        fotograma.puntero,
+        fotograma.editable,
+    );
+}
+
+/// Anota el clic derecho sin arrastre de este fotograma, si el mapa admite cambios.
+///
+/// Lo interpreta `ui::menu_contextual_nodo`. `egui` solo lo da por clic si el puntero no superó
+/// el umbral de arrastre, así que mover la cámara con el botón derecho no lo dispara. En solo
+/// lectura no se anota: casi todo lo que ofrece el menú cambia el mapa.
+///
+/// # Parámetros
+/// - `app`: el estado, donde se anota el clic.
+/// - `response`: la respuesta del lienzo en este fotograma.
+/// - `fotograma`: la conversión a coordenadas del lienzo y si el mapa es editable.
+fn anotar_el_clic_derecho(
+    app: &mut AplicacionMapaMental,
+    response: &egui::Response,
+    fotograma: &Fotograma,
+) {
+    if !fotograma.editable || !response.secondary_clicked() {
+        return;
+    }
+    if let Some(en_pantalla) = response.interact_pointer_pos() {
+        let en_el_lienzo = (fotograma.a_mundo)(en_pantalla);
+        app.lienzo_mut().actualizar_vista().clic_derecho = Some((en_el_lienzo, en_pantalla));
+    }
 }
 
 /// Dibuja las curvas de la jerarquía, una rama por cada hijo de la raíz.
@@ -673,10 +766,11 @@ fn dibujar_las_tarjetas(
             dibujar_el_editor_del_titulo(app, ui, fotograma, id_del_nodo, &geometria, acciones);
         } else {
             pintar_el_titulo_y_los_indicadores(app, fotograma, &datos, &geometria);
+            anotar_el_icono_bajo_el_cursor(app, fotograma, &datos, &geometria, acciones);
         }
 
         pintar_el_boton_de_plegar(app, fotograma, id_del_nodo, &datos, &geometria, acciones);
-        if !app.es_solo_lectura_por_raiz() {
+        if fotograma.editable {
             pintar_el_boton_de_anadir_hijo(app, fotograma, id_del_nodo, &geometria, acciones);
         }
     }
@@ -706,6 +800,7 @@ fn datos_de_la_tarjeta(
         status: node.status,
         priority: node.priority,
         review_status: node.review_status,
+        role: node.role,
         pos: node.pos,
         sin_hijos: node.children.is_empty(),
         collapsed: node.collapsed,
@@ -740,7 +835,7 @@ fn geometria_de_la_tarjeta(
     } = *fotograma;
     let posicion_del_cursor = puntero.posicion;
     let pos = datos.pos;
-    let (w, h) = estimar_tamano_del_nodo(&datos.title, !datos.sin_notas, datos.numero_de_etiquetas);
+    let (w, h) = estimar_tamano_del_nodo(&datos.title, datos.numero_de_etiquetas);
 
     let screen_w = w * zoom;
     let screen_h = h * zoom;
@@ -801,7 +896,7 @@ fn atender_el_arrastre(
     datos: &DatosDeLaTarjeta,
     geometria: &GeometriaDeLaTarjeta,
 ) {
-    if app.es_solo_lectura_por_raiz() {
+    if !fotograma.editable {
         return;
     }
     let Fotograma {
@@ -831,6 +926,7 @@ fn atender_el_arrastre(
         app.lienzo_mut().actualizar_vista().agarre_del_arrastre = posicion_del_cursor
             .map(|p| a_mundo(p) - Pos2::new(pos[0], pos[1]))
             .unwrap_or(Vec2::ZERO);
+        app.lienzo_mut().actualizar_vista().posicion_al_agarrar = pos;
 
         // Con la colocación automática puesta, el arrastre se acepta y la
         // siguiente recolocación lo deshace —ocurre al escribir en el inspector,
@@ -877,6 +973,12 @@ fn atender_el_arrastre(
             }
         } else {
             app.lienzo_mut().actualizar_vista().nodo_arrastrado = None;
+            // Quién interpreta la suelta —si cayó encima de otro nodo— es
+            // `ui::suelta_de_nodo`; aquí solo se anota qué se soltó y dónde se ve.
+            app.lienzo_mut().actualizar_vista().nodo_recien_soltado = Some((
+                id_del_nodo,
+                (fotograma.a_pantalla)(Pos2::new(pos[0], pos[1])),
+            ));
         }
     }
 }
@@ -1083,6 +1185,7 @@ fn pintar_el_titulo_y_los_indicadores(
         status,
         priority,
         review_status,
+        role,
         es_la_raiz,
         sin_notas,
         primera_etiqueta,
@@ -1098,13 +1201,10 @@ fn pintar_el_titulo_y_los_indicadores(
     // Se compone con un ancho máximo para que **se envuelva dentro de la
     // caja**. El espacio disponible tiene en cuenta la reserva horizontal
     // para los indicadores de la esquina superior derecha (C19-D).
-    let posicion_del_titulo = Pos2::new(
-        caja_del_nodo.min.x + 10.0 * zoom,
-        caja_del_nodo.min.y + 12.0 * zoom,
-    );
+    let posicion_del_titulo = posicion_del_titulo(caja_del_nodo, zoom);
 
     let texto_del_titulo = format!("{} {}", status.emoji(), title);
-    let tamano_de_letra = if es_la_raiz { 15.0 } else { 13.0 } * zoom;
+    let tamano_de_letra = tamano_de_letra_del_titulo(es_la_raiz) * zoom;
     let ancho_para_el_texto =
         (caja_del_nodo.width() - (MARGEN_DEL_TEXTO * zoom + reserva_indicadores)).max(1.0);
 
@@ -1122,11 +1222,9 @@ fn pintar_el_titulo_y_los_indicadores(
 
     // Indicadores visuales de prioridad y control humano (C19-C, C19-D)
     if !indicadores.is_empty() {
-        let mut x_indicador = caja_del_nodo.max.x - 10.0 * zoom;
-        let y_indicador = caja_del_nodo.min.y + 12.0 * zoom;
         let tamano_letra_indicador = 12.0 * zoom;
 
-        for indicador in indicadores.iter().rev() {
+        for (orden_desde_la_derecha, indicador) in indicadores.iter().rev().enumerate() {
             let color = if indicador.es_prioridad {
                 match priority {
                     PrioridadNodo::Critica => app.presentacion().tema().peligro,
@@ -1143,21 +1241,27 @@ fn pintar_el_titulo_y_los_indicadores(
             };
 
             painter.text(
-                Pos2::new(x_indicador, y_indicador),
+                ancla_del_indicador(caja_del_nodo, zoom, orden_desde_la_derecha),
                 egui::Align2::RIGHT_TOP,
                 indicador.simbolo,
                 FontId::proportional(tamano_letra_indicador),
                 color,
             );
-            x_indicador -= 16.0 * zoom;
         }
     }
 
     // Etiquetas e indicador de notas.
     let linea_de_los_iconos = caja_del_nodo.max.y - 14.0 * zoom;
+    painter.text(
+        ancla_del_rol(caja_del_nodo, zoom),
+        egui::Align2::RIGHT_BOTTOM,
+        role.simbolo(),
+        FontId::proportional(LETRA_DEL_ICONO_DE_NOTAS * zoom),
+        app.presentacion().tema().texto_atenuado,
+    );
     if !sin_notas {
         painter.text(
-            Pos2::new(caja_del_nodo.max.x - 14.0 * zoom, linea_de_los_iconos),
+            ancla_de_las_notas(caja_del_nodo, zoom),
             egui::Align2::RIGHT_BOTTOM,
             "📝",
             FontId::proportional(LETRA_DEL_ICONO_DE_NOTAS * zoom),
@@ -1338,6 +1442,7 @@ fn aplicar_las_acciones_del_lienzo(
     acciones: AccionesDelLienzo,
     response: &egui::Response,
     puntero: PulsacionesDelPuntero,
+    editable: bool,
 ) {
     let posicion_del_cursor = puntero.posicion;
 
@@ -1413,7 +1518,7 @@ fn aplicar_las_acciones_del_lienzo(
     }
 
     if let Some(id) = acciones.nodo_para_hijo_rapido {
-        if !app.es_solo_lectura_por_raiz() {
+        if editable {
             let titulo = crate::textos::Texto::NodoNuevaIdea.en(app.idioma());
             let id_del_hijo = app
                 .mapa_mut()
@@ -1543,12 +1648,8 @@ fn dibujar_conexiones_de_la_rama(
         let parent_screen = a_pantalla(parent_pos);
         let node_screen = a_pantalla(posicion_del_nodo);
 
-        let (pw, _) = estimar_tamano_del_nodo(
-            &parent_node.title,
-            !parent_node.notes.is_empty(),
-            parent_node.tags.len(),
-        );
-        let (nw, _) = estimar_tamano_del_nodo(&node.title, !node.notes.is_empty(), node.tags.len());
+        let (pw, _) = estimar_tamano_del_nodo(&parent_node.title, parent_node.tags.len());
+        let (nw, _) = estimar_tamano_del_nodo(&node.title, node.tags.len());
 
         // La línea sale del lado por el que queda el hijo, para que no cruce por encima del
         // propio nodo.
@@ -1597,4 +1698,253 @@ fn dibujar_conexiones_de_la_rama(
             }
         }
     }
+}
+
+/// Separación horizontal entre dos indicadores de la esquina superior derecha, a escala natural.
+/// Es también la anchura que reserva cada uno en [`reserva_horizontal_de_indicadores`].
+const PASO_ENTRE_INDICADORES: f32 = 16.0;
+
+/// Distancia del borde derecho de la tarjeta al indicador más a la derecha, a escala natural.
+const MARGEN_DERECHO_DE_LOS_INDICADORES: f32 = 10.0;
+
+/// Distancia del borde superior de la tarjeta al título y a los indicadores, a escala natural.
+const MARGEN_SUPERIOR_DEL_TITULO: f32 = 12.0;
+
+/// Distancia del borde izquierdo de la tarjeta al título, a escala natural.
+const MARGEN_IZQUIERDO_DEL_TITULO: f32 = 10.0;
+
+/// Distancia del icono de notas a la esquina inferior derecha de la tarjeta, a escala natural.
+const MARGEN_DEL_ICONO_DE_NOTAS: f32 = 14.0;
+
+/// Lado de la zona sensible de un indicador o del icono de notas, a escala natural.
+///
+/// Algo menor que [`PASO_ENTRE_INDICADORES`] para que dos zonas vecinas no se toquen: el puntero
+/// en la frontera no puede pertenecer a dos iconos a la vez.
+const LADO_DE_LA_ZONA_DE_UN_ICONO: f32 = 14.0;
+
+/// Un icono de una tarjeta que tiene explicación al pasar el ratón.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IconoDelNodo {
+    /// El emoji de estado delante del título.
+    Estado,
+    /// El indicador de prioridad, arriba a la derecha.
+    Prioridad,
+    /// El indicador de control humano, arriba a la derecha.
+    Revision,
+    /// El 📝 de las notas, abajo a la derecha.
+    Notas,
+    /// El icono del rol, abajo a la derecha, a la izquierda del de notas (PH-1007-3).
+    Rol,
+}
+
+/// Dónde está, en pantalla, un icono de una tarjeta.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ZonaDeIcono {
+    /// La zona sensible al ratón.
+    pub caja: Rect,
+    /// Qué icono es.
+    pub icono: IconoDelNodo,
+}
+
+/// Esquina superior izquierda del título (y del emoji de estado, que va delante).
+fn posicion_del_titulo(caja: Rect, zoom: f32) -> Pos2 {
+    Pos2::new(
+        caja.min.x + MARGEN_IZQUIERDO_DEL_TITULO * zoom,
+        caja.min.y + MARGEN_SUPERIOR_DEL_TITULO * zoom,
+    )
+}
+
+/// Esquina superior derecha de un indicador; el pintado lo alinea a ella.
+///
+/// # Parámetros
+/// - `caja`: la tarjeta en pantalla.
+/// - `zoom`: el acercamiento.
+/// - `orden_desde_la_derecha`: 0 para el de más a la derecha, 1 para el siguiente…
+pub fn ancla_del_indicador(caja: Rect, zoom: f32, orden_desde_la_derecha: usize) -> Pos2 {
+    Pos2::new(
+        caja.max.x
+            - MARGEN_DERECHO_DE_LOS_INDICADORES * zoom
+            - orden_desde_la_derecha as f32 * PASO_ENTRE_INDICADORES * zoom,
+        caja.min.y + MARGEN_SUPERIOR_DEL_TITULO * zoom,
+    )
+}
+
+/// Esquina inferior derecha del icono de rol: un paso a la izquierda del de notas, haya notas
+/// o no, para que el rol no cambie de sitio al escribir una nota.
+pub fn ancla_del_rol(caja: Rect, zoom: f32) -> Pos2 {
+    ancla_de_las_notas(caja, zoom) - Vec2::new(PASO_ENTRE_INDICADORES * zoom, 0.0)
+}
+
+/// Esquina inferior derecha del icono de notas; el pintado lo alinea a ella.
+pub fn ancla_de_las_notas(caja: Rect, zoom: f32) -> Pos2 {
+    Pos2::new(
+        caja.max.x - MARGEN_DEL_ICONO_DE_NOTAS * zoom,
+        caja.max.y - MARGEN_DEL_ICONO_DE_NOTAS * zoom,
+    )
+}
+
+/// Las zonas sensibles de los iconos de una tarjeta, con las mismas anclas que el pintado.
+///
+/// # Parámetros
+/// - `caja`: la tarjeta en pantalla.
+/// - `zoom`: el acercamiento.
+/// - `indicadores`: los de [`calcular_indicadores_del_nodo`], en su orden.
+/// - `con_notas`: si se pinta el icono de notas.
+/// - `tamano_del_estado`: lo que ocupa el emoji de estado con la letra del título.
+///
+/// # Devuelve
+/// Estado, después los indicadores en su orden, el rol y por último las notas, si las hay.
+pub fn zonas_de_los_iconos(
+    caja: Rect,
+    zoom: f32,
+    indicadores: &[IndicadorVisual],
+    con_notas: bool,
+    tamano_del_estado: Vec2,
+) -> Vec<ZonaDeIcono> {
+    let lado = LADO_DE_LA_ZONA_DE_UN_ICONO * zoom;
+    let mut zonas = vec![ZonaDeIcono {
+        caja: Rect::from_min_size(posicion_del_titulo(caja, zoom), tamano_del_estado),
+        icono: IconoDelNodo::Estado,
+    }];
+    let cantidad = indicadores.len();
+    for (posicion, indicador) in indicadores.iter().enumerate() {
+        let ancla = ancla_del_indicador(caja, zoom, cantidad - 1 - posicion);
+        zonas.push(ZonaDeIcono {
+            caja: Rect::from_min_max(
+                Pos2::new(ancla.x - lado, ancla.y),
+                Pos2::new(ancla.x, ancla.y + lado),
+            ),
+            icono: if indicador.es_prioridad {
+                IconoDelNodo::Prioridad
+            } else {
+                IconoDelNodo::Revision
+            },
+        });
+    }
+    let ancla = ancla_del_rol(caja, zoom);
+    zonas.push(ZonaDeIcono {
+        caja: Rect::from_min_max(Pos2::new(ancla.x - lado, ancla.y - lado), ancla),
+        icono: IconoDelNodo::Rol,
+    });
+    if con_notas {
+        let ancla = ancla_de_las_notas(caja, zoom);
+        zonas.push(ZonaDeIcono {
+            caja: Rect::from_min_max(Pos2::new(ancla.x - lado, ancla.y - lado), ancla),
+            icono: IconoDelNodo::Notas,
+        });
+    }
+    zonas
+}
+
+/// El texto emergente de un icono: «categoría: valor», con los nombres del inspector.
+///
+/// Es el único sitio donde se compone (las cadenas que ve el usuario se componen en un
+/// solo sitio).
+fn texto_del_icono(
+    icono: IconoDelNodo,
+    datos: &DatosDeLaTarjeta,
+    idioma: crate::textos::Idioma,
+) -> String {
+    use crate::textos::{sin_dos_puntos, Texto};
+    let categoria_y_valor = |categoria: Texto, valor: &str| {
+        format!("{}: {valor}", sin_dos_puntos(categoria.en(idioma)))
+    };
+    match icono {
+        IconoDelNodo::Estado => categoria_y_valor(
+            Texto::InspectorEstado,
+            datos.status.nombre_para_interfaz(idioma),
+        ),
+        IconoDelNodo::Prioridad => categoria_y_valor(
+            Texto::InspectorPrioridad,
+            datos.priority.nombre_para_interfaz(idioma),
+        ),
+        IconoDelNodo::Revision => categoria_y_valor(
+            Texto::InspectorControlHumano,
+            datos.review_status.nombre_para_interfaz(idioma),
+        ),
+        IconoDelNodo::Notas => Texto::IconoTieneNotas.en(idioma).to_string(),
+        IconoDelNodo::Rol => {
+            categoria_y_valor(Texto::InspectorRol, datos.role.nombre_para_interfaz(idioma))
+        }
+    }
+}
+
+/// Anota el texto emergente del icono que tiene el puntero encima, si hay alguno.
+///
+/// No se anota nada mientras se arrastra un nodo o se mantiene pulsado el botón: un texto
+/// emergente persiguiendo al cursor durante un arrastre solo estorba.
+fn anotar_el_icono_bajo_el_cursor(
+    app: &AplicacionMapaMental,
+    fotograma: &Fotograma,
+    datos: &DatosDeLaTarjeta,
+    geometria: &GeometriaDeLaTarjeta,
+    acciones: &mut AccionesDelLienzo,
+) {
+    let Some(puntero) = fotograma.puntero.posicion else {
+        return;
+    };
+    if fotograma.puntero.boton_pulsado
+        || app.lienzo().vista().nodo_arrastrado.is_some()
+        || !geometria.caja.contains(puntero)
+    {
+        return;
+    }
+    let zoom = fotograma.zoom;
+    let tamano_del_estado = fotograma
+        .painter
+        .layout_no_wrap(
+            datos.status.emoji().to_string(),
+            FontId::proportional(tamano_de_letra_del_titulo(datos.es_la_raiz) * zoom),
+            app.presentacion().tema().texto_principal,
+        )
+        .size();
+    let indicadores = calcular_indicadores_del_nodo(datos.priority, datos.review_status);
+    let icono = zonas_de_los_iconos(
+        geometria.caja,
+        zoom,
+        &indicadores,
+        !datos.sin_notas,
+        tamano_del_estado,
+    )
+    .into_iter()
+    .find(|zona| zona.caja.contains(puntero))
+    .map(|zona| zona.icono);
+    if let Some(icono) = icono {
+        acciones.texto_emergente = Some((texto_del_icono(icono, datos, app.idioma()), puntero));
+    }
+}
+
+/// Tamaño de letra del título, a escala natural: la raíz algo mayor.
+fn tamano_de_letra_del_titulo(es_la_raiz: bool) -> f32 {
+    if es_la_raiz {
+        15.0
+    } else {
+        13.0
+    }
+}
+
+/// Distancia del texto emergente al puntero, para que el cursor no lo tape.
+const SEPARACION_DEL_TEXTO_EMERGENTE: Vec2 = Vec2::new(14.0, 14.0);
+
+/// Pinta junto al puntero el texto emergente anotado en este fotograma.
+///
+/// # Parámetros
+/// - `ctx`: el contexto de egui del fotograma.
+/// - `texto`: lo que dice la nube, ya traducido.
+/// - `puntero`: dónde está el cursor; la nube se abre un poco más abajo y a la derecha.
+pub fn pintar_el_texto_emergente(ctx: &egui::Context, texto: String, puntero: Pos2) {
+    egui::Area::new(egui::Id::new("texto_emergente_de_icono"))
+        .order(egui::Order::Tooltip)
+        .fixed_pos(puntero + SEPARACION_DEL_TEXTO_EMERGENTE)
+        .interactable(false)
+        .show(ctx, |ui| {
+            // El área recuerda el tamaño del fotograma anterior y lo da como ancho máximo; todas
+            // las nubes comparten esta área, así que sin fijar el ancho la de un texto largo
+            // heredaba el de la última corta y salía con tres letras por línea (PH-1007-5). Se
+            // fija el mismo que usan los textos emergentes propios de egui.
+            egui::Frame::popup(ui.style()).show(ui, |ui| {
+                ui.set_max_width(ui.spacing().tooltip_width);
+                ui.label(texto)
+            });
+        });
 }

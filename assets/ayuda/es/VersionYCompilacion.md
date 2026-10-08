@@ -19,3 +19,8 @@ Es la pregunta que surge cuando hay varias copias por el disco: la de la carpeta
 
 ### ⚠️ Aviso de «cambios sin guardar»
 Si aparece, significa que el programa se compiló con modificaciones que aún no estaban guardadas en el repositorio: ese ejecutable no corresponde exactamente a ningún commit.
+
+### ⬆ Aviso de versión nueva
+Al arrancar, MMCelt pregunta a GitHub cuál es la última versión publicada. Si es más nueva que la tuya, en la barra superior aparece `⬆ Nueva versión disponible:` con el número de la versión. Es un enlace: al pulsarlo se abre la página de esa versión en el navegador. **El programa no descarga ni instala nada**; actualizar es decisión tuya.
+
+Si no hay conexión o GitHub no responde, no pasa nada: simplemente no hay aviso. Para que no se compruebe, desmarca `Comprobar al arrancar si hay una versión nueva` en el menú `🎨 Ver y Diseño`; desactivada, el programa no se conecta a internet al arrancar.

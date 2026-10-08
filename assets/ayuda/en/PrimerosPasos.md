@@ -13,7 +13,8 @@ A mind map is a graphical representation of your ideas: you start with a **centr
 - **Pan:** Hold down the **middle mouse button** (scroll wheel) or the **right mouse button** and drag in any direction to move the view.
 - **Zoom:** Rotate the **mouse wheel** forward or backward. Zoom centers on your cursor position.
 - **Select a node:** Click **once with the left button** on any node box.
-- **Center the view:** Press `Ctrl + F` at any time (or go to `🎨 View and Design` → `🎯 Center the View on the Central Node`).
+- **Search for a node:** Press `Ctrl + F` and type part of its title or of a tag.
+- **Center the view:** Press `Home` at any time (or go to `🎨 View and Design` → `🎯 Center the View on the Central Node`).
 - **🍪 Help Crumbs for Beginners:** MMCelt includes contextual floating notes that discreetly guide you with tips and shortcuts. If you dismiss them and want to see them again, reactivate them anytime from `❓ Help` → `🍪 Help Crumbs for Beginners`.
 
 ### 🧭 Where to go next:

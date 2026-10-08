@@ -13,7 +13,8 @@ Un mapa mental es una representación gráfica de tus ideas: comienzas con un **
 - **Desplazamiento (Pan):** Mantén pulsado el **botón central del ratón** (rueda) o el **botón derecho** y arrastra en cualquier dirección para mover la vista.
 - **Zoom:** Gira la **rueda del ratón** hacia adelante o atrás. El zoom se centrará en la posición de tu cursor.
 - **Seleccionar un nodo:** Haz **un clic izquierdo** sobre cualquier caja de nodo.
-- **Centrar la vista:** Pulsa `Ctrl + F` en cualquier momento (o ve a `🎨 Ver y Diseño` → `🎯 Centrar Vista en el Nodo Central`).
+- **Buscar un nodo:** Pulsa `Ctrl + F` y escribe parte de su título o de una etiqueta.
+- **Centrar la vista:** Pulsa `Inicio` en cualquier momento (o ve a `🎨 Ver y Diseño` → `🎯 Centrar Vista en el Nodo Central`).
 - **🍪 Galletas de Ayuda para Principiantes:** MMCelt incluye notas flotantes contextuales que te guían discretamente con consejos y atajos. Si las descartas y quieres volver a verlas, reactívalas en cualquier momento desde `❓ Ayuda` → `🍪 Galletas de Ayuda para Principiantes`.
 
 ### 🧭 Por dónde continuar:

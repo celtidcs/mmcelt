@@ -19,3 +19,8 @@ Dies ist entscheidend, wenn mehrere Kopien existieren: im Projektordner, portabe
 
 ### ⚠️ Hinweis auf „nicht gespeicherte Änderungen“
 Erscheint dieser Hinweis, wurde das Programm mit Änderungen kompiliert, die noch nicht im Git-Repository committet waren: Diese Binärdatei entspricht keinem sauberen Git-Stand.
+
+### ⬆ Hinweis auf eine neue Version
+Beim Start fragt MMCelt bei GitHub nach der zuletzt veröffentlichten Version. Ist sie neuer als Ihre, zeigt die obere Leiste `⬆ Neue Version verfügbar:` mit der Versionsnummer. Es ist ein Link: Ein Klick öffnet die Seite dieser Version im Browser. **Das Programm lädt nichts herunter und installiert nichts**; ob Sie aktualisieren, entscheiden Sie.
+
+Ohne Verbindung oder wenn GitHub nicht antwortet, passiert nichts: Es gibt einfach keinen Hinweis. Um die Prüfung abzuschalten, entfernen Sie das Häkchen bei `Beim Start nach einer neuen Version suchen` im Menü `🎨 Ansicht und Layout`; abgeschaltet verbindet sich das Programm beim Start nicht mit dem Internet.

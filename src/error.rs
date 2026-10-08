@@ -307,6 +307,8 @@ pub enum ClaveError {
     ConfirmacionCaducada,
     /// No se pudo vigilar la carpeta del proyecto.
     Vigilancia { ruta: PathBuf, origen: String },
+    /// No se pudo comprobar si hay una versión nueva publicada.
+    ComprobacionDeVersion { detalle: String },
 }
 
 /// Error único de la aplicación MMCelt.
@@ -383,6 +385,14 @@ pub enum AppError {
         /// Error original devuelto por `notify`.
         origen: notify::Error,
     },
+    /// No se pudo comprobar si hay una versión nueva publicada.
+    ///
+    /// Nunca se muestra como error: la comprobación es una cortesía y, si falla, no se avisa.
+    /// Existe para que el fallo quede en el registro con su detalle.
+    ComprobacionDeVersion {
+        /// Descripción técnica del fallo (red, respuesta, etiqueta o ajustes).
+        detalle: String,
+    },
 }
 
 impl AppError {
@@ -452,6 +462,7 @@ impl AppError {
             | AppError::EntradaInvalida { .. }
             | AppError::ConfirmacionCaducada
             | AppError::Vigilancia { .. } => Severidad::Error,
+            AppError::ComprobacionDeVersion { .. } => Severidad::Aviso,
         }
     }
 
@@ -498,6 +509,9 @@ impl AppError {
             AppError::Vigilancia { ruta, origen } => ClaveError::Vigilancia {
                 ruta: ruta.clone(),
                 origen: origen.to_string(),
+            },
+            AppError::ComprobacionDeVersion { detalle } => ClaveError::ComprobacionDeVersion {
+                detalle: detalle.clone(),
             },
         }
     }
@@ -550,6 +564,9 @@ impl fmt::Display for AppError {
             AppError::Vigilancia { ruta, origen } => {
                 write!(f, "error de vigilancia en {}: {origen}", ruta.display())
             }
+            AppError::ComprobacionDeVersion { detalle } => {
+                write!(f, "comprobación de versión nueva: {detalle}")
+            }
         }
     }
 }
@@ -568,7 +585,8 @@ impl std::error::Error for AppError {
             | AppError::RutaFueraDelProyecto
             | AppError::EntradaDemasiadoGrande { .. }
             | AppError::EntradaInvalida { .. }
-            | AppError::ConfirmacionCaducada => None,
+            | AppError::ConfirmacionCaducada
+            | AppError::ComprobacionDeVersion { .. } => None,
         }
     }
 }

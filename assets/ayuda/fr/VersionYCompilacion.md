@@ -19,3 +19,8 @@ La question se pose fréquemment lorsque plusieurs exécutables coexistent sur l
 
 ### ⚠️ Mention « modifications non enregistrées »
 Si cet avertissement apparaît, cela signifie que le programme a été compilé avec des modifications qui n'avaient pas encore été validées dans le dépôt git : cet exécutable ne correspond exactement à aucun commit propre.
+
+### ⬆ Avis de nouvelle version
+Au démarrage, MMCelt demande à GitHub quelle est la dernière version publiée. Si elle est plus récente que la vôtre, la barre supérieure affiche `⬆ Nouvelle version disponible :` avec le numéro de version. C'est un lien : un clic ouvre la page de cette version dans le navigateur. **Le programme ne télécharge ni n'installe rien** ; la mise à jour reste votre décision.
+
+S'il n'y a pas de connexion ou si GitHub ne répond pas, rien ne se passe : il n'y a simplement pas d'avis. Pour désactiver la vérification, décochez `Vérifier au démarrage s'il existe une nouvelle version` dans le menu `🎨 Affichage et disposition` ; désactivée, le programme ne se connecte pas à internet au démarrage.

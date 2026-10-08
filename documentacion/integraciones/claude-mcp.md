@@ -1,5 +1,10 @@
 # 🔌 MMCelt: El Instrumento Bidireccional de Control y Supervisión Humano ↔ IA
 
+> **Qué conecta MMCelt hoy.** Desde la versión 0.11.6 el programa se conecta con tres agentes de
+> consola: **Claude Code**, **Codex CLI** y **Gemini CLI**. Lo que esta guía cuenta de
+> Claude Desktop y Cursor se conserva como referencia de cómo funciona cada plataforma: **ya no se conectan desde
+> MMCelt** (el motivo está en el [README](../../README.md#por-qué-ya-no-están-antigravity-cursor-windsurf-y-claude-desktop)).
+
 **MMCelt** no es solo un visor de mapas mentales: es una **consola visual de control, verificación y alineación estratégica en tiempo real** entre el usuario y los modelos de Inteligencia Artificial (Claude, ChatGPT, Gemini, Cursor, etc.).
 
 ## Claude Code y Claude Desktop no se abren de la misma manera

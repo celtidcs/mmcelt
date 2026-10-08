@@ -14,7 +14,7 @@ Un plano 2D sin límites donde se distribuyen los nodos del mapa.
 | Desplazar la vista | Arrastrar con el botón central o el derecho |
 | Acercar y alejar | Rueda del ratón (el zoom se centra en el cursor) |
 | Mover un nodo | Arrastrarlo con el botón izquierdo |
-| Encuadrar el mapa entero | `Ctrl + F` |
+| Encuadrar el mapa entero | `Inicio`, con el teclado libre |
 
 El nivel de zoom está limitado entre 0,2× y 3,5×. La retícula de fondo adapta su
 espaciado para seguir siendo útil en todo ese rango.
@@ -82,7 +82,7 @@ resto subtemas— y se pueden cambiar a mano.
 
 | Acción | Atajo |
 |---|---|
-| Crear nodo hijo | `Tab` |
+| Crear nodo hijo | `Tab` o `Insertar` |
 | Crear nodo hermano | `Enter` |
 | Editar el título | `Espacio` o `F2`, o doble clic |
 | Eliminar nodo y su descendencia | `Supr` o `Retroceso` |
@@ -90,6 +90,64 @@ resto subtemas— y se pueden cambiar a mano.
 El borrado es **en cascada**: elimina el nodo y toda su descendencia, y descarta las
 conexiones cruzadas en las que participen. La raíz no se elimina; si se solicita, se
 vacía de hijos pero permanece.
+
+### Qué significa cada icono de la tarjeta
+
+Al pasar el ratón por un icono de una tarjeta aparece, junto al puntero, qué significa, con los
+mismos nombres que usa el inspector:
+
+| Icono | Dónde está | Texto emergente (ejemplo) |
+|---|---|---|
+| Emoji de estado | Delante del título | `Estado: 💡 Idea` |
+| Prioridad | Arriba a la derecha (solo Alta y Crítica) | `Prioridad: ⚡ Alta` |
+| Control humano | Arriba a la derecha (salvo los ordinarios) | `Control Humano: ⏳ Pendiente de Revisión` |
+| Rol (🎯 🏛️ 📌 ❓ ⚡ 🔧) | Abajo a la derecha, a la izquierda del 📝 | `Rol: 📌 Subtema / Módulo` |
+| 📝 | Abajo a la derecha, si hay notas | `📝 Tiene notas: selecciónalo para leerlas en el inspector` |
+
+Las zonas sensibles se calculan con las mismas posiciones con las que se pintan los iconos, así
+que no pueden separarse. Mientras se arrastra un nodo no aparece ningún texto.
+
+### Menú contextual: «Acciones del nodo»
+
+Un **clic derecho sin arrastrar** sobre una tarjeta la selecciona y abre, en ese punto, un menú
+con lo que se suele hacer con un nodo. Los rótulos y atajos son los mismos del menú «✏️ Edición»
+y del inspector, para que cada opción se reconozca esté donde esté:
+
+| Opción | Equivale a |
+|---|---|
+| Añadir nodo hijo | `Tab` / `Insertar` |
+| Añadir nodo hermano | `Enter` (deshabilitado en la raíz, que no tiene hermanos) |
+| Crear conexión cruzada | El cuadro de conexión, con este nodo como origen |
+| Editar el título | `Espacio` / `F2` |
+| Eliminar el nodo | `Supr` |
+| Estado, Prioridad, Control humano, Rol | Submenús con todas las variantes y la actual marcada |
+
+Cada opción actúa sobre el nodo del clic, aunque antes hubiera otro seleccionado. Arrastrar con
+el botón derecho sigue moviendo la vista y no abre el menú. `Esc` o un clic fuera lo cierran sin
+cambios; mientras está abierto, los atajos que cambian el mapa no actúan. Con el mapa en solo
+lectura no se abre. Elegir en un submenú el valor que ya tenía no cuenta como cambio.
+
+### Soltar un nodo encima de otro
+
+Arrastrar un nodo y soltarlo con su **centro** encima de otra tarjeta abre un mini-menú en
+ese punto, porque el gesto admite varias intenciones:
+
+| Opción | Qué hace |
+|---|---|
+| `➕ Hacer hijo` | El nodo, con toda su descendencia, pasa a colgar del de debajo. En «Posición Libre» se aparta lo justo para verse; en los modos automáticos, el mapa se recoloca |
+| `↔ Hacer hermano` | Lo cuelga del mismo padre que el de debajo, justo detrás de él (no si el de debajo es la raíz ni si ya son hermanos) |
+| `🔗 Conectar con enlace` | Crea una conexión cruzada hacia el de debajo y devuelve el nodo arrastrado a su sitio. No se ofrece si ya son padre e hijo o ya están conectados: sería otra línea encima de la que los une |
+| `➡ Mover aquí sin tapar` | Lo deja junto al de debajo, en el hueco libre más cercano a donde se soltó, sin solapar ninguna tarjeta |
+| `↩ Cancelar` | Lo devuelve a donde estaba; `Esc` o un clic fuera del menú hacen lo mismo |
+
+«Hacer hijo» aparece deshabilitado, con la explicación al pasar el ratón, cuando el árbol no lo
+admite: el arrastrado es la raíz, el de debajo ya es su padre, o el de debajo está dentro de su
+propia descendencia, lo que crearía un bucle. Soltar en el vacío, o un simple clic sin mover el
+nodo, no abre nada. Mientras el menú está abierto, los atajos que cambian el mapa no actúan, y
+cualquier opción se deshace con `Ctrl + Z`.
+
+**Caso de uso**: reorganizar la jerarquía con el ratón, sin tener que borrar y volver a crear
+una rama para cambiarla de sitio.
 
 ---
 
@@ -790,10 +848,10 @@ nombres de estados, prioridades y roles, las ventanas modales, los diálogos del
 y guardar, y los tipos de conexión cruzada. Son **517 textos por idioma** (3.102 cadenas
 en total), en `src/textos.rs`.
 
-**La ayuda interna también.** Son sus 23 temas con las tres piezas de cada uno
-—el rótulo del selector, el resumen de la galleta y la guía completa—: 69 piezas por idioma. Las
+**La ayuda interna también.** Son sus 24 temas con las tres piezas de cada uno
+—el rótulo del selector, el resumen de la galleta y la guía completa—: 72 piezas por idioma. Las
 guías son documentos extensos y no van en `src/textos.rs`; viven en `assets/ayuda/<idioma>/<Tema>.md`
-(138 archivos en total) y las incrusta `src/ui/ayuda_textos.rs`.
+(144 archivos en total) y las incrusta `src/ui/ayuda_textos.rs`.
 
 #### Soporte tipográfico CJK nativo y embebido
 
@@ -950,6 +1008,24 @@ dicen lo mismo. La fecha, el commit y la ruta sí las distinguen.
 
 Si el binario se compiló con cambios sin guardar en el repositorio, se avisa: en ese caso
 no corresponde exactamente a ningún commit.
+
+### Aviso de versión nueva
+
+Al arrancar, MMCelt pregunta a GitHub cuál es la última versión publicada. Si es más nueva que
+la que se está ejecutando, la barra superior muestra `⬆ Nueva versión disponible:` con su número,
+como enlace a la página de esa versión. **No descarga ni instala nada**: abrir el enlace y
+actualizar es decisión del usuario.
+
+- Las versiones se comparan como números (`0.12.0` es posterior a `0.9.9`), y solo se avisa de
+  una estrictamente mayor. Una etiqueta que no sea `X.Y.Z` no provoca aviso.
+- La consulta corre en un hilo aparte: la ventana nunca espera por ella. Sin conexión, con el
+  límite de peticiones de GitHub agotado o ante una respuesta rara, no hay aviso ni error
+  visible; el fallo queda en el registro.
+- Se desactiva en `🎨 Ver y Diseño` → `Comprobar al arrancar si hay una versión nueva`, y la
+  elección se recuerda. Desactivada, el programa no se conecta a internet al arrancar.
+
+**Caso de uso**: quien tiene una copia portable o la instaló hace tiempo se entera de que hay
+versión nueva sin tener que ir a mirar el repositorio.
 
 ---
 
@@ -1148,13 +1224,14 @@ Por eso las descargas publicadas siguen siendo solo de Windows y Linux.
 
 | Atajo | Acción |
 |---|---|
-| `Tab` | Crear nodo hijo |
+| `Tab` / `Insertar` | Crear nodo hijo |
 | `Enter` | Crear nodo hermano |
 | `Espacio` / `F2` | Editar el título |
 | `Supr` / `Retroceso` | Eliminar nodo y su descendencia |
 | `Ctrl + S` | Guardar |
 | `Ctrl + E` | Exportar Markdown para IA |
-| `Ctrl + F` | Encuadrar el mapa entero en la ventana |
+| `Inicio` | Encuadrar el mapa entero en la ventana (solo con el teclado libre) |
+| `Ctrl + F` | Llevar el cursor al buscador con su texto seleccionado |
 | `Ctrl +` / `Ctrl -` | Agrandar o reducir **la interfaz** (letras y botones) |
 | `Ctrl + 0` | Interfaz a tamaño normal |
 | Rueda del ratón | Acercar / alejar **el mapa** |

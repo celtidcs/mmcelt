@@ -1,5 +1,10 @@
 # 📖 Manual de Supervisión y Alineación Bidireccional con IA: Claude, ChatGPT y Gemini
 
+> **Qué conecta MMCelt hoy.** Desde la versión 0.11.6 el programa se conecta con tres agentes de
+> consola: **Claude Code**, **Codex CLI** y **Gemini CLI**. Lo que esta guía cuenta de
+> Claude Desktop, Cursor y Antigravity se conserva como referencia de cómo funciona cada plataforma: **ya no se conectan desde
+> MMCelt** (el motivo está en el [README](../../README.md#por-qué-ya-no-están-antigravity-cursor-windsurf-y-claude-desktop)).
+
 > **MMCelt: Tu cabina de control visual y plano arquitectónico para proyectos desarrollados con Inteligencia Artificial.**
 
 ---
@@ -64,7 +69,7 @@ Se han sustituido los botones dispersos por una estructura limpia y jerárquica:
 - **`📁 Archivo`:** Crear nuevo mapa, plantillas arquitectónicas (*Clean Arch*, *Fullstack*), escáner automático de carpetas de código, abrir, guardar (`Ctrl+S`) y exportar a Markdown para IA (`Ctrl+E`).
 - **`✏️ Edición`:** Añadir hijo (<kbd>Tab</kbd>), añadir hermano (<kbd>Enter</kbd>), eliminar (<kbd>Supr</kbd>), editar (<kbd>Espacio</kbd>/<kbd>F2</kbd>), conexiones cruzadas y ficha de visión del proyecto.
 - **`🤖 Inteligencia Artificial`:** Importar mapas desde chats de IA, copiar el prompt maestro, panel de directivas de corrección humana, previsualizar `.md` y exportar.
-- **`🎨 Ver y Diseño`:** Modos de auto-layout (Árbol balanceado, Radial, Libre), centrado de cámara (<kbd>Ctrl+F</kbd>) y temas visuales (Oscuro, Claro, Alto Contraste).
+- **`🎨 Ver y Diseño`:** Modos de auto-layout (Árbol balanceado, Radial, Libre), centrado de cámara (<kbd>Inicio</kbd>) y temas visuales (Oscuro, Claro, Alto Contraste).
 - **`❓ Ayuda`:** Activación de galletas guiadas, guías temáticas directas, atajos de teclado y panel de ayuda exhaustiva.
 
 ### B. Sistema de "Galletas" Guiadas y Ventana Lateral de Ayuda Detallada (`+info`)

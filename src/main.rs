@@ -36,6 +36,7 @@ mod aplicacion;
 mod autoguardado;
 mod busqueda;
 mod carga_en_segundo_plano;
+mod comprobacion_de_version;
 mod conectores;
 mod configuracion_agente_proyecto;
 mod consola_windows;
@@ -66,6 +67,7 @@ mod theme;
 mod traslado;
 mod ui;
 mod version;
+mod version_publicada;
 mod vigilancia_mapa;
 mod vigilante;
 

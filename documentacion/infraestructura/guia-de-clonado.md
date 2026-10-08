@@ -36,7 +36,7 @@ Si no aparece una versión:
 rustc --version
 ```
 
-Necesitas **1.85 o superior**. Si no lo tienes:
+Necesitas **1.95 o superior** (lo exigen `egui` y `eframe` 0.36). Si no lo tienes:
 
 **Windows**: descarga e instala [rustup-init.exe](https://win.rustup.rs/). Acepta la
 instalación por defecto (opción 1).
@@ -142,7 +142,7 @@ El binario queda en `target/release/mmcelt.exe` (Windows) o `target/release/mmce
 |---|---|---|
 | `linker 'link.exe' not found` | Faltan las Build Tools de C++ | Ver el paso 2 |
 | `failed to run custom build command for glutin` | Faltan bibliotecas del sistema (Linux) | Ver el paso 2 |
-| `error: package requires rustc 1.85` | Rust desactualizado | `rustup update stable` |
+| `... requires rustc 1.95 or newer` | Rust desactualizado | `rustup update stable` |
 | `LNK1104: no se puede abrir el archivo` | El ejecutable está en marcha, o bloqueado por el antivirus | Cierra la aplicación; en Windows, `Get-Process -Name mmcelt* \| Stop-Process -Force` |
 | `LNK1201: error al escribir en el archivo de programa` | Estás compilando dentro de una carpeta sincronizada con la nube | Ver justo debajo |
 

@@ -26,3 +26,6 @@ Les états de vos nœuds ne sont pas de simples couleurs pour vous ; l'intelli
 - **Respect de ce qui est écarté :** Si vous marquez une branche comme **`⛔ Écarté`**, l'IA comprend que cette voie a été délibérément rejetée et n'insistera pas pour vous la proposer.
 - **Contexte des réalisations terminées :** Les nœuds **`✅ Terminé`** indiquent à l'IA quelles parties de votre système existent déjà et fonctionnent, afin qu'elle s'appuie dessus sans dupliquer les efforts.
 - **Métriques automatiques :** Dans l'en-tête de l'exportation, MMCelt calcule une synthèse globale (pourcentage d'avancement, tâches terminées vs en attente) pour que le modèle connaisse le stade exact de maturité du projet.
+
+### 💡 Ce que signifie chaque icône de la carte
+Survolez une icône pour voir sa signification : l'emoji devant le titre est le **statut** ; ceux du coin supérieur droit sont la **priorité** et le **contrôle humain** ; en bas à droite, le **Rôle** du nœud (le ⚡ de « Tâche / Action » n'est pas celui de la priorité Haute : le texte qui apparaît les distingue) ; et le 📝 du bas indique `📝 Contient des notes : sélectionnez-le pour les lire dans l'inspecteur`. Rien n'apparaît pendant que vous faites glisser un nœud.

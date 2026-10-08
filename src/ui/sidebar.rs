@@ -581,7 +581,7 @@ pub(crate) fn dibujar_las_acciones_de_la_guia(
 /// # Devuelve
 /// El par `(ancho, alto)` estimado, el mismo que usa la disposición.
 fn tamano_de_la_tarjeta(nodo: &crate::model::Nodo) -> (f32, f32) {
-    crate::layout::estimar_tamano_del_nodo(&nodo.title, !nodo.notes.is_empty(), nodo.tags.len())
+    crate::layout::estimar_tamano_del_nodo(&nodo.title, nodo.tags.len())
 }
 
 /// Los colores y el idioma con los que se dibuja el inspector.
@@ -1055,9 +1055,10 @@ fn dibujar_las_notas(
             .small()
             .color(estilo.color_atenuado),
     );
-    // El alto de la tarjeta solo distingue entre tener notas y no tenerlas, así que de todo
-    // lo que se escriba aquí únicamente el primer carácter —y el borrado del último— cambia
-    // algo. Antes se recolocaba el mapa entero en **cada pulsación**.
+    // Antes se recolocaba el mapa entero en **cada pulsación**. Desde PH-1007-4 las notas no
+    // cambian el tamaño de la tarjeta (la fila de iconos se reserva siempre), así que esta
+    // comparación no recoloca nunca; se conserva para que, si el estimador vuelve a mirar las
+    // notas, el inspector lo siga respetando sin tener que acordarse de este sitio.
     let tamano_antes_de_escribir = tamano_de_la_tarjeta(node);
     let escribio_en_las_notas = ui
         .add(
@@ -1348,6 +1349,37 @@ pub(crate) fn dibujar_resumen_del_proyecto(app: &mut AplicacionMapaMental, ui: &
     }
 }
 
+/// Da el foco del teclado a un campo de una línea y selecciona todo lo que tenga escrito.
+///
+/// Es lo que espera quien pulsa `Ctrl+F`: teclear encima sustituye la búsqueda anterior sin
+/// tener que borrarla antes.
+///
+/// # Parámetros
+/// - `ui`: interfaz donde se ha dibujado el campo; de ella sale el contexto donde se guarda
+///   la selección.
+/// - `campo`: lo que devolvió `TextEdit::show` en este mismo fotograma.
+fn dar_el_foco_con_todo_seleccionado(ui: &egui::Ui, campo: egui::text_edit::TextEditOutput) {
+    let egui::text_edit::TextEditOutput {
+        response,
+        galley,
+        mut state,
+        ..
+    } = campo;
+    response.request_focus();
+    state
+        .cursor
+        .set_char_range(Some(egui::text::CCursorRange::select_all(&galley)));
+    state.store(ui.ctx(), response.id);
+}
+
+/// Devuelve el identificador fijo del campo del buscador de nodos.
+///
+/// Fijo, y no derivado de su posición en el panel, para que `Ctrl+F` pueda darle el foco
+/// desde fuera y para que el foco no se pierda si cambia lo que se dibuja por encima.
+pub(crate) fn id_del_buscador() -> egui::Id {
+    egui::Id::new("buscador_de_nodos")
+}
+
 /// Dibuja el buscador de nodos, en lo alto del panel lateral.
 ///
 /// En un mapa de cien nodos, dar con uno a ojo obliga a abrir ramas plegadas y a mover la
@@ -1363,11 +1395,17 @@ pub(crate) fn dibujar_resumen_del_proyecto(app: &mut AplicacionMapaMental, ui: &
 pub(crate) fn dibujar_buscador_de_nodos(app: &mut AplicacionMapaMental, ui: &mut egui::Ui) {
     let idioma = app.idioma();
 
-    ui.add(
-        egui::TextEdit::singleline(&mut app.presentacion_mut().filtro_de_busqueda().texto)
-            .hint_text(crate::textos::Texto::PanelBuscarNodo.en(idioma))
-            .desired_width(f32::INFINITY),
-    );
+    let campo = egui::TextEdit::singleline(&mut app.presentacion_mut().filtro_de_busqueda().texto)
+        .id(id_del_buscador())
+        .hint_text(crate::textos::Texto::PanelBuscarNodo.en(idioma))
+        .desired_width(f32::INFINITY)
+        .show(ui);
+    if app
+        .presentacion_mut()
+        .recoger_peticion_de_foco_al_buscador()
+    {
+        dar_el_foco_con_todo_seleccionado(ui, campo);
+    }
 
     dibujar_filtros_del_buscador(app, ui, idioma);
 

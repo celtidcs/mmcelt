@@ -1,6 +1,6 @@
 [package]
 name = "mmcelt"
-version = "0.12.0"
+version = "0.13.0"
 edition = "2021"
 
 # Los datos de aqui abajo no los usa el programa: los leen quien recibe el proyecto y las
@@ -37,6 +37,10 @@ sha2 = "0.10"
 # Lectura y escritura de OPML y del .mm de FreeMind/Freeplane (tanda 5, exportación e
 # importación a formatos no propietarios). MIT/Apache-2.0, compatible con GPL-3.0-or-later.
 quick-xml = "=0.41.0"
+# Consulta, al arrancar, de la última versión publicada en GitHub (aviso de versión nueva,
+# PEND-2026-10-07-1). Solo HTTPS con rustls y las raíces de webpki-roots; sin gzip ni nada más.
+# ureq es MIT/Apache-2.0; rustls, Apache-2.0/MIT/ISC; webpki-roots, CDLA-Permissive-2.0.
+ureq = { version = "3.4", default-features = false, features = ["rustls"] }
 
 [build-dependencies]
 # Solo para poner la fecha de compilacion en el binario (ver build.rs).

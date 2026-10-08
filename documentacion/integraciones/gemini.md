@@ -1,5 +1,10 @@
 # Gemini CLI, Antigravity y Gemini web: tres recorridos distintos
 
+> **Qué conecta MMCelt hoy.** Desde la versión 0.11.6 el programa se conecta con tres agentes de
+> consola: **Claude Code**, **Codex CLI** y **Gemini CLI**. Lo que esta guía cuenta de
+> Antigravity se conserva como referencia de cómo funciona cada plataforma: **ya no se conectan desde
+> MMCelt** (el motivo está en el [README](../../README.md#por-qué-ya-no-están-antigravity-cursor-windsurf-y-claude-desktop)).
+
 MMCelt puede trabajar con los modelos de Google por varios clientes, pero no los abre ni los
 controla a todos de la misma manera. **Gemini CLI** es una consola interactiva; **Antigravity** es
 un entorno gráfico; **Gemini web** es una conversación en el navegador. Compartir la familia de

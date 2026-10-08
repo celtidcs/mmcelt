@@ -23,3 +23,14 @@ Puedes elegir cómo organizar tu mapa en cualquier momento según tus preferenci
 
 - En la barra superior, abre el menú **`🎨 Ver y Diseño`** para seleccionar el modo de disposición que prefieras.
 - Si en algún momento deseas recalcular las posiciones y ordenar el mapa, pulsa en **`🎨 Ver y Diseño`** → **`🔄 Reorganizar los nodos`** (o utiliza la tecla rápida correspondiente). Todos los nodos volverán a alinearse con armonía.
+
+### 🔀 Soltar un nodo encima de otro
+Si arrastras un nodo y lo sueltas con su centro encima de otra tarjeta, aparece un pequeño menú en ese punto para que decidas qué querías hacer:
+
+- **`➕ Hacer hijo`**: el nodo, con todas sus ramas, pasa a colgar del nodo de debajo. Aparece desactivado si no es posible: el de debajo ya es su padre, el que arrastras es la raíz, o el de debajo está dentro de sus propias ramas (se formaría un bucle).
+- **`↔ Hacer hermano`**: el nodo pasa a colgar del mismo padre que el de debajo, justo detrás de él. No está disponible si el de debajo es la raíz o si ya son hermanos.
+- **`🔗 Conectar con enlace`**: crea una conexión cruzada hacia el nodo de debajo y devuelve el que arrastraste a su sitio. No está disponible si ya son padre e hijo o ya están conectados: sería una segunda línea encima de la que ya los une.
+- **`➡ Mover aquí sin tapar`**: lo deja junto al nodo de debajo, en el hueco libre más cercano, sin tapar ninguna tarjeta.
+- **`↩ Cancelar`**: lo devuelve a donde estaba. `Esc` o un clic fuera del menú hacen lo mismo.
+
+Mientras el menú está abierto, las teclas que cambian el mapa no actúan. Cualquiera de las opciones se puede deshacer con `Ctrl + Z`.

@@ -194,6 +194,73 @@ pub struct Preferencias {
     /// Plantillas de encargo definidas por el usuario a nivel global.
     #[serde(default)]
     pub plantillas_usuario: Vec<PlantillaUsuario>,
+
+    /// Si al arrancar se pregunta a GitHub por la última versión publicada.
+    ///
+    /// Activa de fábrica: cada inicio comprueba si hay una actualización. Quien la desactiva no
+    /// genera ningún tráfico de red al arrancar.
+    pub comprobar_version_nueva: bool,
+
+    /// Dónde y cómo se pregunta por la versión nueva.
+    pub ajustes_de_version: AjustesDeVersionNueva,
+}
+
+/// Repositorio público de MMCelt, de donde salen las versiones publicadas.
+pub const REPOSITORIO_DE_VERSIONES_POR_DEFECTO: &str = "celtidcs/mmcelt";
+
+/// Raíz de la API REST de GitHub.
+pub const URL_API_DE_VERSIONES_POR_DEFECTO: &str = "https://api.github.com";
+
+/// Raíz de la web de GitHub, para el enlace del aviso.
+pub const URL_WEB_DE_VERSIONES_POR_DEFECTO: &str = "https://github.com";
+
+/// Segundos que se espera, como mucho, la respuesta de GitHub.
+///
+/// Diez segundos sobran para una petición de unos pocos kilobytes incluso en una conexión
+/// lenta, y la espera ocurre en un hilo aparte: nunca la nota la interfaz.
+pub const SEGUNDOS_DE_ESPERA_DE_VERSION_POR_DEFECTO: u64 = 10;
+
+/// Bytes que se aceptan leer, como mucho, de la respuesta.
+///
+/// La respuesta de `releases/latest` ocupa unos pocos kilobytes; incluye las notas de la
+/// versión y la lista de archivos. Un mebibyte deja un margen holgado y, a la vez, impide que
+/// una respuesta anómala consuma memoria sin límite.
+pub const LIMITE_DE_RESPUESTA_DE_VERSION_POR_DEFECTO: u64 = 1024 * 1024;
+
+/// Dónde y cómo se pregunta por la última versión publicada.
+///
+/// Vive en las preferencias, y no en el código, para poder apuntar a otro repositorio o a
+/// GitHub Enterprise sin recompilar. Como es texto que cualquiera puede editar, se valida
+/// antes de usarse (`OrigenDeLasVersiones::desde_ajustes`, en `version_publicada.rs`).
+///
+/// Los campos ausentes del archivo toman su valor de [`ajustes_de_version_de_fabrica`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default = "ajustes_de_version_de_fabrica")]
+pub struct AjustesDeVersionNueva {
+    /// `dueño/nombre` del repositorio.
+    pub repositorio: String,
+    /// Raíz de la API, solo `https://`.
+    pub url_api: String,
+    /// Raíz de la web, solo `https://`.
+    pub url_web: String,
+    /// Tiempo máximo de espera de la respuesta, en segundos. Cero no es válido.
+    pub segundos_de_espera: u64,
+    /// Tamaño máximo de la respuesta, en bytes. Cero no es válido.
+    pub limite_de_respuesta_en_bytes: u64,
+}
+
+/// Los ajustes de fábrica: el repositorio público de MMCelt en GitHub.
+///
+/// # Devuelve
+/// Unos ajustes que superan la validación de `OrigenDeLasVersiones::desde_ajustes`.
+pub fn ajustes_de_version_de_fabrica() -> AjustesDeVersionNueva {
+    AjustesDeVersionNueva {
+        repositorio: REPOSITORIO_DE_VERSIONES_POR_DEFECTO.to_string(),
+        url_api: URL_API_DE_VERSIONES_POR_DEFECTO.to_string(),
+        url_web: URL_WEB_DE_VERSIONES_POR_DEFECTO.to_string(),
+        segundos_de_espera: SEGUNDOS_DE_ESPERA_DE_VERSION_POR_DEFECTO,
+        limite_de_respuesta_en_bytes: LIMITE_DE_RESPUESTA_DE_VERSION_POR_DEFECTO,
+    }
 }
 
 /// Plantilla de encargo personalizada guardada por el usuario en sus preferencias globales.
@@ -225,6 +292,8 @@ impl Default for Preferencias {
             idioma: Idioma::default(),
             sugerencia_mostrada: false,
             plantillas_usuario: Vec::new(),
+            comprobar_version_nueva: true,
+            ajustes_de_version: ajustes_de_version_de_fabrica(),
         }
     }
 }
@@ -352,6 +421,16 @@ impl Preferencias {
                 &guardado,
                 "plantillas_usuario",
                 &mut preferencias.plantillas_usuario,
+            );
+            leer(
+                &guardado,
+                "comprobar_version_nueva",
+                &mut preferencias.comprobar_version_nueva,
+            );
+            leer(
+                &guardado,
+                "ajustes_de_version",
+                &mut preferencias.ajustes_de_version,
             );
         }
 
