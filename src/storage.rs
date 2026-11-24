@@ -245,8 +245,6 @@ fn escribir_de_forma_atomica_en_disco(ruta: &Path, contenido: &[u8]) -> AppResul
         }
     };
 
-    // Bloque propio para que el archivo se cierre antes de renombrar: en Windows no se puede
-    // renombrar encima de un destino mientras el origen siga abierto.
     let escritura = (|| -> std::io::Result<()> {
         archivo.write_all(contenido)?;
         // Sin esto, el renombrado puede completarse con los datos todavía en la caché del
@@ -261,12 +259,65 @@ fn escribir_de_forma_atomica_en_disco(ruta: &Path, contenido: &[u8]) -> AppResul
         return Err(AppError::escritura(&temporal, e));
     }
 
-    if let Err(e) = fs::rename(&temporal, ruta) {
+    // El temporal se cierra antes de renombrar: en Windows no se puede renombrar encima de un
+    // destino mientras el origen siga abierto.
+    drop(archivo);
+
+    let renombrado = reintentar_si_se_deniega(
+        INTENTOS_DE_RENOMBRADO,
+        || std::thread::sleep(ESPERA_ENTRE_RENOMBRADOS),
+        || fs::rename(&temporal, ruta),
+    );
+    if let Err(e) = renombrado {
         let _ = fs::remove_file(&temporal);
         return Err(AppError::escritura(ruta, e));
     }
 
     Ok(())
+}
+
+/// Cuántas veces se intenta poner el temporal en lugar del destino antes de rendirse.
+///
+/// En Windows, otro programa (normalmente el antivirus al revisar el archivo recién escrito)
+/// puede tener abierto el destino durante un instante, y mientras tanto el renombrado falla con
+/// «Acceso denegado». No se ha medido cuánto dura ese bloqueo: el valor se eligió para que,
+/// junto con [`ESPERA_ENTRE_RENOMBRADOS`], el guardado espere como mucho unos 200 ms, de sobra
+/// para un bloqueo pasajero y poco para quien guarda.
+const INTENTOS_DE_RENOMBRADO: u32 = 10;
+
+/// Pausa entre dos intentos de renombrado denegados (ver [`INTENTOS_DE_RENOMBRADO`]).
+const ESPERA_ENTRE_RENOMBRADOS: std::time::Duration = std::time::Duration::from_millis(20);
+
+/// Repite una operación mientras el sistema la deniegue, hasta un número de intentos.
+///
+/// Solo se reintenta [`std::io::ErrorKind::PermissionDenied`], el error que da Windows cuando
+/// otro programa tiene el archivo abierto un instante; cualquier otro error se devuelve al
+/// primer intento. No toca el disco: la operación y la espera llegan como cierres, para poder
+/// comprobar la decisión sin depender de un bloqueo real.
+///
+/// # Parámetros
+/// - `intentos`: cuántas veces como máximo se ejecuta la operación (al menos una).
+/// - `esperar`: lo que se hace entre un intento denegado y el siguiente.
+/// - `operacion`: la operación que se intenta.
+///
+/// # Errores
+/// El último error de la operación, si se agotan los intentos o si el error no es una
+/// denegación.
+pub(crate) fn reintentar_si_se_deniega(
+    intentos: u32,
+    mut esperar: impl FnMut(),
+    mut operacion: impl FnMut() -> std::io::Result<()>,
+) -> std::io::Result<()> {
+    let mut restantes = intentos.max(1);
+    loop {
+        match operacion() {
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied && restantes > 1 => {
+                restantes -= 1;
+                esperar();
+            }
+            resultado => return resultado,
+        }
+    }
 }
 
 /// Guarda el proyecto en disco en formato `.mmcelt` (JSON estructurado e indentado).

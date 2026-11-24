@@ -1,4 +1,4 @@
-# Integración continua de MMCelt
+﻿# Integración continua de MMCelt
 #
 # Comprueba en cada push y en cada pull request que el proyecto sigue cumpliendo las
 # garantías que estableció la auditoría de código de 2026-08-21:
@@ -94,7 +94,7 @@ jobs:
       - name: Comprobar que los scripts de PowerShell al menos parsean
         # Nació de un defecto real: `preparar-entorno.ps1` estuvo roto por una coma
         # sobrante en su bloque `param()`, de modo que PowerShell se detenía antes de la
-        # primera línea. Sobrevivió a cinco rondas de auditoría porque nadie lo ejecutó
+        # primera línea. Sobrevivió mucho tiempo porque nadie lo ejecutó
         # nunca: `cargo` no mira los scripts y las pruebas tampoco.
         #
         # Esto no comprueba que hagan lo correcto, solo que se pueden ejecutar. Es poco,
@@ -120,9 +120,20 @@ jobs:
         # vuelvan los defectos detectados en la auditoría.
         run: cargo test --all-features
 
+      - name: Ejecutar las pruebas de la biblioteca aviso-version-github
+        # MMCelt no es un workspace, así que las pruebas de la copia no corren con las suyas.
+        # El --target-dir deja la compilación
+        # fuera de la copia, que tiene que seguir idéntica a su etiqueta.
+        run: cargo test --manifest-path bibliotecas/aviso-version-github/Cargo.toml --target-dir target/aviso-version-github
+
+      - name: Ejecutar las pruebas de la biblioteca deteccion-agentes
+        # La misma razón que la anterior: sus
+        # pruebas incluyen las del ejemplo de referencia, y la compilación queda fuera de la copia.
+        run: cargo test --manifest-path bibliotecas/deteccion-agentes/Cargo.toml --target-dir target/deteccion-agentes
+
   linux:
     name: Pruebas en Linux (Rust)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Descargar el repositorio
@@ -147,6 +158,17 @@ jobs:
         # Aquí se ejecuta la prueba `el_espacio_de_trabajo_no_se_escapa_por_un_enlace_simbolico`,
         # que en Windows no corre.
         run: cargo test --all-features
+
+      - name: Ejecutar las pruebas de la biblioteca aviso-version-github
+        # MMCelt no es un workspace, así que las pruebas de la copia no corren con las suyas.
+        # El --target-dir deja la compilación
+        # fuera de la copia, que tiene que seguir idéntica a su etiqueta.
+        run: cargo test --manifest-path bibliotecas/aviso-version-github/Cargo.toml --target-dir target/aviso-version-github
+
+      - name: Ejecutar las pruebas de la biblioteca deteccion-agentes
+        # La misma razón que la anterior: sus
+        # pruebas incluyen las del ejemplo de referencia, y la compilación queda fuera de la copia.
+        run: cargo test --manifest-path bibliotecas/deteccion-agentes/Cargo.toml --target-dir target/deteccion-agentes
 
   macos:
     name: Pruebas en macOS (Rust)
@@ -184,6 +206,17 @@ jobs:
         # Como en Linux, aquí sí corre la prueba del escape por enlace simbólico: es
         # `#[cfg(unix)]` y en Windows no la ejecuta nadie.
         run: cargo test --all-features
+
+      - name: Ejecutar las pruebas de la biblioteca aviso-version-github
+        # MMCelt no es un workspace, así que las pruebas de la copia no corren con las suyas.
+        # El --target-dir deja la compilación
+        # fuera de la copia, que tiene que seguir idéntica a su etiqueta.
+        run: cargo test --manifest-path bibliotecas/aviso-version-github/Cargo.toml --target-dir target/aviso-version-github
+
+      - name: Ejecutar las pruebas de la biblioteca deteccion-agentes
+        # La misma razón que la anterior: sus
+        # pruebas incluyen las del ejemplo de referencia, y la compilación queda fuera de la copia.
+        run: cargo test --manifest-path bibliotecas/deteccion-agentes/Cargo.toml --target-dir target/deteccion-agentes
 
       - name: Comprobar que macOS entiende el icono del paquete
         # `assets/icono/mmcelt.icns` se genera desde Windows con un guion propio, porque
@@ -384,7 +417,7 @@ jobs:
 
   seguridad:
     name: Vulnerabilidades en dependencias
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Descargar el repositorio
@@ -417,3 +450,4 @@ jobs:
         # Con eframe >= 0.32, quick-xml 0.30 ya no forma parte del árbol de dependencias
         # y la auditoría pasa limpia sin necesidad de excepciones.
         run: cargo audit
+

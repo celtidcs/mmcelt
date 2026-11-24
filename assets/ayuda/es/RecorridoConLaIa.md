@@ -33,7 +33,7 @@ o sola si usaste el envío automático.
 
 ### ✍️ Lo que decides tú, y dónde
 
-- **Qué pretendes:** `🤖 Inteligencia Artificial` → `🧭 Proyecto e instrucciones para la IA` → pestaña **Proyecto**.
+- **Qué pretendes:** `✏️ Edición` → `🧭 Proyecto e instrucciones para la IA` → pestaña **Proyecto**.
 - **Qué está bien y qué no:** marca los nodos como `🛡️ Aprobado por Usuario` o
   `⚠️ Requiere Corrección`, y mándalas con
   `🤖 Inteligencia Artificial` → `🛑 Enviar Correcciones y Directivas a la IA...`.
@@ -92,7 +92,7 @@ Puedes trabajar cómodamente desde tu navegador habitual:
 4. Cuando la IA te conteste con un bloque en formato JSON o Markdown, cópialo.
 5. En MMCelt, pulsa `🤖 Inteligencia Artificial` → `📥 Importar desde IA (ChatGPT, Claude, Gemini)...` y pega la respuesta. Tus nuevas ramas aparecerán en el mapa de inmediato.
 
-Si en el futuro instalas un agente en la terminal de tu sistema (como Claude Code, Codex CLI o Gemini CLI), MMCelt lo reconocerá en cuanto esté en tu PATH.
+Si en el futuro instalas un agente en la terminal de tu sistema (como Claude Code, Codex CLI o Antigravity CLI), MMCelt lo reconocerá en cuanto lo encuentre: busca en la carpeta de su instalador oficial, en .local/bin de tu carpeta personal y en el PATH, y en `🔌 Conectar MMCelt con mis IAs...` puedes elegir su programa a mano con `📂 Cambiar ruta...`.
 
 ### 📚 Dónde seguir, según lo que quieras
 

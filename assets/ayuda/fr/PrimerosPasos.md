@@ -20,4 +20,4 @@ Une carte mentale est une représentation graphique de vos idées : vous débu
 ### 🧭 Par où poursuivre :
 1. Cliquez sur le nœud central et appuyez sur `Espace` (ou double-cliquez) pour renommer votre projet.
 2. Appuyez sur `Tab` pour créer vos premiers piliers stratégiques (nœuds enfants) et sur `Entrée` pour ajouter des alternatives (nœuds frères).
-3. Ouvrez `🤖 Intelligence artificielle` → `🧭 Projet et instructions pour l’IA` afin d'exposer l'objectif de votre projet à l'IA dans l'onglet **Projet**.
+3. Ouvrez `✏️ Édition` → `🧭 Projet et instructions pour l’IA` afin d'exposer l'objectif de votre projet à l'IA dans l'onglet **Projet**.

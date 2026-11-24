@@ -4,9 +4,8 @@
 //! necesarios para reubicar mapas mentales fuera de la raíz de unidades o volúmenes hacia
 //! carpetas de proyecto dedicadas.
 //!
-//! Cumple con los principios SOLID (específicamente SRP, separando las operaciones de disco
-//! y flujos de traslado de la lógica de aplicación principal), parte de esa
-//! refactorización (A-3).
+//! Cumple con los principios de diseño (separando las operaciones de disco
+//! y flujos de traslado de la lógica de aplicación principal).
 
 use std::path::{Path, PathBuf};
 
@@ -106,10 +105,8 @@ pub fn pedir_y_crear_nuevo_en_carpeta(app: &mut AplicacionMapaMental) {
         crate::ui::dialogos::pedir_carpeta(Texto::BotonCrearNuevoEnCarpeta.en(idioma))
     {
         if crate::conectores::es_carpeta_valida_para_espacio_trabajo(&carpeta) {
-            let nuevo =
-                crate::model::Proyecto::nuevo_vacio(Texto::ArchivoNuevoProyectoDefecto.en(idioma));
-            app.sustituir_el_mapa_abierto(nuevo, None, Texto::AvisoProyectoNuevo.en(idioma));
-            // Misma canonicalización que `sincronizar_espacio_de_trabajo_con_el_mapa` (A-2): sin
+            crate::aplicacion::abrir_un_mapa_nuevo(app);
+            // Misma canonicalización que `sincronizar_espacio_de_trabajo_con_el_mapa`: sin
             // esto, la carpeta recién elegida podía mostrarse distinta a como la pintan las
             // pantallas que sí pasan por el punto de cálculo compartido.
             let carpeta_canonica = crate::conectores::canonizar_o_conservar(carpeta);

@@ -19,7 +19,7 @@ Das Dateifeld (`file_path`) bildet die Brücke zwischen der abstrakten Idee und 
 ### 💡 Praktische Tipps und Einsatz mit der KI:
 
 **🤖 Wie nutzt die künstliche Intelligenz diese Angabe?**
-Wenn Sie mit einem Assistenten arbeiten (wie Claude Code, Codex CLI oder Gemini CLI) oder die Projektzusammenfassung als Markdown exportieren:
+Wenn Sie mit einem Assistenten arbeiten (wie Claude Code, Codex CLI oder Antigravity CLI) oder die Projektzusammenfassung als Markdown exportieren:
 - Die KI liest exakt, welche Datei zu welchem Knoten gehört.
 - Sie weiß im Voraus, wo Änderungen vorzunehmen sind, ohne blind Ihr gesamtes Repository durchsuchen zu müssen.
 - Sie unterstützt Sie dabei, eine saubere und geordnete Übereinstimmung zwischen konzeptioneller Architektur und Quellcode zu wahren.

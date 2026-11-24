@@ -224,24 +224,8 @@ pub(crate) fn contrato_mmcelt_para_agente(idioma: Idioma) -> String {
 /// sin puerta de regreso. Los nombres de herramientas y los valores canónicos no se traducen,
 /// porque son parte del contrato JSON que el agente debe enviar literalmente.
 fn escribir_como_devolver_el_trabajo(md: &mut String, idioma: Idioma) {
-    let introduccion = match idioma {
-        Idioma::Espanol => "## 🔄 9. CÓMO DEVOLVER TU TRABAJO A ESTE MAPA\n\nMMCelt expone un servidor MCP. No edites el archivo `.mmcelt` directamente: usa sus herramientas para conservar la supervisión humana y las copias de seguridad.\n\n",
-        Idioma::Ingles => "## 🔄 9. HOW TO RETURN YOUR WORK TO THIS MAP\n\nMMCelt exposes an MCP server. Do not edit the `.mmcelt` file directly: use its tools to preserve human supervision and backups.\n\n",
-        Idioma::Frances => "## 🔄 9. COMMENT RENVOYER VOTRE TRAVAIL À CETTE CARTE\n\nMMCelt expose un serveur MCP. Ne modifiez pas directement le fichier `.mmcelt` : utilisez ses outils afin de préserver la supervision humaine et les sauvegardes.\n\n",
-        Idioma::Aleman => "## 🔄 9. SO GIBST DU DEINE ARBEIT AN DIESE KARTE ZURÜCK\n\nMMCelt stellt einen MCP-Server bereit. Bearbeite die `.mmcelt`-Datei nicht direkt: Verwende seine Werkzeuge, damit menschliche Kontrolle und Sicherungen erhalten bleiben.\n\n",
-        Idioma::Ruso => "## 🔄 9. КАК ВЕРНУТЬ РАБОТУ В ЭТУ КАРТУ\n\nMMCelt предоставляет сервер MCP. Не редактируйте файл `.mmcelt` напрямую: используйте его инструменты, чтобы сохранить контроль человека и резервные копии.\n\n",
-        Idioma::ChinoSimplificado => "## 🔄 9. 如何将工作返回此思维导图\n\nMMCelt 提供 MCP 服务器。请勿直接编辑 `.mmcelt` 文件；请使用其工具，以保留人工监督和备份。\n\n",
-    };
-    md.push_str(introduccion);
-    let flujo = match idioma {
-        Idioma::Espanol => "1. `mmcelt_workspace_info`: descubre la carpeta autorizada y los mapas disponibles.\n2. `mmcelt_read_mindmap`: lee nodos, UUID, títulos y conexiones.\n3. `mmcelt_get_human_feedback`: lee correcciones y decisiones humanas.\n4. `mmcelt_sync_ai_progress`: devuelve avances al mapa existente sin sustituirlo.\n5. `mmcelt_create_mindmap`: crea un mapa nuevo; no sustituye un mapa humano.\n6. `mmcelt_export_ai_markdown`: regenera este documento cuando sea necesario.\n\nIdentidad: usa el UUID siempre que haya títulos repetidos; si envías UUID y título, ambos deben concordar. Nunca declares una aprobación humana ni cambies `review_status`: lo añadido por la IA nace como `GeneradoPorIA`.\n\n",
-        Idioma::Ingles => "1. `mmcelt_workspace_info`: discover the authorized folder and available maps.\n2. `mmcelt_read_mindmap`: read nodes, UUIDs, titles and connections.\n3. `mmcelt_get_human_feedback`: read human corrections and decisions.\n4. `mmcelt_sync_ai_progress`: return progress to the existing map without replacing it.\n5. `mmcelt_create_mindmap`: create a new map; never replace a human map.\n6. `mmcelt_export_ai_markdown`: regenerate this document when needed.\n\nIdentity: use the UUID whenever titles repeat; if UUID and title are both sent, they must match. Never claim human approval or change `review_status`: AI additions are born as `GeneradoPorIA`.\n\n",
-        Idioma::Frances => "1. `mmcelt_workspace_info` : découvrir le dossier autorisé et les cartes disponibles.\n2. `mmcelt_read_mindmap` : lire les nœuds, UUID, titres et connexions.\n3. `mmcelt_get_human_feedback` : lire les corrections et décisions humaines.\n4. `mmcelt_sync_ai_progress` : renvoyer les progrès sans remplacer la carte.\n5. `mmcelt_create_mindmap` : créer une nouvelle carte, jamais remplacer une carte humaine.\n6. `mmcelt_export_ai_markdown` : régénérer ce document.\n\nIdentité : utilisez l’UUID lorsque les titres se répètent ; UUID et titre doivent correspondre. Ne revendiquez jamais une approbation humaine et ne modifiez pas `review_status` : les ajouts de l’IA naissent `GeneradoPorIA`.\n\n",
-        Idioma::Aleman => "1. `mmcelt_workspace_info`: autorisierten Ordner und Karten ermitteln.\n2. `mmcelt_read_mindmap`: Knoten, UUIDs, Titel und Verbindungen lesen.\n3. `mmcelt_get_human_feedback`: menschliche Korrekturen und Entscheidungen lesen.\n4. `mmcelt_sync_ai_progress`: Fortschritt zurückgeben, ohne die Karte zu ersetzen.\n5. `mmcelt_create_mindmap`: eine neue Karte erstellen, keine menschliche Karte ersetzen.\n6. `mmcelt_export_ai_markdown`: dieses Dokument neu erzeugen.\n\nIdentität: Bei doppelten Titeln die UUID verwenden; UUID und Titel müssen übereinstimmen. Niemals menschliche Freigabe beanspruchen oder `review_status` ändern: KI-Ergänzungen entstehen als `GeneradoPorIA`.\n\n",
-        Idioma::Ruso => "1. `mmcelt_workspace_info`: узнать разрешённую папку и доступные карты.\n2. `mmcelt_read_mindmap`: прочитать узлы, UUID, заголовки и связи.\n3. `mmcelt_get_human_feedback`: прочитать исправления и решения человека.\n4. `mmcelt_sync_ai_progress`: вернуть результат, не заменяя карту.\n5. `mmcelt_create_mindmap`: создать новую карту, не заменять карту человека.\n6. `mmcelt_export_ai_markdown`: заново создать этот документ.\n\nИдентификация: при повторяющихся заголовках используйте UUID; UUID и заголовок должны совпадать. Не присваивайте одобрение человека и не меняйте `review_status`: добавления ИИ создаются как `GeneradoPorIA`.\n\n",
-        Idioma::ChinoSimplificado => "1. `mmcelt_workspace_info`：查找授权文件夹和可用导图。\n2. `mmcelt_read_mindmap`：读取节点、UUID、标题和连接。\n3. `mmcelt_get_human_feedback`：读取人工修正和决定。\n4. `mmcelt_sync_ai_progress`：将进度返回现有导图，不替换导图。\n5. `mmcelt_create_mindmap`：创建新导图，不替换人工导图。\n6. `mmcelt_export_ai_markdown`：在需要时重新生成本文档。\n\n标识：标题重复时使用 UUID；同时发送 UUID 和标题时两者必须一致。不得声称人工批准或更改 `review_status`；AI 新增内容标记为 `GeneradoPorIA`。\n\n",
-    };
-    md.push_str(flujo);
+    md.push_str(Texto::ContratoDevolverIntroduccion.en(idioma));
+    md.push_str(Texto::ContratoDevolverFlujo.en(idioma));
     md.push_str(
         "Valores canónicos que deben enviarse literalmente / Canonical values to send literally:\n\
 - `status`: Idea, Investigando, EnProgreso, DudaBloqueo, Completado, Descartado\n\
@@ -643,7 +627,7 @@ fn escribir_resumen_ejecutivo(md: &mut String, proyecto: &Proyecto, idioma: Idio
         Texto::MdUltimaActualizacionN.en(idioma),
         &[&proyecto
             .updated_at
-            .format("%Y-%m-%d %H:%M:%S UTC")
+            .strftime("%Y-%m-%d %H:%M:%S UTC")
             .to_string()],
     ));
 

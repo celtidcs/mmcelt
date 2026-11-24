@@ -175,7 +175,7 @@ impl fmt::Display for FalloEstructural {
 /// Motivo tipado y cerrado por el que una carpeta no puede usarse como proyecto.
 ///
 /// La traducción y presentación al usuario final se realiza exclusivamente en el módulo de textos,
-/// garantizando que ningún texto libre o sin traducir viaje por la interfaz (defecto PH-0119-2).
+/// garantizando que ningún texto libre o sin traducir viaje por la interfaz.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MotivoCarpetaInvalida {
     /// La ubicación es la raíz de un volumen o no es una carpeta de proyecto válida.
@@ -362,6 +362,8 @@ pub enum AppError {
     IdentidadProyectoDistinta,
     /// Una ruta intentaba salir de la carpeta autorizada.
     RutaFueraDelProyecto,
+    /// Ruta rechazada y raíz autorizada, cuando la operación conoce ambas.
+    RutaFueraDelProyectoConDetalle { ruta: PathBuf, raiz: PathBuf },
     /// Una entrada supera el tamaño que la aplicación puede procesar con seguridad.
     EntradaDemasiadoGrande {
         /// Archivo o canal del que procedían los datos.
@@ -458,6 +460,7 @@ impl AppError {
             AppError::CarpetaProyectoInvalida { .. }
             | AppError::IdentidadProyectoDistinta
             | AppError::RutaFueraDelProyecto
+            | AppError::RutaFueraDelProyectoConDetalle { .. }
             | AppError::EntradaDemasiadoGrande { .. }
             | AppError::EntradaInvalida { .. }
             | AppError::ConfirmacionCaducada
@@ -494,7 +497,9 @@ impl AppError {
                 motivo: motivo.clone(),
             },
             AppError::IdentidadProyectoDistinta => ClaveError::IdentidadProyectoDistinta,
-            AppError::RutaFueraDelProyecto => ClaveError::RutaFueraDelProyecto,
+            AppError::RutaFueraDelProyecto | AppError::RutaFueraDelProyectoConDetalle { .. } => {
+                ClaveError::RutaFueraDelProyecto
+            }
             AppError::EntradaDemasiadoGrande { origen, limite } => {
                 ClaveError::EntradaDemasiadoGrande {
                     origen: origen.clone(),
@@ -551,6 +556,9 @@ impl fmt::Display for AppError {
             }
             AppError::IdentidadProyectoDistinta => write!(f, "identidad de proyecto distinta"),
             AppError::RutaFueraDelProyecto => write!(f, "ruta fuera de la carpeta del proyecto"),
+            AppError::RutaFueraDelProyectoConDetalle { ruta, raiz } => {
+                write!(f, "{} ⊄ {}", ruta.display(), raiz.display())
+            }
             AppError::EntradaDemasiadoGrande { origen, limite } => {
                 write!(
                     f,
@@ -583,6 +591,7 @@ impl std::error::Error for AppError {
             | AppError::CarpetaProyectoInvalida { .. }
             | AppError::IdentidadProyectoDistinta
             | AppError::RutaFueraDelProyecto
+            | AppError::RutaFueraDelProyectoConDetalle { .. }
             | AppError::EntradaDemasiadoGrande { .. }
             | AppError::EntradaInvalida { .. }
             | AppError::ConfirmacionCaducada
@@ -644,7 +653,7 @@ pub(crate) fn descripcion_para_registro(error: &AppError, contexto: &str) -> Str
     use std::error::Error as _;
     use std::fmt::Write as _;
 
-    let marca = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
+    let marca = jiff::Timestamp::now().strftime("%Y-%m-%d %H:%M:%S UTC");
     let ubicacion = std::panic::Location::caller();
     let mut salida = format!(
         "[{marca}] [{:?}] {contexto}: {error}\nOrigen: {}:{}:{}",

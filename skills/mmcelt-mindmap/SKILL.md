@@ -129,5 +129,13 @@ importar, así que lo que pongas en ellos llega al mapa que la persona tiene del
 
 Si el usuario te proporciona un documento `.md` exportado por MMCelt:
 1. **Lee primero la sección 1 (`VISIÓN DEL CREADOR Y CONTEXTO`)** para entender la intención real.
-2. **Prioriza la sección 5 (`PUNTOS DE DECISIÓN, DUDAS Y BLOQUEOS`)**: Para cada duda listada, analiza opciones viables y sugiere la solución técnica óptima.
+2. **Prioriza la sección 6 (`PUNTOS DE DECISIÓN, DUDAS Y BLOQUEOS`)**: Para cada duda listada, analiza opciones viables y sugiere la solución técnica óptima.
 3. **Ofrece nuevos subtemas estructurados** en formato compatible con MMCelt para que el usuario los pegue con el botón **"Importar desde IA"**.
+
+---
+
+## 3. Si trabajas con el servidor MCP de MMCelt
+
+Si tienes las herramientas `mmcelt_*`, no edites el archivo `.mmcelt` a mano: empieza por `mmcelt_workspace_info`, lee el mapa con `mmcelt_read_mindmap`, consulta `mmcelt_get_human_feedback` antes de cambiar nada y devuelve tu trabajo con `mmcelt_sync_ai_progress` (o `mmcelt_create_mindmap` para un mapa nuevo).
+
+Mientras trabajas, MMCelt mantiene el mapa bloqueado para que la persona no lo edite a la vez. **En tu última entrega, y solo en ella, pon `work_finished: true`**: es la señal con la que MMCelt carga el mapa final y devuelve el control a la persona. Si no la envías, el mapa sigue bloqueado hasta que la persona pulse «Recuperar el control».

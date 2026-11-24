@@ -18,6 +18,14 @@ In automatic layout modes, dragging a node does not trigger a dirty state: the e
 
 In **Manual Free Position**, dragging does count as a change, because custom node layout is your deliberate work.
 
+### 🚪 Closing with unsaved changes
+
+If you close MMCelt with something that is not on disk, it asks first: **Save**, **Don't save** or **Cancel**. Any change to the map counts as unsaved, as does a title you are still typing and any new AI nodes you have opened since the last save.
+
+A map that has no file yet —a scan, an import, a template or an example from the menu— also asks even if you have not touched it. Only the example the program starts with and a new map with just the central idea close without asking, as long as you have not touched them.
+
+Without a file, **Save** opens «Save as»; if you cancel there or saving fails, MMCelt stays open. **Cancel** lets you keep working without saving anything.
+
 ### ⚠️ When offered recovery on startup
 The dialog displays backup timestamp and map title. You decide: if you exited deliberately without saving, discard it. It is never restored automatically.
 

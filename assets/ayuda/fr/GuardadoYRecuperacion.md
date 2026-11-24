@@ -18,6 +18,14 @@ Dans les modes de disposition automatique, déplacer un nœud ne marque pas le d
 
 En **Position libre manuelle**, le déplacement compte comme une modification, car le positionnement manuel relève de votre travail délibéré.
 
+### 🚪 Fermer avec des modifications non enregistrées
+
+Si vous fermez MMCelt alors que quelque chose n'est pas sur le disque, il vous demande d'abord : **Enregistrer**, **Ne pas enregistrer** ou **Annuler**. Toute modification de la carte compte comme non enregistrée, de même qu'un titre en cours de saisie et les nouveaux nœuds de l'IA que vous avez ouverts depuis le dernier enregistrement.
+
+Une carte qui n'a pas encore de fichier —une analyse, une importation, un modèle ou un exemple du menu— pose aussi la question, même si vous n'y avez pas touché. Seuls l'exemple avec lequel démarre le programme et une nouvelle carte ne contenant que l'idée centrale se ferment sans demander, tant que vous n'y avez pas touché.
+
+Sans fichier, **Enregistrer** ouvre « Enregistrer sous » ; si vous annulez à cette étape ou si l'enregistrement échoue, MMCelt reste ouvert. **Annuler** vous laisse continuer à travailler sans rien enregistrer.
+
 ### ⚠️ Si la récupération vous est proposée au démarrage
 La boîte de dialogue affiche la date de la sauvegarde et le titre de la carte. Le choix vous appartient : si vous avez fermé volontairement sans enregistrer, écartez-la. Elle n'est jamais restaurée automatiquement.
 

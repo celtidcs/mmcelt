@@ -33,7 +33,7 @@ ou de manière transparente si vous avez utilisé l'envoi automatique.
 
 ### ✍️ Ce que vous décidez, et où
 
-- **Votre intention générale :** `🤖 Intelligence artificielle` → `🧭 Projet et instructions pour l’IA` → onglet **Projet**.
+- **Votre intention générale :** `✏️ Édition` → `🧭 Projet et instructions pour l’IA` → onglet **Projet**.
 - **Ce qui est valide et ce qui ne l'est pas :** marquez les nœuds comme `🛡️ Approuvé par l'humain` ou
   `⚠️ Correction requise`, puis transmettez-les avec
   `🤖 Intelligence artificielle` → `🛑 Envoyer corrections et directives à l'IA...`.
@@ -92,8 +92,8 @@ Vous pouvez travailler en toute simplicité depuis votre navigateur web habituel
 4. Lorsque l'IA vous répond par un bloc au format JSON ou Markdown, copiez-le.
 5. Dans MMCelt, cliquez sur `🤖 Intelligence artificielle` → `📥 Importer depuis l'IA (ChatGPT, Claude, Gemini)...` et collez la réponse. Vos nouvelles branches apparaîtront aussitôt.
 
-Si vous installez ultérieurement un agent dans le terminal de votre système (comme Claude Code, Codex CLI ou Gemini CLI),
-MMCelt le reconnaîtra automatiquement dès qu'il sera présent dans votre variable PATH.
+Si vous installez ultérieurement un agent dans le terminal de votre système (comme Claude Code, Codex CLI ou Antigravity CLI),
+MMCelt le reconnaîtra dès qu'il le trouvera : il cherche dans le dossier de son installateur officiel, dans .local/bin de votre dossier personnel et dans le PATH, et dans `🔌 Connecter MMCelt à mes IA...` vous pouvez choisir son programme à la main avec `📂 Changer le chemin...`.
 
 ### 📚 Où poursuivre, selon vos objectifs
 

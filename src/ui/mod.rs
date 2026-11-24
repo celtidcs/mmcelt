@@ -8,6 +8,7 @@ pub mod ai_modal;
 pub mod ayuda_textos;
 pub mod canvas;
 pub mod conexiones_modal;
+pub(crate) mod dialogo_de_cierre;
 pub mod dialogos;
 pub(crate) mod estado_agentes;
 pub(crate) mod estado_persistencia;

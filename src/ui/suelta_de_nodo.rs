@@ -7,9 +7,9 @@
 //! | Opción | Qué hace |
 //! |---|---|
 //! | Hacer hijo | Cuelga el nodo del destino, con toda su descendencia |
-//! | Hacer hermano | Lo cuelga del padre del destino, justo detrás de él (PH-1007-1) |
-//! | Conectar con enlace | Crea una conexión cruzada hacia el destino y devuelve el nodo a su sitio; no si ya son padre e hijo o ya están conectados (PH-1007-2) |
-//! | Mover aquí sin tapar | Lo deja junto al destino, en el hueco libre más cercano |
+//! | Hacer hermano | Lo cuelga del padre del destino, justo detrás de él |
+//! | Conectar con enlace | Crea una conexión cruzada hacia el destino y devuelve el nodo a su sitio; no si ya son padre e hijo o ya están conectados |
+//! | Mover aquí sin tapar | Lo deja junto al destino, en el hueco libre más cercano; si es su hermano, además lo pone detrás de él en el orden |
 //! | Cancelar | Lo devuelve a donde estaba (también `Esc` o un clic fuera) |
 //!
 //! La decisión ([`resolver`]) trabaja sobre el [`Proyecto`] y se prueba sin ventana; el dibujo
@@ -45,7 +45,8 @@ pub enum OpcionDeSuelta {
     HacerHermano,
     /// Crear una conexión cruzada arrastrado → destino y devolver el arrastrado a su sitio.
     Conectar,
-    /// Dejar el arrastrado junto al destino sin solaparse con nada.
+    /// Dejar el arrastrado junto al destino sin solaparse con nada. Si los dos son hermanos,
+    /// además lo pone justo detrás del destino en la lista de hijos del padre común.
     MoverSinTapar,
     /// Devolver el arrastrado a su sitio sin cambiar nada más.
     Cancelar,
@@ -109,6 +110,12 @@ pub fn resolver(
         }
         OpcionDeSuelta::MoverSinTapar => {
             dejar_junto_al_destino(proyecto, suelta);
+            if son_hermanos(proyecto, suelta)
+                && proyecto.colocar_despues(suelta.arrastrado, suelta.destino)?
+                && proyecto.layout_mode != ModoDisposicion::FreeDrag
+            {
+                crate::layout::aplicar_disposicion_automatica(proyecto);
+            }
             Ok(())
         }
         OpcionDeSuelta::Cancelar => {
@@ -116,6 +123,21 @@ pub fn resolver(
             Ok(())
         }
     }
+}
+
+/// Dice si el arrastrado y el destino cuelgan del mismo padre, que es cuando «Mover aquí sin
+/// tapar» también cambia el orden.
+///
+/// # Parámetros
+/// - `proyecto`: el mapa, que no se modifica.
+/// - `suelta`: qué nodo se soltó y sobre cuál.
+///
+/// # Devuelve
+/// `true` si son dos nodos distintos de la misma lista de hijos.
+fn son_hermanos(proyecto: &Proyecto, suelta: &SueltaPendiente) -> bool {
+    proyecto
+        .posiciones_de_hermanos(suelta.arrastrado, suelta.destino)
+        .is_some()
 }
 
 /// Coloca el arrastrado en el hueco libre más cercano al punto de suelta, junto al destino.
@@ -173,7 +195,7 @@ pub(crate) fn atender_la_suelta(app: &mut AplicacionMapaMental, ctx: &egui::Cont
 
     let idioma = app.idioma();
     let disponibles = opciones_disponibles(app.mapa().proyecto(), &suelta);
-    let menu = egui::Area::new(egui::Id::new("menu_de_suelta"))
+    let menu = egui::Area::new(egui::Id::unique("menu_de_suelta"))
         .order(egui::Order::Foreground)
         .fixed_pos(Pos2::new(suelta.en_pantalla[0], suelta.en_pantalla[1]))
         .show(ctx, |ui| {
@@ -249,7 +271,7 @@ pub fn opciones_disponibles(proyecto: &Proyecto, suelta: &SueltaPendiente) -> Op
 /// deshabilitado y para la barra de estado si al aplicarla el mapa la rechaza.
 ///
 /// Cada opción lleva su propia explicación: «Hacer hermano» usaba la de «Hacer hijo», que habla
-/// de «ya cuelga de este nodo» y no describe el caso de dos hermanos (PH-1007-7).
+/// de «ya cuelga de este nodo» y no describe el caso de dos hermanos.
 ///
 /// # Devuelve
 /// `None` para las opciones que siempre se pueden hacer.
@@ -262,7 +284,7 @@ pub fn explicacion_si_no_se_puede(opcion: OpcionDeSuelta) -> Option<Texto> {
     }
 }
 
-/// Los botones del menú: hacer hijo, hacer hermano y conectar, más mover y cancelar.
+/// Los botones del menú: las opciones estándar y «Hacer hermano».
 ///
 /// Las opciones que el mapa no admite aparecen deshabilitadas, con la explicación al pasar el
 /// ratón.

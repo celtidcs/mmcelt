@@ -20,6 +20,26 @@ use help_system::TemaDeAyuda;
 use std::path::PathBuf;
 use uuid::Uuid;
 
+/// Dibuja el primer aviso pendiente y lo retira al pulsar el botón de cierre.
+fn dibujar_aviso_de_error(
+    ui: &mut egui::Ui,
+    avisos: &mut std::collections::VecDeque<String>,
+    color: egui::Color32,
+    cerrar: &str,
+) {
+    if let Some(aviso) = avisos.front() {
+        let cerrar_pulsado = ui
+            .horizontal_wrapped(|ui| {
+                ui.colored_label(color, aviso);
+                ui.button(cerrar).clicked()
+            })
+            .inner;
+        if cerrar_pulsado {
+            avisos.pop_front();
+        }
+    }
+}
+
 #[cfg(test)]
 #[path = "audit_checks.rs"]
 mod audit_checks;
@@ -133,7 +153,7 @@ mod pruebas_del_espacio_de_trabajo {
             "la preferencia debe persistir la carpeta adoptada del mapa"
         );
 
-        // Caso 2: con una preferencia ajena previa fijada (reproducción exacta de un fallo real reportado)
+        // Caso 2: con una preferencia ajena previa fijada (cuando una configuración anterior fijó una carpeta externa)
         let ajena = std::env::temp_dir().join(format!(
             "mmcelt_preferencia_antigua_{}",
             uuid::Uuid::new_v4()
@@ -320,6 +340,19 @@ pub(crate) struct EstadoDelMapa {
     nodo_seleccionado: Option<Uuid>,
     /// Estados por los que ha pasado el mapa, para deshacer y rehacer.
     historial: crate::historial::HistorialDeCambios,
+    /// Nodos nuevos de la IA que la persona ya ha abierto en esta sesión. Quitar el resalte
+    /// no cuenta como cambio del mapa, así que una recarga del archivo o un deshacer pueden
+    /// traer de vuelta la marca; esta lista la vuelve a quitar.
+    vistos: std::collections::HashSet<Uuid>,
+    /// Se ha quitado algún resalte que todavía no está en disco. Solo sirve para preguntar al
+    /// cerrar (ver el módulo `cierre_con_cambios`): no retiene las recargas ni es un paso de
+    /// deshacer.
+    vistos_sin_guardar: bool,
+    /// En pantalla sigue un mapa de partida: el ejemplo con el que arranca la aplicación o un
+    /// mapa nuevo vacío (ver [`abrir_un_mapa_nuevo`]). Lo quita cualquier otra sustitución del
+    /// mapa, como una importación o un escaneo. Sirve para no preguntar al cerrar si no se ha
+    /// tocado: no hay nada que perder.
+    es_un_mapa_de_partida: bool,
 }
 
 impl EstadoDelMapa {
@@ -339,8 +372,44 @@ impl EstadoDelMapa {
     }
 
     /// Cambia la selección solo a un nodo existente, o la limpia.
+    ///
+    /// Es la puerta de las selecciones que hace la persona (clic, búsqueda, menú contextual),
+    /// así que también da por visto el nodo: si era nuevo de la IA, deja de resaltarse. Las
+    /// selecciones automáticas (abrir un mapa, recargarlo, deshacer) escriben el campo
+    /// directamente y no pasan por aquí.
+    ///
+    /// Quitar el resalte no llama a `marcar_modificado`: no es un paso de deshacer ni un
+    /// cambio sin guardar, porque si lo fuera el mapa dejaría de recargarse mientras la IA
+    /// sigue trabajando en él.
     pub(crate) fn seleccionar_nodo(&mut self, nodo: Option<Uuid>) {
         self.nodo_seleccionado = nodo.filter(|id| self.proyecto.nodes.contains_key(id));
+        if let Some(id) = self.nodo_seleccionado {
+            self.vistos.insert(id);
+            if let Some(nodo) = self.proyecto.nodes.get_mut(&id) {
+                self.vistos_sin_guardar |= nodo.marcar_como_visto();
+            }
+        }
+    }
+
+    /// Vuelve a quitar el resalte a los nodos que la persona ya abrió, después de que una
+    /// recarga del archivo o un paso del historial hayan sustituido el mapa en memoria.
+    fn reaplicar_los_vistos(&mut self) {
+        for id in &self.vistos {
+            if let Some(nodo) = self.proyecto.nodes.get_mut(id) {
+                self.vistos_sin_guardar |= nodo.marcar_como_visto();
+            }
+        }
+    }
+
+    /// Indica si se ha quitado algún resalte que todavía no está en disco.
+    pub(crate) fn hay_vistos_sin_guardar(&self) -> bool {
+        self.vistos_sin_guardar
+    }
+
+    /// Indica si en pantalla sigue un mapa de partida: el ejemplo del arranque o un mapa nuevo
+    /// vacío.
+    pub(crate) fn es_un_mapa_de_partida(&self) -> bool {
+        self.es_un_mapa_de_partida
     }
 
     /// Indica si existe un estado anterior al que volver.
@@ -449,6 +518,8 @@ pub(crate) struct EstadoDePresentacion {
     pub aviso_guardar_como_otra_carpeta: Option<crate::guardado_como::AvisoGuardarComoOtraCarpeta>,
     /// Aviso temporal que muestra la barra inferior junto al instante en que se creó.
     mensaje_de_estado: Option<(String, std::time::Instant)>,
+    /// Errores pendientes de cerrar, en orden de llegada.
+    avisos_de_error: std::collections::VecDeque<String>,
     /// Ajustes que se conservan entre sesiones: escala de la interfaz y tema.
     preferencias: Preferencias,
     /// Si la escala guardada ya se ha aplicado al contexto de `egui`.
@@ -473,6 +544,10 @@ pub(crate) struct EstadoDePresentacion {
     foco_al_buscador_pedido: bool,
     /// Comprobación de versión nueva de este arranque y el aviso que haya dejado.
     version_nueva: EstadoVersionNueva,
+    /// La ventana «¿Guardar los cambios antes de cerrar?» está abierta.
+    pub(crate) pregunta_al_cerrar: bool,
+    /// La persona ya respondió que se cierre: la siguiente petición de cierre no pregunta.
+    pub(crate) cierre_confirmado: bool,
 }
 
 impl EstadoDePresentacion {
@@ -578,32 +653,113 @@ pub const FUENTE_CJK_BYTES: &[u8] = include_bytes!("../assets/fuentes/NotoSansSC
 /// que ningún error avise.
 const NOMBRE_FUENTE_CJK: &str = "noto_sans_sc_subconjunto";
 
-/// Instala en `egui` la fuente china como respaldo de las que ya trae.
+/// Datos binarios de Noto Emoji, la versión en blanco y negro, fijada al peso normal.
 ///
-/// Hay que llamarla antes del primer fotograma. `egui` no incluye ningún glifo CJK —su fuente
-/// por omisión cubre latín y cirílico—, así que sin esto el chino se dibuja como cuadrados:
-/// la traducción está, pero no hay con qué pintarla.
+/// Trae los 1.489 símbolos de la fuente: los que usan los menús y la ayuda (🤖, 🧭, 🛑, 🏛…), que
+/// las fuentes de `egui` no tienen, y los que escriba la persona o la IA en un nodo. Se genera
+/// aparte, a partir de la fuente original.
+pub const FUENTE_SIMBOLOS_BYTES: &[u8] =
+    include_bytes!("../assets/fuentes/NotoEmoji-subconjunto.ttf");
+
+/// Datos binarios de Noto Sans Math recortada a los signos que no están en ninguna otra fuente
+/// del programa, como la flecha «→» de las rutas de menú.
+pub const FUENTE_SIGNOS_BYTES: &[u8] =
+    include_bytes!("../assets/fuentes/NotoSansMath-subconjunto.ttf");
+
+/// Fuentes de respaldo que se añaden al final de cada familia, en este orden: clave interna en
+/// `egui` y datos. Las claves no las ve nadie, pero no pueden repetirse.
+const FUENTES_DE_RESPALDO: [(&str, &[u8]); 3] = [
+    (NOMBRE_FUENTE_CJK, FUENTE_CJK_BYTES),
+    ("noto_emoji_subconjunto", FUENTE_SIMBOLOS_BYTES),
+    ("noto_sans_math_subconjunto", FUENTE_SIGNOS_BYTES),
+];
+
+/// Sustituye el mapa abierto por uno nuevo vacío, sin archivo, y lo marca como mapa de partida.
+///
+/// Es el único camino de «Nuevo mapa», con el menú, con Ctrl+N o al crear en una carpeta: así
+/// el cierre sabe que no hay nada que perder mientras no se toque. Una importación o un escaneo
+/// que traiga solo la raíz no pasa por aquí, y al cerrar pregunta.
+pub(crate) fn abrir_un_mapa_nuevo(app: &mut AplicacionMapaMental) {
+    let idioma = app.idioma();
+    app.sustituir_el_mapa_abierto(
+        Proyecto::nuevo_vacio(Texto::ArchivoNuevoProyectoDefecto.en(idioma)),
+        None,
+        Texto::AvisoProyectoNuevo.en(idioma),
+    );
+    app.mapa.es_un_mapa_de_partida = true;
+}
+
+/// Fuentes con las que dibuja MMCelt: las de `egui` y, detrás, las de respaldo.
+///
+/// Todas van dentro del ejecutable: MMCelt no usa las fuentes del sistema, así que lo que se ve
+/// es igual en cualquier equipo e idioma. `egui` no trae chino ni muchos símbolos (🤖, 🧭, «→»…),
+/// que sin esto se dibujaban como recuadros vacíos.
+///
+/// Las de respaldo van **al final** de cada familia: las de `egui` se consultan primero, así que
+/// el latín y el cirílico se siguen dibujando igual y solo lo que a ellas les falta llega hasta
+/// aquí.
+pub(crate) fn definiciones_de_fuentes() -> egui::FontDefinitions {
+    let mut fuentes = egui::FontDefinitions::default();
+    for (nombre, datos) in FUENTES_DE_RESPALDO {
+        fuentes.font_data.insert(
+            nombre.to_owned(),
+            std::sync::Arc::new(egui::FontData::from_static(datos)),
+        );
+        for familia in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
+            if let Some(lista) = fuentes.families.get_mut(&familia) {
+                lista.push(nombre.to_owned());
+            }
+        }
+    }
+    fuentes
+}
+
+/// Con el mapa bloqueado por un agente, deshace cualquier cambio del contenido que haya llegado
+/// a hacerse en este fotograma, por el camino que sea, y avisa de ello.
+pub(crate) fn proteger_el_mapa_bloqueado(app: &mut AplicacionMapaMental) {
+    if app.agentes.bloqueo.deshacer_cambios(&mut app.mapa.proyecto) {
+        app.mapa.reaplicar_los_vistos();
+        app.lienzo.indice_espacial_del_lienzo.invalidar();
+        app.establecer_estado(Texto::AvisoBloqueoEdicionRechazada.en(app.idioma()));
+    }
+}
+
+/// Si el mapa está bloqueado por un agente y su recibo dice que ha terminado, relee el archivo:
+/// el agente escribe el mapa antes que el recibo, así que la relectura trae su entrega final
+/// aunque la vigilancia no haya avisado todavía. El bloqueo se quita al cargar ese mapa; si en
+/// pantalla ya está lo mismo que en el archivo, se quita en el acto.
+fn atender_el_fin_del_agente(app: &mut AplicacionMapaMental) {
+    let Some(ruta) = app.persistencia.ruta_actual.clone() else {
+        return;
+    };
+    if !app.agentes.bloqueo.comprobar_si_termino(
+        &app.agentes.espacio_de_trabajo,
+        &ruta,
+        std::time::Instant::now(),
+        || crate::proyectos::huella(&ruta),
+    ) {
+        return;
+    }
+    let en_pantalla = app.persistencia.ultima_huella_guardada;
+    if app
+        .agentes
+        .bloqueo
+        .aceptar_entrega(&app.mapa.proyecto, en_pantalla)
+    {
+        app.establecer_estado(Texto::AvisoAgenteTermino.en(app.idioma()));
+    } else {
+        app.persistencia.cargador_externo.solicitar(ruta);
+    }
+}
+
+/// Instala en `egui` las fuentes del programa ([`definiciones_de_fuentes`]).
+///
+/// Hay que llamarla antes del primer fotograma.
 ///
 /// # Parámetros
 /// - `ctx`: contexto de `egui` en el que se instalan las fuentes.
 pub fn configurar_fuentes(ctx: &egui::Context) {
-    let mut fuentes = egui::FontDefinitions::default();
-
-    fuentes.font_data.insert(
-        NOMBRE_FUENTE_CJK.to_owned(),
-        std::sync::Arc::new(egui::FontData::from_static(FUENTE_CJK_BYTES)),
-    );
-
-    // Va **al final** de cada familia, como respaldo: las de `egui` se consultan primero, así
-    // que el latín y el cirílico se siguen dibujando igual que antes y solo los caracteres que
-    // a ellas les faltan llegan hasta aquí.
-    for familia in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
-        if let Some(lista) = fuentes.families.get_mut(&familia) {
-            lista.push(NOMBRE_FUENTE_CJK.to_owned());
-        }
-    }
-
-    ctx.set_fonts(fuentes);
+    ctx.set_fonts(definiciones_de_fuentes());
 }
 
 impl AplicacionMapaMental {
@@ -809,7 +965,7 @@ impl AplicacionMapaMental {
         // Solo el arranque real pregunta a GitHub; las construcciones de prueba no salen a
         // la red. Si el usuario lo ha desactivado, aquí no se crea ni la consulta.
         aplicacion.presentacion.version_nueva =
-            EstadoVersionNueva::arrancar_en_este_equipo(&aplicacion.presentacion.preferencias, ctx);
+            EstadoVersionNueva::arrancar_en_este_equipo(&aplicacion.presentacion.preferencias);
         aplicacion
     }
 
@@ -844,12 +1000,18 @@ impl AplicacionMapaMental {
         // valor de fábrica.
         let mut autoguardado = ControlAutoguardado::nuevo();
         autoguardado.fijar_minutos(preferencias.intervalo_autoguardado_minutos);
+        // El ejemplo inicial, sin tocar, no es trabajo que perder: cerrar la aplicación nada
+        // más abrirla no pregunta si se guarda (ver el módulo `cierre_con_cambios`).
+        autoguardado.dar_por_copiado(proyecto.revision());
 
         Self {
             mapa: EstadoDelMapa {
                 proyecto,
                 nodo_seleccionado: selected,
                 historial: crate::historial::HistorialDeCambios::nuevo(),
+                vistos: std::collections::HashSet::new(),
+                vistos_sin_guardar: false,
+                es_un_mapa_de_partida: true,
             },
             lienzo: EstadoDelLienzo {
                 conexion: ConexionEnCurso::default(),
@@ -871,11 +1033,14 @@ impl AplicacionMapaMental {
                 aviso_mapa_en_raiz: None,
                 aviso_guardar_como_otra_carpeta: None,
                 mensaje_de_estado: Some((mensaje_bienvenida, std::time::Instant::now())),
+                avisos_de_error: Default::default(),
                 preferencias,
                 escala_aplicada: false,
                 filtro_de_busqueda: FiltroDeBusqueda::default(),
                 foco_al_buscador_pedido: false,
                 version_nueva: EstadoVersionNueva::inactivo(),
+                pregunta_al_cerrar: false,
+                cierre_confirmado: false,
             },
             servicios: servicios_aplicacion::ServiciosAplicacion::locales(),
             agentes: estado_agentes::EstadoAgentes::nuevo(ctx.clone(), espacio_trabajo_ia),
@@ -1103,6 +1268,7 @@ impl AplicacionMapaMental {
     /// # Parámetros
     /// - `ruta`: archivo en el que se acaba de guardar.
     pub fn anotar_guardado(&mut self, ruta: &std::path::Path) {
+        self.mapa.vistos_sin_guardar = false;
         persistencia_mapa_comando::registrar_guardado(
             &mut self.persistencia,
             &self.mapa.proyecto,
@@ -1110,11 +1276,21 @@ impl AplicacionMapaMental {
         );
     }
 
-    /// Registra un guardado cuya huella ya se calculó fuera del hilo gráfico.
-    pub fn anotar_guardado_con_huella(&mut self, ruta: &std::path::Path, huella: Option<u64>) {
+    /// Registra un guardado hecho en otro hilo, cuya huella ya se calculó allí.
+    ///
+    /// Solo cuenta como guardado lo que recoge `instantanea`: lo que la persona editó o abrió
+    /// mientras se escribía el archivo sigue pendiente.
+    pub fn anotar_guardado_con_huella(
+        &mut self,
+        ruta: &std::path::Path,
+        huella: Option<u64>,
+        revision: crate::model::RevisionProyecto,
+        resaltados: &std::collections::HashSet<Uuid>,
+    ) {
+        self.mapa.vistos_sin_guardar = self.mapa.vistos.iter().any(|id| resaltados.contains(id));
         persistencia_mapa_comando::registrar_guardado_con_huella(
             &mut self.persistencia,
-            &self.mapa.proyecto,
+            revision,
             ruta,
             huella,
         );
@@ -1126,7 +1302,7 @@ impl AplicacionMapaMental {
             &self.presentacion.preferencias.espacio_trabajo_ia,
             self.persistencia.ruta_actual.as_deref(),
         );
-        // Se canoniza aquí, en el único sitio donde se calcula el espacio de trabajo (A-2): así
+        // Se canoniza aquí, en el único sitio donde se calcula el espacio de trabajo: así
         // toda pantalla que lo lea después ve siempre la misma ruta resuelta, y una carpeta
         // alcanzada por una unión de directorio no se muestra distinta según qué ventana pinte.
         let nuevo = crate::conectores::canonizar_o_conservar(propuesto);
@@ -1151,6 +1327,7 @@ impl AplicacionMapaMental {
 
     /// Convierte las decisiones del módulo de vigilancia en cambios visibles de la interfaz.
     pub(crate) fn procesar_eventos_de_vigilancia(&mut self) {
+        atender_el_fin_del_agente(self);
         let hay_cambios_locales = self.hay_cambios_locales_sin_guardar();
         let acciones =
             crate::vigilancia_mapa::atender_vigilancia(&mut self.persistencia, hay_cambios_locales);
@@ -1161,31 +1338,35 @@ impl AplicacionMapaMental {
 
     /// Atiende el resultado del hilo de envío a agentes de IA y actualiza el estado de la aplicación.
     pub(crate) fn procesar_eventos_de_envio(&mut self, ctx: &egui::Context) {
-        match crate::envio_agente_comando::atender_envio_en_segundo_plano(
+        use crate::envio_agente_comando::ReaccionEnvioSegundoPlano;
+        let reaccion = crate::envio_agente_comando::atender_envio_en_segundo_plano(
             &mut self.agentes,
             &mut self.persistencia,
             ctx,
-        ) {
-            crate::envio_agente_comando::ReaccionEnvioSegundoPlano::Ninguna => {}
-            crate::envio_agente_comando::ReaccionEnvioSegundoPlano::Exito {
-                mapa_guardado,
-                iniciada,
-            } => {
-                if let Some((ruta, huella)) = mapa_guardado {
-                    self.anotar_guardado_con_huella(&ruta, huella);
-                }
+        );
+        // Lo que el envío guardó cuenta igual tanto si después tuvo éxito como si falló.
+        let guardado = match &reaccion {
+            ReaccionEnvioSegundoPlano::Ninguna => None,
+            ReaccionEnvioSegundoPlano::Exito { mapa_guardado, .. }
+            | ReaccionEnvioSegundoPlano::Fallo { mapa_guardado, .. } => mapa_guardado.as_ref(),
+        };
+        if let Some(guardado) = guardado {
+            self.anotar_guardado_con_huella(
+                &guardado.ruta,
+                guardado.huella,
+                guardado.instantanea.revision,
+                &guardado.instantanea.resaltados,
+            );
+        }
+        match reaccion {
+            ReaccionEnvioSegundoPlano::Ninguna => {}
+            ReaccionEnvioSegundoPlano::Exito { iniciada, .. } => {
                 if iniciada {
                     self.establecer_estado(Texto::AvisoSeguimientoIniciado.en(self.idioma()));
                 }
                 self.establecer_estado(Texto::IaVigilandoCambios.en(self.idioma()));
             }
-            crate::envio_agente_comando::ReaccionEnvioSegundoPlano::Fallo {
-                mapa_guardado,
-                error,
-            } => {
-                if let Some((ruta, huella)) = mapa_guardado {
-                    self.anotar_guardado_con_huella(&ruta, huella);
-                }
+            ReaccionEnvioSegundoPlano::Fallo { error, .. } => {
                 self.reportar_error(&error, Texto::SesionAgenteTitulo.en(self.idioma()));
             }
         }
@@ -1285,6 +1466,12 @@ impl AplicacionMapaMental {
             crate::vigilancia_mapa::AccionCargaExterna::Sustituir(nuevo_proyecto) => {
                 let _ = self.guardar_copia_de_recuperacion();
                 self.mapa.proyecto = *nuevo_proyecto;
+                self.mapa.reaplicar_los_vistos();
+                let cargada = self.persistencia.ultima_huella_guardada;
+                let termino = self
+                    .agentes
+                    .bloqueo
+                    .aceptar_entrega(&self.mapa.proyecto, cargada);
                 self.lienzo.indice_espacial_del_lienzo.invalidar();
                 self.mapa.historial.olvidar(&self.mapa.proyecto);
                 if !self.mapa.proyecto.nodes.contains_key(
@@ -1295,9 +1482,12 @@ impl AplicacionMapaMental {
                 ) {
                     self.mapa.nodo_seleccionado = Some(self.mapa.proyecto.root_id);
                 }
-                self.establecer_estado(
-                    crate::textos::Texto::AvisoMapaActualizadoPorIA.en(self.idioma()),
-                );
+                let aviso = if termino {
+                    Texto::AvisoAgenteTermino
+                } else {
+                    Texto::AvisoMapaActualizadoPorIA
+                };
+                self.establecer_estado(aviso.en(self.idioma()));
             }
         }
     }
@@ -1359,6 +1549,7 @@ impl AplicacionMapaMental {
             &destino,
         ) {
             Ok(()) => {
+                self.mapa.vistos_sin_guardar = false;
                 let txt = destino.display().to_string();
                 self.establecer_estado(
                     Texto::ModalGuardadoEn.en(self.idioma()).replace("{}", &txt),
@@ -1448,21 +1639,28 @@ impl AplicacionMapaMental {
     /// visible. Las capas internas (modelo, persistencia, puente con la IA) se limitan
     /// a propagar el error hacia arriba; aquí se decide cómo se presenta.
     ///
-    /// El mensaje se antepone con el emoji correspondiente a la gravedad del error,
-    /// para que el usuario distinga de un vistazo un aviso menor de un archivo dañado.
+    /// El aviso combina la gravedad, la operación y el motivo. Queda pendiente hasta
+    /// que el usuario lo cierre.
     ///
     /// # Parámetros
     /// - `error`: el error a comunicar.
-    /// - `contexto`: descripción breve de la operación durante la que se produjo, que
-    ///   se escribe en el registro pero no se muestra al usuario.
+    /// - `contexto`: descripción breve de la operación, visible en el aviso y en el registro.
     pub fn reportar_error(&mut self, error: &AppError, contexto: &str) {
         crate::error::registrar(error, contexto);
         let idioma = self.idioma();
-        self.establecer_estado(format!(
-            "{} {}",
+        let mut aviso = format!(
+            "{} {}: {}",
             error.severidad().emoji(),
+            contexto,
             error.mensaje_usuario().en(idioma)
-        ));
+        );
+        if let AppError::RutaFueraDelProyectoConDetalle { ruta, raiz } = error {
+            use std::fmt::Write as _;
+            let _ = write!(aviso, "\n{} ⊄ {}", ruta.display(), raiz.display());
+        }
+        if self.presentacion.avisos_de_error.back() != Some(&aviso) {
+            self.presentacion.avisos_de_error.push_back(aviso);
+        }
     }
 
     /// Cambia cada cuántos minutos se autoguarda, y lo recuerda entre sesiones.
@@ -1684,7 +1882,7 @@ impl eframe::App for AplicacionMapaMental {
         self.procesar_eventos_de_vigilancia();
 
         // Recoge, sin esperar, el resultado de la comprobación de versión nueva.
-        self.presentacion.version_nueva.atender();
+        self.presentacion.version_nueva.atender(&ctx);
 
         // Top Toolbar
         toolbar::dibujar_barra_de_herramientas(self, ui);
@@ -1704,6 +1902,11 @@ impl eframe::App for AplicacionMapaMental {
         // Diálogos y ventanas emergentes
         ai_modal::dibujar_modales(self, &ctx);
         crate::guardado_como::dibujar_modal_guardar_como(self, &ctx);
+        crate::ui::dialogo_de_cierre::atender_peticion_de_cierre(self, &ctx);
+        crate::ui::dialogo_de_cierre::dibujar_dialogo_de_cierre(self, &ctx);
+
+        // Antes de que el historial vea el fotograma: con el mapa bloqueado no queda cambio.
+        proteger_el_mapa_bloqueado(self);
 
         // El historial mira el mapa al final del fotograma, cuando ya han pasado por él el
         // lienzo, el inspector y los modales. Si algo ha cambiado, anota el estado anterior.
@@ -1777,6 +1980,27 @@ impl AplicacionMapaMental {
         egui::Panel::bottom("bottom_status_bar")
             .min_size(24.0)
             .show(ui, |ui| {
+                let cerrar = Texto::BotonCerrar.en(self.idioma());
+                dibujar_aviso_de_error(
+                    ui,
+                    &mut self.presentacion.avisos_de_error,
+                    self.presentacion.tema.peligro,
+                    cerrar,
+                );
+                if self.agentes.bloqueo.esta_bloqueado() {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new(Texto::BloqueoAgenteTrabajando.en(self.idioma()))
+                                .strong(),
+                        );
+                        if ui
+                            .button(Texto::BloqueoRecuperarControl.en(self.idioma()))
+                            .clicked()
+                        {
+                            self.agentes.bloqueo.desbloquear();
+                        }
+                    });
+                }
                 ui.horizontal(|ui| {
                     if self.persistencia.cambio_externo_pendiente {
                         ui.label(
@@ -1890,6 +2114,7 @@ impl AplicacionMapaMental {
     /// La edición que hubiera en curso ya viene cerrada por `confirmar_edicion_del_titulo`,
     /// que es la única puerta de salida de la edición del lienzo.
     fn recolocar_la_seleccion_tras_moverse_por_el_historial(&mut self) {
+        self.mapa.reaplicar_los_vistos();
         let sigue_existiendo = self
             .mapa
             .nodo_seleccionado
@@ -1926,6 +2151,10 @@ impl AplicacionMapaMental {
         let copia_guardada = self.guardar_copia_de_recuperacion().is_ok();
 
         self.mapa.proyecto = nuevo;
+        // Lo visto en el mapa anterior no dice nada de este.
+        self.mapa.vistos.clear();
+        self.mapa.vistos_sin_guardar = false;
+        self.mapa.es_un_mapa_de_partida = false;
         self.lienzo.indice_espacial_del_lienzo.invalidar();
         // Los pasos del mapa anterior no valen para este. Deshacer sobre ellos traería de
         // vuelta un mapa que no es el que está abierto, y lo pisaría.
@@ -1934,7 +2163,7 @@ impl AplicacionMapaMental {
         // la pisaría con el mapa nuevo en la primera comprobación.
         self.persistencia
             .autoguardado
-            .dar_por_copiado(&self.mapa.proyecto);
+            .dar_por_copiado(self.mapa.proyecto.revision());
         self.mapa.nodo_seleccionado = Some(self.mapa.proyecto.root_id);
         self.persistencia.ruta_actual = archivo.clone();
         self.sincronizar_espacio_de_trabajo_con_el_mapa();
@@ -2272,11 +2501,7 @@ impl AplicacionMapaMental {
         if nuevo_mapa_solicitado {
             // Sale del cierre por lo mismo que los otros dos: deja copia de recuperación,
             // que escribe en disco.
-            self.sustituir_el_mapa_abierto(
-                Proyecto::nuevo_vacio(Texto::ArchivoNuevoProyectoDefecto.en(self.idioma())),
-                None,
-                crate::textos::Texto::AvisoProyectoNuevo.en(self.idioma()),
-            );
+            abrir_un_mapa_nuevo(self);
         }
     }
 
@@ -2313,7 +2538,7 @@ impl AplicacionMapaMental {
 
     /// Indica si el mapa activo se encuentra directamente en la raíz de una unidad o volumen.
     ///
-    /// Por decisión de diseño (2026-09-16), los mapas en la raíz permanecen en modo de
+    /// Por diseño de seguridad del sistema (2026-09-16), los mapas en la raíz permanecen en modo de
     /// solo lectura para impedir accesos involuntarios a la unidad completa y comportamientos
     /// no deseados. La aplicación guía a la persona para mover el mapa a una carpeta dedicada.
     pub fn es_solo_lectura_por_raiz(&self) -> bool {

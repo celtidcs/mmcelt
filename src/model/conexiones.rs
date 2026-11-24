@@ -2,7 +2,7 @@
 //!
 //! Cuándo tiene sentido que la persona cree una conexión cruzada entre dos nodos. El modelo
 //! acepta cualquier pareja de nodos distintos (lo necesitan los importadores); esta pregunta es
-//! la que hace la interfaz antes de ofrecer la opción (PH-1007-2).
+//! la que hace la interfaz antes de ofrecer la opción.
 
 use super::tipos::Proyecto;
 use uuid::Uuid;
@@ -11,8 +11,8 @@ impl Proyecto {
     /// Dice si se puede crear una conexión cruzada entre dos nodos.
     ///
     /// No se admite si son el mismo nodo, si alguno no existe, si uno es el padre directo del
-    /// otro —la jerarquía ya los une con una línea, y una segunda del mismo color solo confunde
-    /// (PH-1007-2)— ni si esa pareja ya está conectada, en cualquier sentido.
+    /// otro —la jerarquía ya los une con una línea, y una segunda del mismo color solo confunde—
+    /// ni si esa pareja ya está conectada, en cualquier sentido.
     pub fn conexion_cruzada_admitida(&self, desde: Uuid, hasta: Uuid) -> bool {
         let (Some(origen), Some(destino)) = (self.nodes.get(&desde), self.nodes.get(&hasta)) else {
             return false;

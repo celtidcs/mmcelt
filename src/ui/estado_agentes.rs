@@ -31,6 +31,8 @@ pub(crate) struct EstadoAgentes {
     pub(crate) detectados: Option<Vec<Agente>>,
     /// Carpeta dentro de la cual podrán operar los agentes.
     pub(crate) espacio_de_trabajo: PathBuf,
+    /// Bloqueo del mapa mientras un agente trabaja en él.
+    pub(crate) bloqueo: crate::bloqueo_por_agente::BloqueoPorAgente,
 }
 
 impl EstadoAgentes {
@@ -43,6 +45,7 @@ impl EstadoAgentes {
             trabajador: EnvioEnSegundoPlano::nuevo(ctx),
             detectados: None,
             espacio_de_trabajo,
+            bloqueo: Default::default(),
         }
     }
 

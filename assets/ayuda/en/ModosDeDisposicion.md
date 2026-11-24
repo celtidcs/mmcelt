@@ -30,7 +30,7 @@ If you drag a node and drop it with its centre over another card, a small menu a
 - **`➕ Make child`**: the node, with all its branches, now hangs from the node underneath. It is disabled when that is not possible: the node underneath is already its parent, the one you drag is the root, or the node underneath is inside its own branches (it would create a loop).
 - **`↔ Make sibling`**: the node now hangs from the same parent as the node underneath, right after it. Not available when the node underneath is the root or when they are already siblings.
 - **`🔗 Connect with a link`**: creates a cross-connection to the node underneath and puts the dragged node back where it was. Not available when they are already parent and child or already connected: it would be a second line on top of the one that links them.
-- **`➡ Move here without covering`**: places it next to the node underneath, in the nearest free spot, without covering any card.
+- **`➡ Move here without covering`**: places it next to the node underneath, in the nearest free spot, without covering any card. If it is a sibling, it also moves it right after that node in the order.
 - **`↩ Cancel`**: puts it back where it was. `Esc` or a click outside the menu do the same.
 
 While the menu is open, the keys that change the map do nothing. Any of the options can be undone with `Ctrl + Z`.

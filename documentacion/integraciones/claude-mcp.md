@@ -1,128 +1,177 @@
-# 🔌 MMCelt: El Instrumento Bidireccional de Control y Supervisión Humano ↔ IA
+MMCelt con Claude: control y supervisión bidireccional entre la persona y la IA
 
-> **Qué conecta MMCelt hoy.** Desde la versión 0.11.6 el programa se conecta con tres agentes de
-> consola: **Claude Code**, **Codex CLI** y **Gemini CLI**. Lo que esta guía cuenta de
-> Claude Desktop y Cursor se conserva como referencia de cómo funciona cada plataforma: **ya no se conectan desde
-> MMCelt** (el motivo está en el [README](../../README.md#por-qué-ya-no-están-antigravity-cursor-windsurf-y-claude-desktop)).
+MMCelt no es solo un visor de mapas mentales: es una consola visual de control, verificación y
+alineación entre el usuario y los modelos de inteligencia artificial, como Claude, ChatGPT o Gemini.
+Esta guía explica cómo se conecta con los clientes de Anthropic y qué herramientas pone a disposición
+del agente.
 
-**MMCelt** no es solo un visor de mapas mentales: es una **consola visual de control, verificación y alineación estratégica en tiempo real** entre el usuario y los modelos de Inteligencia Artificial (Claude, ChatGPT, Gemini, Cursor, etc.).
+Qué conecta MMCelt hoy
 
-## Claude Code y Claude Desktop no se abren de la misma manera
+Desde la versión 0.11.6 el programa se conecta con tres agentes de consola: Claude Code, Codex CLI y
+Antigravity CLI (agy). Lo que esta guía cuenta de Claude Desktop se conserva como referencia de cómo
+funciona esa plataforma: ya no se conecta desde MMCelt. El motivo está en el apartado «Conectarlo con tu
+IA» del README.md de la raíz del repositorio.
 
-Ambos pertenecen al ecosistema de Anthropic, pero son clientes distintos. **Claude Code** es la
-consola: después de conectarlo y reiniciarlo una vez, `Enviar a… → Claude Code` guarda el mapa,
-crea el expediente, abre una terminal nueva en la carpeta del proyecto y activa la vigilancia.
-No tienes que abrir Claude Code antes; sí debes haber iniciado sesión en su CLI.
+Claude Code y Claude Desktop no se abren de la misma manera
 
-**Claude Desktop** es una aplicación gráfica y MMCelt no controla sus conversaciones. Conéctala
-desde `Conectar MMCelt con mis IAs`, ciérrala por completo y vuelve a abrirla para que cargue MCP.
-Después prepara la sesión desde MMCelt, abre tú una conversación en Claude Desktop y adjunta o
-pega `.mmcelt/sesiones/<sesión>/inicio.md` o el `_AI.md` generado. Claude Desktop no debe
-presuponerse capaz de abrir una ruta del proyecto solo porque tenga el MCP de MMCelt. La
-conversación continúa en Claude Desktop y el mapa vuelve mediante MCP.
+Ambos pertenecen al ecosistema de Anthropic, pero son clientes distintos. Claude Code es la consola:
+después de conectarlo y reiniciarlo una vez, «Enviar a... → Claude Code» guarda el mapa, crea el
+expediente, abre una terminal nueva en la carpeta del proyecto y activa la vigilancia. No tienes que
+abrir Claude Code antes, pero sí debes haber iniciado sesión en su CLI.
 
-La consola lleva tus mensajes; MCP aporta las herramientas para leer y actualizar el mapa. Que una
-de las dos capacidades funcione no demuestra la otra, y una prueba de Claude Code no sustituye la
-prueba de un cliente gráfico.
+Claude Desktop es una aplicación gráfica y MMCelt no controla sus conversaciones. Para usarla hay que
+registrar el servidor MCP en su configuración a mano, como se explica más abajo, cerrarla por
+completo y volver a abrirla para que cargue MCP. Después se prepara la sesión desde MMCelt, se abre
+una conversación en Claude Desktop y se adjunta o se pega el archivo
+.mmcelt/sesiones/<sesión>/inicio.md o el _AI.md generado. No hay que presuponer que Claude Desktop
+puede abrir una ruta del proyecto solo porque tenga el MCP de MMCelt. La conversación continúa en
+Claude Desktop y el mapa vuelve mediante MCP.
 
----
+La consola lleva tus mensajes; MCP aporta las herramientas para leer y actualizar el mapa. Que una de
+las dos capacidades funcione no demuestra la otra, y que funcione en Claude Code no garantiza que
+funcione en un cliente gráfico.
 
-## 🔄 El Bucle Cerrado de Trabajo Humano-en-el-Bucle (Human-in-the-loop)
+Conectar Claude Code
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Humano as 👤 Usuario / Supervisor
-    participant MMCelt as 🧠 MMCelt (App Rust)
-    participant Claude as 🤖 Modelo de IA (Claude / MCP)
+El servidor MCP va dentro del propio ejecutable de MMCelt, así que no hay nada que instalar aparte:
+ni Python, ni Node, ni ningún paquete.
 
-    Note over Claude: 1. La IA trabaja en un proyecto complejo (código, arquitectura, ideas)
-    Claude->>MMCelt: Envía o sincroniza el Mapa Mental (.mmcelt / MCP)
-    Note over MMCelt: 2. El usuario ve el proyecto con visión panorámica
-    Humano->>MMCelt: 3. Supervisa, valida ramas y detecta errores o desvíos
-    Humano->>MMCelt: 4. Modifica nodos (descarta vías erróneas, añade notas de corrección)
-    MMCelt->>Claude: 5. Envía informe de correcciones exigidas (Markdown / MCP)
-    Note over Claude: 6. La IA reajusta su rumbo, acata las correcciones y continúa
-```
+La vía corta es el menú «Inteligencia Artificial → Conectar MMCelt con mis IAs...». La aplicación
+busca los agentes instalados, los muestra en una lista y los conecta al pulsar «Conectar». Hace una
+copia de seguridad del archivo de configuración antes de tocarlo. Después hay que cerrar y volver a
+abrir el agente, porque ninguno relee su configuración mientras está en marcha. Si tienes varias
+cuentas de Claude Code, cada una en su carpeta, MMCelt muestra una ficha por cuenta: se conecta cada
+una por separado, y al enviar un mapa la consola se abre con la cuenta elegida. Una cuenta que esté
+en otro sitio se añade con «Añadir cuenta».
 
----
+Si prefieres hacerlo desde la terminal, se registra con una sola orden, sustituyendo las dos rutas
+por las tuyas:
 
-## 🛠️ Herramientas MCP para el Control del Proyecto
+claude mcp add mmcelt -s user -e MMCELT_WORKSPACE="C:/ruta/hasta/tu/carpeta/de/mapas" -- "C:/ruta/hasta/mmcelt.exe" --mcp-server
 
-El servidor MCP va integrado en el propio ejecutable (`mmcelt --mcp-server`) e incluye estas herramientas:
+Lo que se registra es el ejecutable de MMCelt, no un script suelto: por eso quien reciba el programa
+no necesita instalar nada más para conectarlo con su agente.
 
-1. **`mmcelt_workspace_info`**: La IA pregunta cuál es la carpeta autorizada y qué mapas hay dentro, en vez de adivinar rutas. Es la primera que debe llamar; las rutas que devuelve son las que hay que reenviar tal cual.
-2. **`mmcelt_create_mindmap`**: La IA genera el mapa mental visual del proyecto en el que está trabajando para que lo veas en tu pantalla.
-3. **`mmcelt_read_mindmap`**: La IA lee un mapa ya existente: su jerarquía, sus notas, sus dudas abiertas y sus conexiones. Cada nodo y cada conexión vienen con su identificador y con su título, que es lo que le permite escribir después sin ambigüedad.
-4. **`mmcelt_sync_ai_progress`**: La IA desarrolla un mapa que ya existe —también el que has hecho tú—: actualiza estados (`EnProgreso`, `Completado`, `DudaBloqueo`) y añade nodos con su rol y sus etiquetas, además de conexiones cruzadas entre ramas distintas.
-5. **`mmcelt_get_human_feedback`**: La IA consulta si tú has modificado el mapa, validado ramas o exigido correcciones (`RequiereCorreccion`, `Descartado`).
-6. **`mmcelt_export_ai_markdown`**: Exporta la especificación completa en Markdown con ingeniería de prompts.
+Configurar Claude Desktop a mano
 
----
+Abre el archivo %APPDATA%\Claude\claude_desktop_config.json, o entra en Claude Desktop en Settings,
+Developer, Edit Config, y añade esta entrada:
 
-## 🌱 Cómo la IA amplía un mapa tuyo sin sustituirlo
+{
+  "mcpServers": {
+    "mmcelt": {
+      "command": "C:/ruta/hasta/mmcelt.exe",
+      "args": ["--mcp-server"],
+      "env": {
+        "MMCELT_WORKSPACE": "C:/ruta/hasta/tu/carpeta/de/mapas"
+      }
+    }
+  }
+}
 
-Si el mapa lo has hecho tú, `mmcelt_create_mindmap` se niega a tocarlo: rehacerlo encima
-borraría tu trabajo. La vía legítima para ampliarlo es `mmcelt_sync_ai_progress`, y con ella el
-agente puede añadir nodos completos —con rol y etiquetas— y trazar conexiones cruzadas entre
-ramas distintas, que es lo que hace falta para dibujar un bucle o una dependencia que la
-jerarquía no expresa.
+Sustituye las dos rutas por las tuyas y escríbelas con barras normales, que es lo que espera el
+formato JSON. MMCELT_WORKSPACE marca la carpeta dentro de la cual el agente puede leer y escribir:
+fuera de ella no tiene acceso a nada. Guarda y reinicia Claude Desktop. Sabrás que ha funcionado
+porque aparece un icono de martillo abajo a la derecha, con las herramientas de MMCelt dentro.
 
-Lo que el agente **no** puede hacer por esa puerta:
+El bucle cerrado de trabajo con la persona en el bucle
 
-- Borrar un nodo tuyo o cambiarlo de sitio.
-- Sustituir tus etiquetas: las suyas se añaden a las tuyas.
-- Presentar su trabajo como tuyo: todo lo que añade nace **Generado por IA**.
-- Firmar algo como aprobado por ti, ni conservar tu aprobación sobre un texto que ha cambiado.
-- Volver a enlazar un camino que hayas marcado como **Descartado**.
+El ciclo de trabajo tiene seis pasos. La IA trabaja en un proyecto complejo, ya sea código,
+arquitectura o ideas, y envía o sincroniza el mapa mental con MMCelt, mediante el archivo .mmcelt o
+mediante MCP. El usuario ve el proyecto con visión panorámica en MMCelt. Supervisa, valida ramas y
+detecta errores o desvíos. Modifica los nodos, descartando las vías erróneas y añadiendo notas de
+corrección. MMCelt envía a la IA el informe de correcciones exigidas, en Markdown o por MCP. Por
+último, la IA reajusta su rumbo, acata las correcciones y continúa.
 
-Si pide una conexión imposible —un nodo que no existe, un nodo consigo mismo o una relación que
-ya estaba—, no se crea y el servidor le explica por qué, en lugar de responderle que todo ha ido
-bien.
+Herramientas MCP para el control del proyecto
 
----
+El servidor MCP va integrado en el propio ejecutable, que se arranca con mmcelt --mcp-server, e
+incluye seis herramientas.
 
-## 🏷️ Qué pasa cuando dos nodos se llaman igual
+Con mmcelt_workspace_info la IA pregunta cuál es la carpeta autorizada y qué mapas hay dentro, en vez
+de adivinar rutas. Es la primera que debe llamar, y las rutas que devuelve son las que hay que
+reenviar tal cual.
 
-En un diagrama de decisiones lo normal es tener dos **Sí** y dos **No** colgando de preguntas
-distintas. **Puedes seguir repitiendo títulos**: el problema no es tuyo.
+Con mmcelt_create_mindmap la IA genera el mapa mental visual del proyecto en el que está trabajando
+para que lo veas en tu pantalla.
 
-Antes, una petición dirigida a «Sí» caía sobre uno de los dos y la IA recibía un «hecho». Ahora,
-si la petición nombra solo el título y ese título lo llevan varios nodos, **la llamada entera se
-rechaza sin escribir nada** y la respuesta enumera los candidatos con su identificador, para que
-la IA repita la llamada señalando el que quería.
+Con mmcelt_read_mindmap la IA lee un mapa ya existente: su jerarquía, sus notas, sus dudas abiertas y
+sus conexiones. Cada nodo y cada conexión vienen con su identificador y con su título, que es lo que
+le permite escribir después sin ambigüedad.
 
-Para poder señalarlo, cada nodo y cada conexión que lee traen su identificador:
+Con mmcelt_sync_ai_progress la IA desarrolla un mapa que ya existe, también uno que hayas hecho tú:
+actualiza estados, como EnProgreso, Completado o DudaBloqueo, y añade nodos con su rol y sus
+etiquetas, además de conexiones cruzadas entre ramas distintas.
 
-- `mmcelt_read_mindmap` devuelve el `id` de cada nodo, y cada conexión con `from` y `to`
-  —identificadores— junto a `from_title` y `to_title` —títulos—.
-- `mmcelt_sync_ai_progress` acepta `id` y `parent_id` en cada nodo, y `from_id` y `to_id` en cada
-  conexión. Si llegan el identificador y el título a la vez, tienen que corresponder al mismo
-  nodo; si no, se rechaza, porque significa que la IA arrastra una tabla vieja del mapa.
+Mientras la IA trabaja, MMCelt mantiene el mapa bloqueado para que la persona no lo edite a la vez.
+mmcelt_sync_ai_progress y mmcelt_create_mindmap aceptan el campo opcional work_finished: la IA lo
+pone a true solo en su última entrega. MMCelt lo lee en el recibo .mmcelt/devolucion.json, carga el
+mapa final y levanta el bloqueo. Las entregas sin ese campo, o con false, se cargan y el mapa sigue
+bloqueado. Si la IA no avisa nunca, la persona puede quitar el bloqueo con «Recuperar el control».
+Si el envío falla antes de lanzar al agente, el bloqueo se quita solo.
 
-El título por sí solo **sigue funcionando** siempre que sea único, que es el caso más común. Lo
-único que ha dejado de ocurrir es que el servidor elija por su cuenta.
+Con mmcelt_get_human_feedback la IA consulta si has modificado el mapa, validado ramas o exigido
+correcciones, como los estados RequiereCorreccion o Descartado.
 
-Un título que no existe no es lo mismo que uno ambiguo: si nombras un padre que no está en el
-mapa, el nodo cuelga de la raíz y la IA recibe el aviso, igual que antes. Ambiguo significa que
-hay varios sitios donde ponerlo, y ahí se para.
+Con mmcelt_export_ai_markdown se exporta la especificación completa en Markdown, preparada para que
+la lea un modelo.
 
----
+Cómo la IA amplía un mapa tuyo sin sustituirlo
 
-## 🛑 Cómo Corregir a la IA desde MMCelt
+Si el mapa lo has hecho tú, mmcelt_create_mindmap se niega a tocarlo, porque rehacerlo encima
+borraría tu trabajo. La vía legítima para ampliarlo es mmcelt_sync_ai_progress, y con ella el agente
+puede añadir nodos completos, con rol y etiquetas, y trazar conexiones cruzadas entre ramas
+distintas, que es lo que hace falta para dibujar un bucle o una dependencia que la jerarquía no
+expresa.
 
-1. Abre el mapa en MMCelt.
-2. Si la IA tomó una decisión incorrecta o un rumbo no deseado:
-   - Cambia el estado del nodo a **`⛔ Descartado`** o **`⚠️ Requiere Corrección`**.
-   - En el campo **"🛑 Corrección / Instrucción Exigida a la IA"**, escribe lo que debe corregir (ej. *"No usar SQLite, necesitamos PostgreSQL por volumen de escrituras concurrentes"*).
-   - *(Si necesitas ayuda sobre cómo redactar o estructurar correcciones, pulsa el botón **`+info`** junto a Control Humano para abrir la guía detallada a la derecha)*.
-3. Ve al menú superior **`🤖 Inteligencia Artificial` > `🛑 Enviar Correcciones y Directivas a la IA...`**.
-4. Pulsa **`📋 Copiar Directivas de Corrección`** y pégalo en tu chat con la IA (o haz que Claude use `mmcelt_get_human_feedback` vía MCP).
-5. La IA recibirá un informe que le ordena acatar tus correcciones y descartar las vías canceladas.
+Por esa vía el agente no puede borrar un nodo tuyo ni cambiarlo de sitio. Tampoco puede sustituir tus
+etiquetas, porque las suyas se añaden a las tuyas, ni presentar su trabajo como tuyo, porque todo lo
+que añade nace con el estado Generado por IA y resaltado, con otro color de fondo y de borde, hasta
+que lo seleccionas. No puede marcar nada como aprobado por ti, ni conservar tu aprobación sobre un texto
+que ha cambiado, ni volver a enlazar un camino que hayas marcado como Descartado. Si cambia un nodo
+tuyo, este pasa a Pendiente de Revisión, para que veas qué ha tocado.
 
----
+Si pide una conexión imposible, como un nodo que no existe, un nodo consigo mismo o una relación que
+ya estaba, no se crea y el servidor le explica por qué, en lugar de responderle que todo ha ido bien.
 
-## 🍪 Asistencia para Nuevos Usuarios
-Si estás empezando a usar MMCelt junto a Claude, activa las **Galletas de Ayuda** en el menú **`❓ Ayuda`**. Te guiarán paso a paso sobre cómo interactuar con los nodos y podrás pulsar **`+info`** en cualquier momento para desplegar la documentación exhaustiva en el panel lateral derecho.
+Qué pasa cuando dos nodos se llaman igual
 
+En un diagrama de decisiones lo normal es tener dos nodos Sí y dos nodos No colgando de preguntas
+distintas. Puedes seguir repitiendo títulos.
 
+Si una petición nombra solo el título y ese título lo llevan varios nodos, la llamada entera se
+rechaza sin escribir nada y la respuesta enumera los candidatos con su identificador, para que la IA
+repita la llamada señalando el que quería. El servidor nunca elige por su cuenta.
+
+Para poder señalarlo, cada nodo y cada conexión que lee la IA traen su identificador.
+mmcelt_read_mindmap devuelve el campo id de cada nodo, y cada conexión con los identificadores from y
+to junto a los títulos from_title y to_title. mmcelt_sync_ai_progress acepta id y parent_id en cada
+nodo, y from_id y to_id en cada conexión. Si llegan el identificador y el título a la vez, tienen que
+corresponder al mismo nodo; si no, se rechaza, porque significa que la IA arrastra una copia vieja
+del mapa.
+
+El título por sí solo sigue funcionando siempre que sea único, que es el caso más común.
+
+Un título que no existe no es lo mismo que uno ambiguo. Si se nombra un padre que no está en el mapa,
+el nodo cuelga de la raíz y la IA recibe un aviso. Ambiguo significa que hay varios sitios donde
+ponerlo, y en ese caso la operación se detiene.
+
+Cómo corregir a la IA desde MMCelt
+
+Abre el mapa en MMCelt. Si la IA sigue trabajando, el mapa está bloqueado: espera a que termine o
+pulsa «Recuperar el control». Si la IA tomó una decisión incorrecta o un rumbo no deseado, cambia el estado
+del nodo a Descartado o a Requiere Corrección y escribe en el campo de corrección exigida a la IA lo
+que debe cambiar, por ejemplo: no usar SQLite, porque se necesita PostgreSQL por el volumen de
+escrituras concurrentes. Si necesitas ayuda para redactar o estructurar correcciones, pulsa el botón
++info junto al apartado de control humano y se abrirá la guía detallada a la derecha.
+
+Después ve al menú «Inteligencia Artificial → Enviar Correcciones y Directivas a la IA...» y pulsa
+«Copiar Directivas de Corrección». Pega el texto en tu conversación con la IA, o pide al agente que
+use mmcelt_get_human_feedback por MCP. La IA recibirá un informe que le indica que acate tus
+correcciones y descarte las vías canceladas.
+
+Asistencia para nuevos usuarios
+
+Si estás empezando a usar MMCelt junto a Claude, activa las galletas de ayuda en el menú Ayuda. Te
+guiarán paso a paso sobre cómo trabajar con los nodos, y podrás pulsar +info en cualquier momento
+para desplegar la documentación completa en el panel lateral derecho.

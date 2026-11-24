@@ -29,7 +29,7 @@
 //! configuración de otro programa.
 
 use crate::aplicacion::AplicacionMapaMental;
-use crate::conectores::{self, Agente, EstadoDeLaConexion};
+use crate::conectores::{self, Agente, EstadoDeLaConexion, EstadoDeLaRuta};
 use crate::textos::Texto;
 use egui::RichText;
 
@@ -45,6 +45,14 @@ struct AccionesDelModalDeConexiones {
     desconectar: Option<usize>,
     /// Hay que volver a recorrer el disco buscando agentes.
     volver_a_buscar: bool,
+    /// Agente cuyo programa hay que elegir a mano, por su posición en la lista.
+    elegir_programa: Option<usize>,
+    /// Agente que vuelve a usar el programa detectado, por su posición en la lista.
+    usar_deteccion: Option<usize>,
+    /// Herramienta de la que hay que dar de alta a mano una cuenta.
+    anadir_cuenta: Option<conectores::IdAgente>,
+    /// Cuenta añadida a mano que hay que quitar, por su posición en la lista.
+    quitar_cuenta: Option<usize>,
 }
 
 /// Dibuja la ventana de conexión con agentes de IA.
@@ -63,7 +71,7 @@ pub fn dibujar_modal_conexiones(app: &mut AplicacionMapaMental, ctx: &egui::Cont
     // La primera vez que se abre, se buscan los agentes. Se guarda el resultado para no
     // recorrer el disco en cada fotograma mientras la ventana está abierta.
     if app.agentes_mut().detectados.is_none() {
-        app.agentes_mut().detectados = Some(conectores::detectar_agentes());
+        volver_a_detectar(app);
     }
 
     let mut abierta = app.presentacion_mut().ventanas().modal_conexiones;
@@ -187,14 +195,7 @@ fn dibujar_la_lista_de_agentes(
             .max_height(280.0)
             .show(ui, |ui| {
                 for (indice, agente) in agentes.iter().enumerate() {
-                    dibujar_agente(
-                        ui,
-                        app,
-                        agente,
-                        indice,
-                        &mut acciones.conectar,
-                        &mut acciones.desconectar,
-                    );
+                    dibujar_agente(ui, app, agente, indice, acciones);
                     ui.add_space(6.0);
                 }
             });
@@ -226,6 +227,16 @@ fn dibujar_el_pie_de_la_ventana(
         {
             acciones.volver_a_buscar = true;
         }
+        ui.menu_button(Texto::ModalAnadirCuenta.en(idioma), |ui| {
+            for (id, nombre) in conectores::herramientas_con_cuentas() {
+                if ui.button(nombre).clicked() {
+                    acciones.anadir_cuenta = Some(id);
+                    ui.close();
+                }
+            }
+        })
+        .response
+        .on_hover_text(Texto::ModalAnadirCuentaAyuda.en(idioma));
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if ui.button(Texto::BotonCerrar.en(app.idioma())).clicked() {
@@ -254,7 +265,7 @@ fn aplicar_las_acciones_del_modal(
     acciones: AccionesDelModalDeConexiones,
 ) {
     if acciones.volver_a_buscar {
-        app.agentes_mut().detectados = Some(conectores::detectar_agentes());
+        volver_a_detectar(app);
         app.establecer_estado(Texto::ModalBusquedaDeAgentesActualizada.en(idioma));
     }
 
@@ -263,6 +274,102 @@ fn aplicar_las_acciones_del_modal(
     } else if let Some(indice) = acciones.desconectar {
         aplicar_conexion(app, indice, false);
     }
+
+    let agente_en = |app: &AplicacionMapaMental, indice: usize| {
+        app.agentes()
+            .detectados
+            .as_ref()
+            .and_then(|agentes| agentes.get(indice))
+            .map(|agente| (agente.id, agente.nombre))
+    };
+    if let Some((id, nombre)) = acciones.elegir_programa.and_then(|i| agente_en(app, i)) {
+        let titulo = Texto::ModalElegirProgramaDe
+            .en(idioma)
+            .replacen("{}", nombre, 1);
+        if let Some(ruta) = rfd::FileDialog::new().set_title(titulo).pick_file() {
+            aplicar_programa_elegido(app, id, Some(ruta));
+        }
+    } else if let Some((id, _)) = acciones.usar_deteccion.and_then(|i| agente_en(app, i)) {
+        aplicar_programa_elegido(app, id, None);
+    }
+
+    if let Some(id) = acciones.anadir_cuenta {
+        let nombre = conectores::herramientas_con_cuentas()
+            .into_iter()
+            .find(|(otro, _)| *otro == id)
+            .map_or("", |(_, nombre)| nombre);
+        let titulo = Texto::ModalElegirCarpetaDeCuenta
+            .en(idioma)
+            .replacen("{}", nombre, 1);
+        if let Some(carpeta) = rfd::FileDialog::new().set_title(titulo).pick_folder() {
+            let detectadas: Vec<_> = app
+                .agentes()
+                .detectados
+                .iter()
+                .flatten()
+                .map(|agente| agente.cuenta.clone())
+                .collect();
+            let mut rechazo = None;
+            cambiar_cuentas_manuales(app, |cuentas| {
+                rechazo = conectores::anadir_cuenta_manual(
+                    cuentas,
+                    conectores::CuentaManual {
+                        agente: id,
+                        carpeta,
+                    },
+                    &detectadas,
+                )
+                .err();
+            });
+            if let Some(rechazo) = rechazo {
+                app.establecer_estado(texto_del_rechazo_de_alta(&rechazo, nombre, idioma));
+            }
+        }
+    }
+    let cuenta_a_quitar = acciones.quitar_cuenta.and_then(|indice| {
+        app.agentes()
+            .detectados
+            .as_ref()
+            .and_then(|agentes| agentes.get(indice))
+            .map(|agente| (agente.id, agente.cuenta.carpeta.clone()))
+    });
+    if let Some((id, carpeta)) = cuenta_a_quitar {
+        cambiar_cuentas_manuales(app, |cuentas| {
+            conectores::quitar_cuenta_manual(cuentas, id, &carpeta);
+        });
+    }
+}
+
+/// Motivo, para la persona, de que no se añada una cuenta a mano de la herramienta `nombre`.
+fn texto_del_rechazo_de_alta(
+    rechazo: &deteccion_agentes::RechazoDeAlta,
+    nombre: &str,
+    idioma: crate::textos::Idioma,
+) -> String {
+    texto_del_motivo(rechazo)
+        .en(idioma)
+        .replacen("{}", nombre, 1)
+}
+
+/// Texto que explica cada motivo de rechazo de un alta a mano.
+fn texto_del_motivo(rechazo: &deteccion_agentes::RechazoDeAlta) -> Texto {
+    match rechazo {
+        deteccion_agentes::RechazoDeAlta::SinVariableDeCuenta => Texto::ModalAltaNoAdmitida,
+        deteccion_agentes::RechazoDeAlta::CarpetaYaUsada(_) => Texto::ModalAltaCarpetaYaUsada,
+    }
+}
+
+/// Cambia las cuentas dadas de alta a mano, guarda las preferencias y vuelve a buscar.
+pub(crate) fn cambiar_cuentas_manuales(
+    app: &mut AplicacionMapaMental,
+    cambio: impl FnOnce(&mut Vec<conectores::CuentaManual>),
+) {
+    cambio(&mut app.presentacion_mut().preferencias().cuentas_de_agentes);
+    if let Err(error) = app.guardar_preferencias() {
+        let idioma = app.idioma();
+        app.reportar_error(&error, Texto::ModalPreferenciasNoGuardadas.en(idioma));
+    }
+    volver_a_detectar(app);
 }
 
 /// Dibuja la ficha de un agente con su estado y sus botones.
@@ -277,15 +384,13 @@ fn aplicar_las_acciones_del_modal(
 /// - `app`: el estado, del que salen el idioma, los colores y la carpeta en uso.
 /// - `agente`: el agente que se dibuja.
 /// - `indice`: su posición en la lista detectada, que es como se anotan las acciones.
-/// - `conectar`: donde se anota que hay que registrarlo con la carpeta actual.
-/// - `desconectar`: donde se anota que hay que retirar el registro.
+/// - `acciones`: donde se anota lo que se pulse en la ficha.
 fn dibujar_agente(
     ui: &mut egui::Ui,
     app: &AplicacionMapaMental,
     agente: &Agente,
     indice: usize,
-    conectar: &mut Option<usize>,
-    desconectar: &mut Option<usize>,
+    acciones: &mut AccionesDelModalDeConexiones,
 ) {
     let idioma = app.idioma();
     let estado = conectores::estado_de_la_conexion(agente, &app.agentes().espacio_de_trabajo);
@@ -296,19 +401,24 @@ fn dibujar_agente(
             ui.horizontal(|ui| {
                 ficha_del_agente(ui, app, agente, idioma, estado);
 
-                botones_del_agente(ui, app, idioma, estado, indice, conectar, desconectar);
-            });
-
-            if agente.id == conectores::IdAgente::GeminiCli {
-                ui.add_space(4.0);
-                ui.add(
-                    egui::Label::new(
-                        RichText::new(Texto::ModalAdvertenciaGeminiCli.en(idioma))
-                            .small()
-                            .color(app.presentacion().tema().aviso),
-                    )
-                    .wrap(),
+                botones_del_agente(
+                    ui,
+                    app,
+                    idioma,
+                    estado,
+                    indice,
+                    &mut acciones.conectar,
+                    &mut acciones.desconectar,
                 );
+            });
+            dibujar_el_programa_del_agente(ui, app, agente, idioma, indice, acciones);
+            if agente.cuenta.origen == deteccion_agentes::OrigenDeLaCuenta::Manual
+                && ui
+                    .small_button(Texto::ModalQuitarCuenta.en(idioma))
+                    .on_hover_text(Texto::ModalQuitarCuentaAyuda.en(idioma))
+                    .clicked()
+            {
+                acciones.quitar_cuenta = Some(indice);
             }
         });
 }
@@ -324,9 +434,137 @@ pub(crate) fn dibujar_agente_para_prueba(
     agente: &Agente,
     ui: &mut egui::Ui,
 ) {
-    let mut conectar = None;
-    let mut desconectar = None;
-    dibujar_agente(ui, app, agente, 0, &mut conectar, &mut desconectar);
+    let mut acciones = AccionesDelModalDeConexiones::default();
+    dibujar_agente(ui, app, agente, 0, &mut acciones);
+}
+
+/// Dibuja qué programa se usa para el agente, de dónde sale y los botones para cambiarlo.
+///
+/// La ruta se enseña entera: si el agente está instalado en una carpeta rara, la persona
+/// tiene que poder ver cuál se está usando antes de decidir si la cambia. Una ruta elegida
+/// que ya no vale se avisa con su motivo, porque si no parecería que MMCelt la ignora.
+///
+/// # Parámetros
+/// - `ui`: la interfaz de `egui`.
+/// - `app`: el estado, del que salen las rutas elegidas y los colores.
+/// - `agente`: el agente que se describe.
+/// - `idioma`: el idioma en que se escriben los textos.
+/// - `indice`: su posición en la lista, que es como se anotan las acciones.
+/// - `acciones`: donde se anota si hay que elegir el programa o volver a detectarlo.
+fn dibujar_el_programa_del_agente(
+    ui: &mut egui::Ui,
+    app: &AplicacionMapaMental,
+    agente: &Agente,
+    idioma: crate::textos::Idioma,
+    indice: usize,
+    acciones: &mut AccionesDelModalDeConexiones,
+) {
+    let tema = app.presentacion().tema();
+    let elegida = app
+        .presentacion()
+        .preferencias_ref()
+        .rutas_de_agentes
+        .get(&agente.id);
+    let estado = conectores::estado_de_la_ruta(agente, elegida.map(|ruta| ruta.as_path()));
+
+    ui.horizontal_wrapped(|ui| {
+        match (&estado, agente.cli.as_ref()) {
+            (EstadoDeLaRuta::NoEncontrada, _) | (_, None) => {
+                ui.label(
+                    RichText::new(Texto::ModalProgramaNoEncontrado.en(idioma))
+                        .small()
+                        .color(tema.texto_atenuado),
+                );
+            }
+            (_, Some(cli)) => {
+                let origen = if estado == EstadoDeLaRuta::ElegidaAMano {
+                    Texto::ModalProgramaElegidoAMano
+                } else {
+                    Texto::ModalProgramaDetectado
+                };
+                ui.label(
+                    RichText::new(Texto::ModalProgramaDelAgente.en(idioma).replacen(
+                        "{}",
+                        &conectores::ruta_de_programa_para_interfaz(&cli.ejecutable),
+                        1,
+                    ))
+                    .monospace()
+                    .small()
+                    .color(tema.texto_atenuado),
+                );
+                ui.label(
+                    RichText::new(origen.en(idioma))
+                        .small()
+                        .italics()
+                        .color(tema.texto_atenuado),
+                );
+            }
+        }
+        if ui
+            .small_button(Texto::ModalCambiarRuta.en(idioma))
+            .on_hover_text(Texto::ModalCambiarRutaAyuda.en(idioma))
+            .clicked()
+        {
+            acciones.elegir_programa = Some(indice);
+        }
+        if elegida.is_some()
+            && ui
+                .small_button(Texto::ModalUsarLaDeteccion.en(idioma))
+                .clicked()
+        {
+            acciones.usar_deteccion = Some(indice);
+        }
+    });
+
+    if let EstadoDeLaRuta::ElegidaNoValida(ruta) = &estado {
+        ui.label(
+            RichText::new(Texto::ModalRutaElegidaNoValida.en(idioma).replacen(
+                "{}",
+                &conectores::ruta_de_programa_para_interfaz(ruta),
+                1,
+            ))
+            .small()
+            .color(tema.aviso),
+        );
+    }
+}
+
+/// Guarda el programa elegido para un agente, o lo borra, y vuelve a detectar.
+///
+/// Es lo que hacen los botones «Cambiar ruta...» y «Usar la detección» una vez resuelto el
+/// diálogo, separado de él para poder comprobarlo sin abrir ninguna ventana del sistema.
+///
+/// # Parámetros
+/// - `app`: el estado, cuyas preferencias se cambian y se guardan.
+/// - `id`: el agente.
+/// - `ruta`: el programa elegido, o `None` para volver a la detección.
+pub(crate) fn aplicar_programa_elegido(
+    app: &mut AplicacionMapaMental,
+    id: conectores::IdAgente,
+    ruta: Option<std::path::PathBuf>,
+) {
+    let rutas = &mut app.presentacion_mut().preferencias().rutas_de_agentes;
+    match ruta {
+        Some(ruta) => {
+            rutas.insert(id, ruta);
+        }
+        None => {
+            rutas.remove(&id);
+        }
+    }
+    if let Err(error) = app.guardar_preferencias() {
+        let idioma = app.idioma();
+        app.reportar_error(&error, Texto::ModalCambiarRutaAyuda.en(idioma));
+    }
+    volver_a_detectar(app);
+}
+
+/// Vuelve a buscar los agentes con las rutas elegidas y las cuentas dadas de alta a mano.
+fn volver_a_detectar(app: &mut AplicacionMapaMental) {
+    let preferencias = app.presentacion().preferencias_ref();
+    let rutas = preferencias.rutas_de_agentes.clone();
+    let manuales = preferencias.cuentas_de_agentes.clone();
+    app.agentes_mut().detectados = Some(conectores::detectar_agentes_con_rutas(&rutas, &manuales));
 }
 
 /// Escribe qué carpeta autoriza de verdad la configuración de un agente descolocado.
@@ -453,7 +691,7 @@ fn aplicar_conexion(app: &mut AplicacionMapaMental, indice: usize, conectar: boo
 
             // Se rehace la detección para que el estado mostrado sea el real, y no una
             // suposición sobre lo que acaba de escribirse.
-            app.agentes_mut().detectados = Some(conectores::detectar_agentes());
+            volver_a_detectar(app);
         }
         Err(e) => {
             let contexto = if conectar {
@@ -495,6 +733,16 @@ fn ficha_del_agente(
 
             ui.label(RichText::new(icono).color(color));
             ui.label(RichText::new(agente.nombre).strong().size(15.0));
+            if let Some(cuenta) = agente.cuenta.nombre_visible() {
+                ui.label(
+                    RichText::new(
+                        Texto::ModalCuentaDelAgente
+                            .en(idioma)
+                            .replacen("{}", &cuenta, 1),
+                    )
+                    .color(app.presentacion().tema().texto_secundario),
+                );
+            }
 
             match estado {
                 EstadoDeLaConexion::Conectado => {
@@ -516,9 +764,11 @@ fn ficha_del_agente(
         });
 
         ui.label(
-            RichText::new(agente.descripcion)
-                .small()
-                .color(app.presentacion().tema().texto_secundario),
+            RichText::new(
+                Texto::descripcion_del_agente(agente.id).map_or("", |texto| texto.en(app.idioma())),
+            )
+            .small()
+            .color(app.presentacion().tema().texto_secundario),
         );
 
         ui.label(
@@ -604,4 +854,28 @@ fn botones_del_agente(
             *conectar = Some(indice);
         }
     });
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    /// Cada motivo de rechazo de un alta a mano se explica con su propio texto.
+    #[test]
+    fn cada_rechazo_del_alta_se_explica_con_su_texto() {
+        let usada = deteccion_agentes::Cuenta {
+            herramienta: deteccion_agentes::Herramienta::CodexCli,
+            carpeta: std::path::PathBuf::new(),
+            origen: deteccion_agentes::OrigenDeLaCuenta::Manual,
+        };
+        let motivos = [
+            deteccion_agentes::RechazoDeAlta::SinVariableDeCuenta,
+            deteccion_agentes::RechazoDeAlta::CarpetaYaUsada(usada),
+        ]
+        .map(|rechazo| texto_del_motivo(&rechazo));
+        assert_eq!(
+            motivos,
+            [Texto::ModalAltaNoAdmitida, Texto::ModalAltaCarpetaYaUsada]
+        );
+    }
 }

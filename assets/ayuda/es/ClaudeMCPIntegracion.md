@@ -7,8 +7,11 @@ Un puente directo y seguro para que las inteligencias artificiales lean y creen 
 No necesitas editar archivos de configuración complicados. Puedes conectar tus agentes desde la propia aplicación:
 
 1. Ve al menú `🤖 Inteligencia Artificial` → `🔌 Conectar MMCelt con mis IAs...`.
-2. MMCelt buscará automáticamente qué asistentes de terminal tienes instalados en tu equipo (Claude Code, Codex CLI y Gemini CLI).
+2. MMCelt buscará automáticamente qué asistentes de terminal tienes instalados en tu equipo (Claude Code, Codex CLI y Antigravity CLI).
 3. Pulsa el botón **Conectar** junto al asistente que quieras usar. ¡Y listo!
+4. Si el asistente está instalado en otra carpeta, pulsa **📂 Cambiar ruta...** en su ficha y elige su programa. MMCelt lo recordará; **Usar la detección** vuelve a la búsqueda automática.
+
+5. Si usas varias cuentas de un mismo agente, cada una sale en su propia ficha, con el nombre de su carpeta (por ejemplo, cuenta «.claude2»). MMCelt las encuentra solo: mira las carpetas de tu carpeta personal que se llaman como la del agente seguida de algo más, y las que señalan CLAUDE_CONFIG_DIR o CODEX_HOME. **Conectar** registra MMCelt en esa cuenta, y al enviar un mapa la consola se abre con ella. Si una cuenta está en otro sitio, pulsa **Añadir cuenta**, elige el agente y su carpeta; **Quitar cuenta** la deja de mostrar sin borrar nada. Antigravity CLI (agy) solo usa su cuenta por defecto: no tiene una forma documentada de elegir otra carpeta de configuración, así que una cuenta añadida a mano no se usaría.
 
 Si instalas un asistente nuevo más adelante, abre de nuevo esa ventana: la búsqueda se realiza cada vez que entras. El estado «Conectado» te garantiza que el asistente sabe dónde encontrar a MMCelt y cómo comunicarse con él mediante `--mcp-server`.
 
@@ -44,7 +47,7 @@ El asistente dispone de seis herramientas oficiales diseñadas específicamente 
 - `mmcelt_workspace_info`: Consulta qué carpeta tiene autorizada y qué mapas existen en ella. Es lo primero que revisa para no inventar rutas.
 - `mmcelt_create_mindmap`: Crea mapas mentales nuevos en formato `.mmcelt`.
 - `mmcelt_read_mindmap`: Lee la estructura de tu mapa, tus notas y las dudas pendientes.
-- `mmcelt_sync_ai_progress`: Desarrolla el mapa añadiendo nodos con sus roles, prioridades y relaciones.
+- `mmcelt_sync_ai_progress`: Desarrolla el mapa añadiendo nodos con sus roles, prioridades y relaciones. En su última entrega pone `work_finished: true`, y así MMCelt levanta el bloqueo del mapa.
 - `mmcelt_get_human_feedback`: Lee tus correcciones y directivas antes de tocar partes sensibles.
 - `mmcelt_export_ai_markdown`: Convierte el mapa en un resumen estructurado en Markdown.
 

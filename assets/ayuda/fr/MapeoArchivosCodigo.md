@@ -19,7 +19,7 @@ Le champ de fichier (`file_path`) est le pont reliant l'idée abstraite au fichi
 ### 💡 Conseils pratiques et utilisation avec l'IA :
 
 **🤖 Comment l'intelligence artificielle en tire-t-elle parti ?**
-Lorsque vous travaillez avec un assistant (comme Claude Code, Codex CLI ou Gemini CLI), ou lorsque vous exportez le résumé du projet en Markdown :
+Lorsque vous travaillez avec un assistant (comme Claude Code, Codex CLI ou Antigravity CLI), ou lorsque vous exportez le résumé du projet en Markdown :
 - L'IA lit exactement quel fichier correspond à chaque nœud.
 - Elle sait d'avance où appliquer ses modifications sans chercher aveuglément dans tout votre dépôt.
 - Elle vous aide à maintenir une correspondance claire et ordonnée entre l'architecture conceptuelle et le code source.

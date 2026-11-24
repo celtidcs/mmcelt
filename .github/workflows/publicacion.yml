@@ -1,4 +1,4 @@
-# Publicación de MMCelt
+﻿# Publicación de MMCelt
 #
 # Existe porque la publicación se hacía a mano y se quedó atrás: el repositorio llegó a la
 # 0.9.1 mientras la última descarga disponible seguía siendo la v0.8.1, tres versiones por
@@ -43,7 +43,7 @@ jobs:
   # ------------------------------------------------------------------------------------
   comprobar:
     name: La etiqueta coincide con la versión
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.leer.outputs.version }}
       etiqueta: ${{ steps.leer.outputs.etiqueta }}
@@ -91,7 +91,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        sistema: [windows-latest, ubuntu-latest]
+        sistema: [windows-latest, ubuntu-24.04]
 
     steps:
       - name: Descargar el repositorio
@@ -123,7 +123,7 @@ jobs:
             nombre: Windows
             binario: target/release/mmcelt.exe
             sufijo: windows-x64.exe
-          - sistema: ubuntu-latest
+          - sistema: ubuntu-24.04
             nombre: Linux
             binario: target/release/mmcelt
             sufijo: linux-x64
@@ -138,8 +138,30 @@ jobs:
       - name: Reutilizar la caché de compilación
         uses: Swatinem/rust-cache@v2
 
-      - name: Compilar con el perfil de publicación
-        run: cargo build --release
+      # Rust incrusta en el ejecutable las rutas de la máquina que compila (en los mensajes de
+      # error de las dependencias). Se cambian por nombres neutros para que el ejecutable
+      # publicado no lleve rutas de esta máquina. Lo vigila
+      # `la_publicacion_quita_las_rutas_de_compilacion` en `src/audit_checks.rs`.
+      - name: Compilar con el perfil de publicación (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $cargo = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $env:USERPROFILE '.cargo' }
+          # Cada argumento va entero, separado por el carácter 0x1F: así una ruta con espacios no
+          # se parte, como pasaría con RUSTFLAGS.
+          $env:CARGO_ENCODED_RUSTFLAGS = "--remap-path-prefix=$cargo=cargo" + [char]0x1F + "--remap-path-prefix=$env:GITHUB_WORKSPACE=mmcelt"
+          cargo build --release
+
+      - name: Compilar con el perfil de publicación (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cargo_dir="${CARGO_HOME:-$HOME/.cargo}"
+          # Cada argumento va entero, separado por el carácter 0x1F: así una ruta con espacios no
+          # se parte, como pasaría con RUSTFLAGS.
+          CARGO_ENCODED_RUSTFLAGS="$(printf '%s\x1f%s' "--remap-path-prefix=$cargo_dir=cargo" "--remap-path-prefix=$GITHUB_WORKSPACE=mmcelt")"
+          export CARGO_ENCODED_RUSTFLAGS
+          cargo build --release
 
       - name: Renombrar el binario con su versión y su sistema
         shell: bash
@@ -164,7 +186,7 @@ jobs:
   publicar:
     name: Crear la publicación en GitHub
     needs: [comprobar, construir]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # `gh release create/edit/upload` escribe en las publicaciones del repositorio.
     permissions:
       contents: write
@@ -186,23 +208,24 @@ jobs:
           version="${{ needs.comprobar.outputs.version }}"
           historial="documentacion/historial-de-cambios.md"
 
-          # Toma desde el encabezado «## [X.Y.Z]» hasta el encabezado de la versión
-          # anterior, sin incluirlo. Las líneas se acumulan en vez de imprimirse sobre la
-          # marcha para poder recortar por el final el separador «---» y los huecos que
-          # van antes de la versión anterior: si no, la publicación acaba con una raya
-          # suelta que no separa nada.
-          notas="$(awk -v v="## [$version]" '
+          # Toma desde la línea «Versión X.Y.Z — fecha» hasta la línea que abre la versión
+          # anterior, sin incluirla. El historial está en texto plano: cada versión empieza
+          # con una línea propia «Versión », el número, una raya larga y la fecha. La prueba
+          # la_version_actual_esta_en_el_historial_de_cambios exige ese mismo formato. Las
+          # líneas se acumulan para recortar por el final los huecos que preceden a la
+          # versión anterior.
+          notas="$(awk -v v="Versión $version — " '
             index($0, v) == 1 { dentro = 1; next }
-            dentro && /^## \[/ { exit }
+            dentro && /^Versión [0-9]/ { exit }
             dentro { lineas[++n] = $0 }
             END {
-              while (n > 0 && (lineas[n] ~ /^[[:space:]]*$/ || lineas[n] == "---")) n--
+              while (n > 0 && lineas[n] ~ /^[[:space:]]*$/) n--
               for (i = 1; i <= n; i++) print lineas[i]
             }
           ' "$historial")"
 
           if [ -z "$(echo "$notas" | tr -d '[:space:]')" ]; then
-            echo "::error::No hay ninguna sección [$version] en $historial."
+            echo "::error::No hay ninguna sección «Versión $version» en $historial."
             exit 1
           fi
 
@@ -260,3 +283,4 @@ jobs:
               --notes-file notas-de-la-publicacion.md \
               binarios/*
           fi
+

@@ -14,7 +14,7 @@ una respuesta suene muy bien y no sirva para nada.
 
 ### 📝 Cómo se rellena
 
-1. Abre **`🤖 Inteligencia Artificial`** → **`🧭 Proyecto e instrucciones para la IA`** (también accesible desde el botón del panel lateral o tras editar en `✏️ Edición`).
+1. Abre **`✏️ Edición`** → **`🧭 Proyecto e instrucciones para la IA`** (también se abre con el botón `🧭 Editar Visión` del panel lateral).
 2. Rellena los tres campos. Ninguno es obligatorio, pero cuanto más concretos, mejor:
    - **Visión:** qué estás intentando plasmar. En una o dos frases, en tus palabras.
    - **Objetivos:** qué resultados concretos buscas. «Hitos y entregables», no deseos.
@@ -78,21 +78,21 @@ Esta parte pasa desapercibida y es de las más útiles del programa.
 Cuando usas **`🤖 Inteligencia Artificial`** → **`📤 Enviar a...`** y eliges un agente, **no se manda
 nada todavía**. Se abre una vista previa con el texto completo repartido en cuatro bloques:
 
-| Bloque | ¿Se puede editar? | Qué es |
+| Bloque | ¿Se edita en la vista previa? | Qué es |
 |---|---|---|
 | **Contrato MMCelt** | No | Las reglas mínimas, iguales para todos los agentes |
-| **Reglas comunes del proyecto** | **Sí** | Tu forma de trabajar, la que se repite en cada sesión |
+| **Reglas comunes del proyecto** | No: se escriben en esta ventana | Tu forma de trabajar, la que se repite en cada sesión |
 | **Contexto del mapa** | No | Lo genera el mapa; para cambiarlo, cambia el mapa |
-| **Encargo de esta sesión** | **Sí** | Qué quieres conseguir **ahora**, esta vez |
+| **Encargo de esta sesión** | No: se escribe en esta ventana | Qué quieres conseguir **ahora**, esta vez |
 
 Si dos instrucciones se contradicen, el propio texto declara quién manda, de más fuerte a más
 débil: **tus correcciones en el mapa**, el contrato de MMCelt, las reglas del proyecto y, por
 último, el encargo de la sesión.
 
-Debajo hay cuatro botones. `Restaurar esta sesión` deshace lo que hayas cambiado. `Guardar como
-reglas comunes` es la **única** acción que guarda tu perfil de forma permanente, en
-`.mmcelt/instrucciones-agente.md`. `Cancelar` no guarda nada ni deja rastro. Y el último arranca
-el agente.
+Las reglas y el encargo, que son los dos bloques que decides tú, se escriben aquí, en las pestañas
+**Instrucciones** y **Plantillas de encargo**. `Guardar como reglas comunes` es la **única** acción que
+guarda tu perfil de forma permanente, en `.mmcelt/instrucciones-agente.md`. Debajo de la vista previa
+solo hay dos botones: `Cancelar`, que no guarda nada ni deja rastro, y el que arranca el agente.
 
 **Léela al menos una vez.** Si el mapa, las reglas o una fuente cambian después de abrir la
 confirmación, MMCelt la da por caducada y obliga a revisar el contenido otra vez. Así el expediente

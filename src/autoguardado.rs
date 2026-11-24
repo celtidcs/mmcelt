@@ -57,7 +57,7 @@
 
 use crate::error::{AppError, AppResult};
 use crate::model::{ModoDisposicion, Proyecto, RevisionProyecto};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -114,7 +114,7 @@ pub struct Recuperacion {
     pub ruta_original: Option<PathBuf>,
 
     /// Momento en que se escribió la copia.
-    pub momento: DateTime<Utc>,
+    pub momento: Timestamp,
 }
 
 impl Recuperacion {
@@ -123,7 +123,7 @@ impl Recuperacion {
     /// # Devuelve
     /// Un texto del estilo «del 21/08/2026 a las 19:45, de `mapa.mmcelt`».
     pub fn descripcion(&self) -> String {
-        let momento = self.momento.format("%d/%m/%Y a las %H:%M");
+        let momento = self.momento.strftime("%d/%m/%Y a las %H:%M");
 
         match &self.ruta_original {
             Some(ruta) => {
@@ -229,7 +229,7 @@ pub fn escribir_recuperacion_en(
     let contenido = Recuperacion {
         proyecto: proyecto.clone(),
         ruta_original: ruta_original.map(PathBuf::from),
-        momento: Utc::now(),
+        momento: Timestamp::now(),
     };
 
     let json = serde_json::to_string(&contenido)
@@ -489,8 +489,11 @@ impl ControlAutoguardado {
     ///
     /// # Parámetros
     /// - `proyecto`: el mapa que pasa a estar en pantalla, del que se toma la revisión.
-    pub fn dar_por_copiado(&mut self, proyecto: &Proyecto) {
-        self.revision_copiada = Some(proyecto.revision());
+    ///
+    /// Recibe la revisión, no el proyecto, porque puede no ser la que hay ahora en pantalla: la
+    /// de una instantánea que otro hilo guardó mientras la persona seguía editando.
+    pub fn dar_por_copiado(&mut self, revision: crate::model::RevisionProyecto) {
+        self.revision_copiada = Some(revision);
         self.ultima_comprobacion = Instant::now();
     }
 

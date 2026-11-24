@@ -7,8 +7,11 @@ A secure and direct bridge for artificial intelligence models to read and create
 You don't need to edit complex configuration files. You can connect your agents directly from the application:
 
 1. Go to the menu `🤖 Artificial Intelligence` → `🔌 Connect MMCelt with my AIs...`.
-2. MMCelt will automatically look for installed terminal assistants on your machine (Claude Code, Codex CLI, and Gemini CLI).
+2. MMCelt will automatically look for installed terminal assistants on your machine (Claude Code, Codex CLI, and Antigravity CLI).
 3. Click the **Connect** button next to the assistant you wish to use. Done!
+4. If the assistant is installed in another folder, click **📂 Change path...** on its card and choose its program. MMCelt will remember it; **Use detection** goes back to automatic search.
+
+5. If you use several accounts of the same agent, each one appears on its own card with the name of its folder (for example, account «.claude2»). MMCelt finds them by itself: it looks at the folders in your home folder named like the agent's folder followed by something else, and at the ones that CLAUDE_CONFIG_DIR or CODEX_HOME point to. **Connect** registers MMCelt in that account, and when you send a map the console opens with it. If an account is somewhere else, click **Add account** and choose the agent and its folder; **Remove account** stops showing it without deleting anything. Antigravity CLI (agy) only uses its default account: it has no documented way to choose another configuration folder, so a manually added account would not be used.
 
 If you install a new assistant later, simply reopen that window: detection runs each time you open it. The “Connected” state guarantees that the assistant knows where to find MMCelt and how to communicate with it using `--mcp-server`.
 
@@ -44,7 +47,7 @@ The assistant has six official tools designed specifically to collaborate with y
 - `mmcelt_workspace_info`: Checks which folder is authorized and which `.mmcelt` maps exist in it. This is the first tool it checks so it never invents paths.
 - `mmcelt_create_mindmap`: Creates new mind maps in `.mmcelt` format.
 - `mmcelt_read_mindmap`: Reads the structure of your map, notes, and open questions.
-- `mmcelt_sync_ai_progress`: Develops the map by adding nodes with their roles, priorities, and relationships.
+- `mmcelt_sync_ai_progress`: Develops the map by adding nodes with their roles, priorities, and relationships. In its last delivery it sets `work_finished: true`, which tells MMCelt to lift the map lock.
 - `mmcelt_get_human_feedback`: Reads your corrections and directives before modifying sensitive areas.
 - `mmcelt_export_ai_markdown`: Converts the map into a structured summary in Markdown.
 

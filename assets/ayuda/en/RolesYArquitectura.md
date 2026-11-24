@@ -41,7 +41,7 @@ Each role brings a clear identity to the node card on the visual canvas:
 - Connections and lines that reflect the organic structure of the project.
 
 **🤖 Why do roles matter to AI?**
-When you export or send your map to an AI (such as Claude Code, Codex CLI, or Gemini CLI), the model does not see a flat list of text strings:
+When you export or send your map to an AI (such as Claude Code, Codex CLI, or Antigravity CLI), the model does not see a flat list of text strings:
 - **Understands the architecture:** Knows that a *Strategic Pillar* demands high-level architectural consistency and must not be altered lightly.
 - **Distinguishes doubts from certainties:** Treats *Hypotheses / Questions* as open design queries requiring technical analysis and trade-offs.
 - **Generates coherent tasks:** When asked to flesh out a module, the AI will propose concrete *Tasks / Actions* and suggest recommended *Resources / Tools* to solve it.

@@ -19,7 +19,7 @@ The file field (`file_path`) is the bridge linking the abstract concept with the
 ### 💡 Practical tips and usage with AI:
 
 **🤖 How does the artificial intelligence take advantage of this?**
-When working with an assistant (such as Claude Code, Codex CLI, or Gemini CLI), or when exporting the project summary in Markdown:
+When working with an assistant (such as Claude Code, Codex CLI, or Antigravity CLI), or when exporting the project summary in Markdown:
 - The AI reads exactly which file corresponds to each node.
 - It knows in advance where to apply changes without blindly searching your entire repository.
 - It helps maintain a clean, organized correspondence between conceptual architecture and source code.

@@ -33,7 +33,7 @@ oder selbstständig, wenn Sie den automatischen Versand genutzt haben.
 
 ### ✍️ Was Sie entscheiden und wo
 
-- **Was Sie bezwecken:** `🤖 Künstliche Intelligenz` → `🧭 Projekt und Anweisungen für die KI` → Reiter **Projekt**.
+- **Was Sie bezwecken:** `✏️ Bearbeiten` → `🧭 Projekt und Anweisungen für die KI` → Reiter **Projekt**.
 - **Was akzeptiert ist und was nicht:** Markieren Sie Knoten als `🛡️ Menschlich freigegeben` oder
   `⚠️ Korrektur erforderlich`, und senden Sie diese über
   `🤖 Künstliche Intelligenz` → `🛑 Korrekturen und Anweisungen an die KI senden...`.
@@ -92,8 +92,8 @@ Sie können bequem über Ihren gewohnten Webbrowser arbeiten:
 4. Sobald die KI mit einem strukturierten Block in JSON- oder Markdown-Format antwortet, kopieren Sie diesen.
 5. Klicken Sie in MMCelt auf `🤖 Künstliche Intelligenz` → `📥 Aus KI importieren (ChatGPT, Claude, Gemini)...` und fügen Sie die Antwort ein. Ihre neuen Zweige erscheinen sofort auf der Map.
 
-Falls Sie künftig einen Terminal-Agenten auf Ihrem System einrichten (wie Claude Code, Codex CLI oder Gemini CLI),
-erkennt MMCelt diesen automatisch, sobald er in Ihrem Systempfad (PATH) liegt.
+Falls Sie künftig einen Terminal-Agenten auf Ihrem System einrichten (wie Claude Code, Codex CLI oder Antigravity CLI),
+erkennt MMCelt diesen, sobald es ihn findet: Es sucht im Ordner seines offiziellen Installationsprogramms, in .local/bin Ihres persönlichen Ordners und im PATH, und unter `🔌 MMCelt mit meinen KIs verbinden...` können Sie sein Programm mit `📂 Pfad ändern...` von Hand wählen.
 
 ### 📚 Wie es weitergeht, je nach Ihrem Ziel
 

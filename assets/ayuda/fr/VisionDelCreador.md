@@ -14,7 +14,7 @@ une réponse très séduisante mais totalement inutile.
 
 ### 📝 Comment renseigner ces informations
 
-1. Ouvrez **`🤖 Intelligence artificielle`** → **`🧭 Projet et instructions pour l’IA`** (également accessible depuis le bouton du panneau latéral ou après édition dans `✏️ Édition`).
+1. Ouvrez **`✏️ Édition`** → **`🧭 Projet et instructions pour l’IA`** (le bouton `🧭 Modifier la vision` du panneau latéral l’ouvre aussi).
 2. Renseignez les trois champs. Aucun n'est obligatoire, mais plus ils sont précis, meilleur est le résultat :
    - **Vision :** ce que vous cherchez à concrétiser. En une ou deux phrases, avec vos propres mots.
    - **Objectifs :** les résultats tangibles attendus. Des « jalons et livrables », pas de simples souhaits.
@@ -78,21 +78,21 @@ Cette étape passe souvent inaperçue, alors qu'elle constitue l'une des fonctio
 Lorsque vous utilisez **`🤖 Intelligence artificielle`** → **`📤 Envoyer à...`** et choisissez un agent, **rien
 n'est encore expédié**. Un aperçu s'ouvre, présentant le texte complet réparti en quatre blocs :
 
-| Bloc | Modifiable ? | Description |
+| Bloc | Modifiable dans l’aperçu ? | Description |
 |---|---|---|
 | **Contrat MMCelt (protégé)** | Non | Les règles fondamentales, identiques pour tous les agents |
-| **Règles communes du projet** | **Oui** | Votre méthode de travail, reconduite à chaque session |
+| **Règles communes du projet** | Non : elles s’écrivent dans cette fenêtre | Votre méthode de travail, reconduite à chaque session |
 | **Contexte de la carte (généré)** | Non | Généré à partir de la carte ; pour le changer, modifiez la carte |
-| **Tâche de cette session** | **Oui** | Ce que vous voulez obtenir **maintenant**, pour cette intervention |
+| **Tâche de cette session** | Non : elle s’écrit dans cette fenêtre | Ce que vous voulez obtenir **maintenant**, pour cette intervention |
 
 Si deux instructions se contredisent, le texte lui-même fixe la hiérarchie, de la plus forte à la plus
 faible : **vos corrections sur la carte**, le contrat MMCelt, les règles du projet et, enfin,
 la tâche de la session en cours.
 
-En dessous se trouvent quatre boutons d'action. `Réinitialiser cette session` rétablit la demande.
-`Enregistrer comme règles communes` est la **seule** action qui enregistre durablement
-votre profil dans `.mmcelt/instrucciones-agente.md`.
-`Annuler` ne conserve rien et ne laisse aucune trace. Le dernier bouton lance l'agent.
+Les règles et la mission, les deux blocs que vous décidez, s'écrivent ici, dans les onglets
+**Instructions** et **Modèles de mission**. `Enregistrer comme règles communes` est la **seule** action
+qui enregistre durablement votre profil dans `.mmcelt/instrucciones-agente.md`. L'aperçu n'a que deux
+boutons : `Annuler`, qui ne conserve rien et ne laisse aucune trace, et celui qui lance l'agent.
 
 **Lisez cet aperçu au moins une fois.** Si la carte, les règles ou un fichier source changent après l'ouverture
 de la confirmation, MMCelt la déclare expirée et exige une nouvelle vérification. Ainsi, le dossier `inicio.md`

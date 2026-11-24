@@ -8,7 +8,7 @@
 //! idéntico y metería un paso vacío en el historial de deshacer.
 
 use super::tipos::{EstadoNodo, EstadoRevision, Nodo, PrioridadNodo, Proyecto, RolNodo};
-use chrono::Utc;
+use jiff::Timestamp;
 use uuid::Uuid;
 
 impl Proyecto {
@@ -66,7 +66,7 @@ impl Proyecto {
             return false;
         }
         *destino = valor;
-        self.updated_at = Utc::now();
+        self.updated_at = Timestamp::now();
         self.marcar_modificado();
         true
     }

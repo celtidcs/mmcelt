@@ -11,7 +11,7 @@
 //! mano desde la interfaz.
 
 use super::tipos::Proyecto;
-use chrono::Utc;
+use jiff::Timestamp;
 use uuid::Uuid;
 
 /// Por qué no se puede colgar un nodo de otro.
@@ -29,8 +29,10 @@ pub enum MovimientoRechazado {
     NodoInexistente,
     /// El destino es la raíz: no tiene padre del que colgar a un hermano.
     DestinoSinPadre,
-    /// Los dos nodos ya cuelgan del mismo padre: ya son hermanos (PH-1007-7).
+    /// Los dos nodos ya cuelgan del mismo padre: ya son hermanos.
     YaSonHermanos,
+    /// Los nodos no pertenecen a la misma lista de hijos.
+    NoSonHermanos,
 }
 
 impl Proyecto {
@@ -38,8 +40,9 @@ impl Proyecto {
     ///
     /// # Errores
     /// [`MovimientoRechazado::DestinoSinPadre`] si `hermano` es la raíz;
-    /// [`MovimientoRechazado::YaSonHermanos`] si ya cuelgan del mismo padre (no hay
-    /// nada que mover, igual que «Hacer hijo» cuando ya lo es); los demás motivos, los mismos que [`Self::comprobar_que_se_puede_colgar`]
+    /// [`MovimientoRechazado::YaSonHermanos`] si ya cuelgan del mismo padre (permanece
+    /// deshabilitado para evitar reorganizaciones ambiguas, igual que «Hacer hijo» cuando ya lo
+    /// es); los demás motivos, los mismos que [`Self::comprobar_que_se_puede_colgar`]
     /// aplicado al padre de `hermano`. En cualquier error el mapa no cambia.
     pub fn hacer_hermano_de(
         &mut self,
@@ -62,7 +65,7 @@ impl Proyecto {
         if let Some(movido) = self.nodes.get_mut(&nodo) {
             movido.parent_id = Some(padre);
         }
-        self.updated_at = Utc::now();
+        self.updated_at = Timestamp::now();
         self.marcar_modificado();
         Ok(())
     }
@@ -131,7 +134,7 @@ impl Proyecto {
         if let Some(movido) = self.nodes.get_mut(&nodo) {
             movido.parent_id = Some(nuevo_padre);
         }
-        self.updated_at = Utc::now();
+        self.updated_at = Timestamp::now();
         self.marcar_modificado();
         Ok(())
     }

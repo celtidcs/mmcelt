@@ -21,3 +21,5 @@ La bonne pratique consiste néanmoins à **enregistrer avec `Ctrl + S` avant d'i
 L'IA retourne la structure et le contenu, non la mise en page. Les positions ajustées manuellement et les branches repliées sont réinitialisées : la carte est réorganisée selon la disposition automatique.
 
 Tout ce qui est essentiel au développement est fidèlement préservé : titres, notes, chemins de fichiers, tags, rôles, états, priorités, connexions croisées et corrections exigées.
+
+Tout ce que vous importez de l'IA apparaît **mis en évidence**, avec une autre couleur de fond et de bordure, jusqu'à ce que vous sélectionniez chaque nœud. Les nœuds qui arrivent sans état de révision entrent comme **`🤖 Généré par l'IA`**, et celui qui se dit approuvé entre comme **`⏳ En attente de révision`** : seule une personne peut approuver.

@@ -6,17 +6,17 @@
 Cliquer sur un agent ouvre un **aperçu** du prompt complet, réparti en quatre blocs :
 
 1. **Contrat MMCelt** (lecture seule) : les règles minimales d'intégrité. Découvrir l'espace autorisé, lire les décisions humaines avant d'écrire, ne jamais modifier le fichier `.mmcelt` à la main et renvoyer l'avancement par MCP. Il est affiché protégé pour ne pas être effacé par mégarde.
-2. **Règles communes du projet** (modifiable) : votre profil neutre, le même pour tous les agents.
+2. **Règles communes du projet** (lecture seule) : votre profil neutre, le même pour tous les agents.
 3. **Contexte de la carte** (lecture seule) : produit par l'exportation pour l'IA. Il se change dans la carte, qui en est la source.
-4. **Tâche de cette session** (modifiable) : ce que vous voulez obtenir maintenant. Elle n'est pas conservée d'une session à l'autre.
+4. **Tâche de cette session** (lecture seule) : ce que vous voulez obtenir maintenant. Elle est conservée d'une session à l'autre jusqu'à ce que vous la changiez.
 
-`Restaurer cette session` remet les règles et la tâche dans leur état initial. `Enregistrer comme règles communes` est une action distincte : elle seule écrit le profil du projet dans `.mmcelt/instrucciones-agente.md`. `Annuler` n'enregistre rien, n'exporte rien, ne surveille rien et ne laisse aucun dossier de session.
+Aucun bloc n'est modifiable dans l'aperçu. Les règles et la tâche s'écrivent dans `✏️ Édition` → `🧭 Projet et instructions pour l’IA`, onglets **Instructions** et **Modèles de mission**. Cette fenêtre les enregistre dans le projet quand vous la fermez, et `Enregistrer comme règles communes` enregistre les règles dans `.mmcelt/instrucciones-agente.md` sans la fermer. Si la tâche est vide, l'aperçu le signale, ne permet pas de confirmer et propose `Configurer la mission...`, qui ouvre cette fenêtre sur l'onglet de la tâche. `Annuler` n'enregistre rien, n'exporte rien, ne surveille rien et ne laisse aucun dossier de session.
 
 ### ⚖️ Précédence déclarée dans le prompt lui-même
 Corrections humaines de la carte **>** contrat MMCelt **>** règles du projet **>** tâche de la session.
 
-### 📚 Les instructions natives sont montrées, pas collées
-Si la racine du projet contient `AGENTS.md`, `CLAUDE.md` ou `GEMINI.md`, l'aperçu les énumère et permet de les lire, mais **ne les incorpore pas** au prompt commun : chaque outil découvre le sien avec sa propre portée, et tout copier créerait des règles dupliquées et contradictoires.
+### 📚 Les instructions natives ne sont incluses que si vous les acceptez
+Si la racine du projet contient `AGENTS.md`, `CLAUDE.md` ou `GEMINI.md`, l'aperçu les énumère avec leur état, mais **ne les incorpore pas automatiquement**. Chaque fichier s'accepte séparément dans l'onglet **Instructions** de cette même fenêtre, avec `Accepter cette version`, et son contenu s'ajoute dès lors aux règles communes du prompt. Si le fichier change ensuite, l'acceptation ne vaut plus : il apparaît comme `Source modifiée ; une nouvelle vérification est requise` et n'est plus incorporé tant que vous ne l'acceptez pas de nouveau.
 
 ### 🚀 Ce qui se passe à la confirmation
 Le bouton annonce ce qui va réellement arriver : `Démarrer dans la console` quand MMCelt a localisé la console de l'agent, et `Préparer pour MCP` quand il n'y en a pas. Dans ce second cas, l'aperçu le signale à l'avance, par un avertissement mis en évidence au-dessus du nom de l'agent.
@@ -48,7 +48,7 @@ Aucun mot de passe, aucune clé, aucune adresse électronique et aucun identifia
 Ouvrez la console de l'agent dans le dossier du projet et demandez-lui de lire le `inicio.md` de ce dossier. Il reçoit exactement ce qu'il avait reçu la première fois, sans presse-papiers et sans devoir vous souvenir de ce que vous aviez écrit. Utile pour reproduire une panne et pour comparer deux agents sur la même tâche.
 
 ### 🔑 Les comptes viennent du CLI, pas de MMCelt
-MMCelt ne demande, ne conserve et ne transforme aucun identifiant. Il s'appuie sur la session déjà authentifiée dans `claude`, `codex` ou `gemini`. Il n'utilise aucune API payante, ne choisit pas de modèle et ne décide d'aucune facturation. L'authentification reste entièrement du côté de l'outil officiel.
+MMCelt ne demande, ne conserve et ne transforme aucun identifiant. Il s'appuie sur la session déjà authentifiée dans `claude`, `codex` ou `agy`. Il n'utilise aucune API payante, ne choisit pas de modèle et ne décide d'aucune facturation. L'authentification reste entièrement du côté de l'outil officiel.
 
 ### 🔗 MCP et console sont deux capacités distinctes
 Le menu « Envoyer à... » marque chaque agent d'une icône :
@@ -61,12 +61,15 @@ Le menu « Envoyer à... » marque chaque agent d'une icône :
 Qu'un agent apparaisse connecté par MCP **ne veut pas dire** qu'on puisse lui ouvrir une console.
 
 ### 🌌 Agents officiels en console (CLI)
-MMCelt conserve exclusivement les trois clients officiels de terminal : **Claude Code**, **Codex CLI** et **Gemini CLI** (ce dernier avec un avertissement sur le compte). Les clients graphiques ont été retirés afin de ne proposer que des options vérifiées et simples d'utilisation.
+MMCelt conserve exclusivement les trois clients officiels de terminal : **Claude Code**, **Codex CLI** et **Antigravity CLI (agy)**. Les clients graphiques ont été retirés afin de ne proposer que des options vérifiées et simples d'utilisation.
 
 ### 💻 Où c'est vérifié et où ce n'est qu'implémenté
 - **Windows** : c'est la plateforme au parcours vérifié. MMCelt ouvre une nouvelle fenêtre de console directement sur l'exécutable de l'agent. Pour le localiser, `PATHEXT` prime : si une installation npm a laissé un script Unix sans extension à côté du lanceur `.cmd`, c'est le lanceur qui est retenu, seul exécutable pour Windows.
 - **Linux** : implémenté, mais **sans parcours réel vérifié à ce jour**. Il utilise le premier terminal connu qu'il trouve parmi `x-terminal-emulator`, `gnome-terminal`, `konsole` et `xfce4-terminal`. S'il n'y en a aucun, il le signale et ne lance rien.
 - **macOS** : ce n'est **pas** encore affirmé. Le projet n'y dispose d'aucun parcours vérifié et préfère ne rien promettre.
+
+### 🔒 La carte est verrouillée pendant que l'agent travaille
+Dès que vous confirmez l'envoi, la carte ne peut plus être modifiée : si vous et l'agent changez le même fichier en même temps, l'un des deux perd son travail. Vous pouvez la consulter, la parcourir, sélectionner des nœuds, chercher et exporter, et la barre du bas indique qu'un agent travaille. Le verrou est levé quand l'agent annonce qu'il a terminé : il le marque dans sa dernière livraison (`work_finished: true`) et MMCelt charge cette carte finale. Si l'agent échoue ou ne prévient pas, le bouton **Reprendre la main** de la barre lève le verrou. Si l'envoi échoue avant le lancement de l'agent, le verrou est levé automatiquement.
 
 ### 🔄 Rechargement automatique en boucle fermée
 Quand un agent met à jour la carte sur le disque via `mmcelt_sync_ai_progress`, MMCelt détecte le changement aussitôt et le canevas se recharge tout seul, avec les nouveaux nœuds, états et priorités.

@@ -1,39 +1,20 @@
-# 🔵 Integration mit Gemini CLI
+# 🔵 Integration mit Antigravity CLI (agy)
 
-Gemini ist das KI-Modell von Google, und **Gemini CLI** ist das offizielle Befehlszeilenwerkzeug. MMCelt ermöglicht Ihnen die direkte Anbindung an Gemini CLI, um Ihre Mindmaps zu analysieren, zu erweitern und auszubauen.
+Google Antigravity ist die moderne Entwicklungsplattform von Google, und **Antigravity CLI (`agy`)** ist das offizielle Befehlszeilenwerkzeug, das die bisherige Gemini CLI ablöst. MMCelt ermöglicht Ihnen die direkte Anbindung an Antigravity CLI, um Ihre Mindmaps zu analysieren, zu erweitern und auszubauen.
 
-### 💻 Verwendung mit Gemini CLI im Terminal
+### 💻 Verwendung mit Antigravity CLI (`agy`) im Terminal
 
-1. Rufen Sie `🤖 Künstliche Intelligenz` → `🔌 MMCelt mit meinen KIs verbinden...` auf und verbinden Sie Gemini CLI.
-2. Öffnen Sie Ihre Mindmap und wählen Sie `🤖 Künstliche Intelligenz` → `📤 Senden an...` → `Gemini CLI`.
+1. Rufen Sie `🤖 Künstliche Intelligenz` → `🔌 MMCelt mit meinen KIs verbinden...` auf und klicken Sie auf **Verbinden** neben Antigravity CLI (agy).
+2. Öffnen Sie Ihre Mindmap und wählen Sie `🤖 Künstliche Intelligenz` → `📤 Senden an...` → `Antigravity CLI (agy)`.
 3. Prüfen Sie die Vorschau des Dokuments und des Auftrags, den die KI erhalten wird.
-4. Klicken Sie auf **In Konsole starten**. MMCelt öffnet automatisch das Terminal mit der vorbereiteten Umgebung und überwacht Änderungen, um von Gemini erstellte Knoten zu übernehmen.
+4. Klicken Sie auf **In Konsole starten**. MMCelt öffnet automatisch das Terminal mit `agy -i` in der vorbereiteten Umgebung und überwacht Änderungen, um vom Agenten per MCP erstellte Knoten zu übernehmen.
 
-### 💡 Tipps und Tricks: Kostenloser API-Schlüssel und Kompatibilität
+### 💡 Authentifizierung mit normalem Google-Konto
 
-Falls Gemini CLI beim Start nach Authentifizierung verlangt oder Probleme bei der Browser-Anmeldung auftreten, ist die Nutzung eines **kostenlosen API-Schlüssels** von Google AI Studio der schnellste und zuverlässigste Weg:
-
-1. Melden Sie sich bei Google AI Studio (`https://aistudio.google.com/app/apikey`) mit Ihrem Google-Konto an und klicken Sie auf **Create API Key**. Dies ist kostenlos.
-2. Kopieren Sie den erzeugten Schlüssel.
-3. Setzen Sie die Umgebungsvariable vor dem Starten der Konsole oder im Benutzerprofil:
-   - **Unter Windows (PowerShell):**
-     ```powershell
-     $env:GEMINI_API_KEY="ihr_schluessel_hier"
-     ```
-   - **Unter Linux oder macOS (Bash/Zsh):**
-     ```bash
-     export GEMINI_API_KEY="ihr_schluessel_hier"
-     ```
-4. Mit dieser Variablen arbeitet Gemini CLI sofort ohne weitere Anmeldeaufforderungen im Browser.
-5. Die offizielle Dokumentation von Gemini CLI finden Sie im Repository: `https://github.com/google-gemini/gemini-cli`.
-
-**ℹ️ Aktueller Status der Kontokompatibilität in Gemini CLI:**
-Bestätigt: Seit dem 18. Juni 2026 hat Google die interaktive Anmeldung „Sign in with Google“ für persönliche Konten in Gemini CLI entfernt, einschließlich kostenloser, Google AI Pro- und Ultra-Konten.
-- **13. September 2026:** erster Test auf dem Rechner des Direktors, mit der wortgetreuen Meldung: *„This client is no longer supported for Gemini Code Assist for individuals. To continue using Gemini, please migrate to the Antigravity suite of products“*.
-- **Anschließend mit mehreren älteren Versionen von Gemini CLI wiederholt**, um ein Problem der installierten Version auszuschließen: Das Ergebnis war bei allen gleich.
-- **Bestätigt mit einem kostenlosen Google AI Studio API-Schlüssel**: Die Verbindung funktionierte durchgängig; Knoten und Verbindungen wurden auf dem Datenträger verifiziert, ohne jede Einschränkung für persönliche Konten.
-
-Die oben beschriebene Methode mit dem API-Schlüssel **ist der einzige bestätigte Weg** für persönliche Konten: Die interaktive Anmeldung steht ihnen nicht mehr zur Verfügung.
+Antigravity CLI arbeitet nativ mit Ihrem **Standard-Google-Konto**:
+- Keine Google AI Studio API-Schlüssel oder zusätzlichen Umgebungsvariablen erforderlich.
+- Wenn Sie noch nicht in `agy` angemeldet sind, öffnet das Werkzeug den Browser, damit Sie sich mit Ihrem normalen Google-Konto anmelden können.
+- Der MCP-Server von MMCelt wird in `~/.gemini/config/mcp_config.json` registriert, sodass der Agent die Mindmap innerhalb des autorisierten Projektordners lesen und aktualisieren kann.
 
 ### 🌐 Gemini im Webbrowser
 

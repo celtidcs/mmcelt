@@ -7,8 +7,11 @@ Eine sichere und direkte Brücke, über die Modelle künstlicher Intelligenz Min
 Sie müssen keine komplizierten Konfigurationsdateien bearbeiten. Verbinden Sie Ihre Agenten direkt aus der Anwendung heraus:
 
 1. Öffnen Sie das Menü `🤖 Künstliche Intelligenz` → `🔌 MMCelt mit meinen KIs verbinden...`.
-2. MMCelt sucht automatisch nach installierten Terminal-Assistenten auf Ihrem Rechner (Claude Code, Codex CLI und Gemini CLI).
+2. MMCelt sucht automatisch nach installierten Terminal-Assistenten auf Ihrem Rechner (Claude Code, Codex CLI und Antigravity CLI).
 3. Klicken Sie neben dem gewünschten Assistenten auf die Schaltfläche **Verbinden**. Fertig!
+4. Wenn der Assistent in einem anderen Ordner installiert ist, klicken Sie in seiner Karte auf **📂 Pfad ändern...** und wählen Sie sein Programm. MMCelt merkt es sich; **Erkennung verwenden** kehrt zur automatischen Suche zurück.
+
+5. Wenn Sie mehrere Konten desselben Agenten verwenden, erscheint jedes auf einer eigenen Karte mit dem Namen seines Ordners (zum Beispiel Konto „.claude2“). MMCelt findet sie selbst: Es sieht sich die Ordner in Ihrem persönlichen Ordner an, die wie der Ordner des Agenten heißen und noch etwas dahinter haben, und die, auf die CLAUDE_CONFIG_DIR oder CODEX_HOME zeigen. **Verbinden** trägt MMCelt in diesem Konto ein, und beim Senden einer Karte öffnet sich die Konsole mit ihm. Liegt ein Konto woanders, klicken Sie auf **Konto hinzufügen** und wählen den Agenten und seinen Ordner; **Konto entfernen** blendet es aus, ohne etwas zu löschen. Antigravity CLI (agy) verwendet nur sein Standardkonto: Es gibt keine dokumentierte Möglichkeit, einen anderen Konfigurationsordner zu wählen, daher würde ein von Hand hinzugefügtes Konto nicht verwendet.
 
 Wenn Sie später einen weiteren Assistenten installieren, öffnen Sie dieses Fenster einfach erneut: Die Erkennung erfolgt bei jedem Aufruf dynamisch. Der Status „Verbunden“ stellt sicher, dass der Assistent weiß, wo MMCelt zu finden ist und wie er über `--mcp-server` mit ihm kommuniziert.
 
@@ -44,7 +47,7 @@ Der Assistent verfügt über sechs offizielle Werkzeuge, die speziell für die Z
 - `mmcelt_workspace_info`: Fragt ab, welcher Ordner freigegeben ist und welche `.mmcelt`-Maps darin liegen. Dies wird zuerst geprüft, um keine Pfade zu erfinden.
 - `mmcelt_create_mindmap`: Erstellt neue Mindmaps im `.mmcelt`-Format.
 - `mmcelt_read_mindmap`: Liest die Struktur Ihrer Map, Notizen und offenen Fragen.
-- `mmcelt_sync_ai_progress`: Baut die Map aus, indem Knoten mit Rollen, Prioritäten und Beziehungen hinzugefügt werden.
+- `mmcelt_sync_ai_progress`: Baut die Map aus, indem Knoten mit Rollen, Prioritäten und Beziehungen hinzugefügt werden. In seiner letzten Lieferung setzt er `work_finished: true`, damit MMCelt die Sperre der Karte aufhebt.
 - `mmcelt_get_human_feedback`: Liest Ihre Korrekturen und Anweisungen, bevor sensible Bereiche bearbeitet werden.
 - `mmcelt_export_ai_markdown`: Wandelt die Mindmap in eine strukturierte Markdown-Zusammenfassung um.
 

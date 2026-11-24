@@ -1,4 +1,6 @@
 Copyright 2022 The Noto Project Authors (https://github.com/notofonts/noto-cjk)
+Copyright 2013 Google LLC (Noto Emoji, https://github.com/googlefonts/noto-emoji)
+Copyright 2022 Google LLC. All Rights Reserved. (Noto Sans Math, https://github.com/notofonts/math)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

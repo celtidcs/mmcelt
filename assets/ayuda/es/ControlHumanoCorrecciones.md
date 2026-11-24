@@ -8,13 +8,20 @@ Convierte a MMCelt en tu **consola de supervisión y veto** frente a lo que la I
    - Cambia el nodo a **`⛔ Descartado`** o **`⚠️ Requiere Corrección`**.
    - En el campo **"🛑 Corrección / Instrucción Exigida a la IA"**, escribe tu orden explícita (ej. *"No usar librerías externas, implementar con la librería estándar de Rust"*).
 3. Abre el menú **`🤖 Inteligencia Artificial` > `🛑 Enviar Correcciones y Directivas a la IA...`**.
-4. Pulsa **`📋 Copiar Directivas de Corrección`** y pégalo en tu chat con la IA (o deja que tu agente de consola, como Claude Code, Codex CLI o Gemini CLI, las consulte directamente mediante la herramienta MCP `mmcelt_get_human_feedback`).
+4. Pulsa **`📋 Copiar Directivas de Corrección`** y pégalo en tu chat con la IA (o deja que tu agente de consola, como Claude Code, Codex CLI o Antigravity CLI, las consulte directamente mediante la herramienta MCP `mmcelt_get_human_feedback`).
 5. La IA leerá las órdenes de veto obligatorio y reajustará su código de inmediato.
+
+### 🟣 Qué ha hecho la IA, de un vistazo
+- Los nodos que creas tú nacen **`⚪ Sin marcar`**: no llevan icono de revisión.
+- Un nodo que la IA **acaba de crear** se dibuja con **otro color de fondo y de borde** hasta que lo seleccionas. Después recupera su aspecto normal y conserva el icono **`🤖 Generado por IA`**.
+- Si la IA **cambia un nodo que ya existía**, pasa a **`⏳ Pendiente de Revisión`** y el reloj se pinta en **color de aviso**.
+
+Abrir el mapa o recargarlo cuando la IA lo cambia no quita el resalte: solo lo quita seleccionar el nodo. Quitarlo no es un cambio del mapa, así que no se deshace. Eso sí, solo queda en el archivo al guardar: si cierras MMCelt sin haber guardado, te pregunta si quieres guardar.
 
 ### ✅ Aprobar un nodo, y qué pasa después
 Cuando das por bueno un nodo, ponle **`🛡️ Aprobado por Usuario`** en el inspector. Es tu firma sobre ese contenido. Tanto los controles de supervisión humana como los de prioridad y estado muestran iconos homogéneos en el menú y en el propio nodo en el lienzo.
 
-**Esa firma caduca sola.** Si más tarde la IA cambia ese nodo —sus notas, su estado, su prioridad o su ruta de archivo—, el nodo vuelve automáticamente a **`⏳ Pendiente de Revisión`**.
+**Esa firma caduca sola.** Si más tarde la IA cambia ese nodo —sus notas, su estado, su prioridad o su ruta de archivo—, el nodo vuelve automáticamente a **`⏳ Pendiente de Revisión`**. Lo mismo pasa con un nodo **`⚪ Sin marcar`** o **`⚠️ Requiere Corrección`** que la IA modifique.
 
 El motivo es simple: aprobaste un texto concreto, no el nodo para siempre. Sin esta caducidad verías tu propio visto bueno sobre algo que no has leído, que es justo lo contrario de para lo que sirve este programa.
 

@@ -21,3 +21,5 @@ Aun así, la costumbre sana es **guardar con `Ctrl+S` antes de importar**. La co
 La IA devuelve la estructura y el contenido, no la presentación. Al importar se pierden las posiciones que hubieras ajustado a mano y las ramas que tuvieras plegadas: el mapa se recoloca con la disposición automática.
 
 Lo que sí viaja completo es lo que importa para trabajar: títulos, notas, rutas de archivo, etiquetas, roles, estados, prioridades, conexiones cruzadas y las correcciones que hayas exigido.
+
+Todo lo que importas de la IA aparece **resaltado**, con otro color de fondo y de borde, hasta que seleccionas cada nodo. Los nodos que llegan sin estado de revisión entran como **`🤖 Generado por IA`**, y uno que diga venir aprobado entra como **`⏳ Pendiente de Revisión`**: la aprobación solo la das tú.

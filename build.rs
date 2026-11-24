@@ -57,12 +57,9 @@ fn main() {
     // no reejecutaba este guion, y el binario seguía declarando que correspondía exactamente
     // a un commit cuando ya no era verdad.
     //
-    // **Solo se vigila lo que git rastrea.** Aquí llegaron a estar también rutas ignoradas,
-    // `CLAUDE.md`, `GEMINI.md` y `AGENTS.md`, y las cuatro están en `.gitignore`. Vigilarlas
-    // no detecta nada —un archivo ignorado no puede ensuciar el árbol— y a cambio recompila
-    // el crate entero cada vez que se tocan. Alguna de ellas se reescribe a cada
-    // sesión, así que era una recompilación completa por cada nota que se apunta.
-    // Comprobado ejecutándolo antes de quitarlo.
+    // **Solo se vigila lo que git rastrea.** Vigilar archivos ignorados por `.gitignore` no
+    // detecta nada —un archivo ignorado no puede ensuciar el árbol— y a cambio recompila el
+    // crate entero cada vez que se tocan.
     println!("cargo:rerun-if-changed=documentacion");
     println!("cargo:rerun-if-changed=assets");
     println!("cargo:rerun-if-changed=skills");
@@ -78,7 +75,9 @@ fn main() {
         println!("cargo:rerun-if-changed={ref_rama}");
     }
 
-    let fecha = chrono::Utc::now().format("%Y-%m-%d %H:%M UTC").to_string();
+    let fecha = jiff::Timestamp::now()
+        .strftime("%Y-%m-%d %H:%M UTC")
+        .to_string();
     println!("cargo:rustc-env=MMCELT_FECHA_COMPILACION={fecha}");
 
     let commit =

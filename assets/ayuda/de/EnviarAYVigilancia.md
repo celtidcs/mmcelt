@@ -6,17 +6,17 @@
 Ein Klick auf einen Agenten öffnet eine **Vorschau** des vollständigen Prompts, aufgeteilt in vier Blöcke:
 
 1. **MMCelt-Vertrag** (schreibgeschützt): die Mindestregeln für die Integrität. Den freigegebenen Bereich zuerst erkunden, menschliche Entscheidungen vor dem Schreiben lesen, die `.mmcelt`-Datei niemals von Hand bearbeiten und Fortschritte über MCP zurückmelden. Er wird geschützt angezeigt, damit er nicht versehentlich gelöscht wird.
-2. **Gemeinsame Projektregeln** (bearbeitbar): Ihr neutrales Profil, für alle Agenten dasselbe.
+2. **Gemeinsame Projektregeln** (schreibgeschützt): Ihr neutrales Profil, für alle Agenten dasselbe.
 3. **Mindmap-Kontext** (schreibgeschützt): vom KI-Export erzeugt. Er wird in der Mindmap geändert, die seine Quelle ist.
-4. **Auftrag dieser Sitzung** (bearbeitbar): was jetzt erreicht werden soll. Er wird nicht in die nächste Sitzung übernommen.
+4. **Auftrag dieser Sitzung** (schreibgeschützt): was jetzt erreicht werden soll. Er bleibt von einer Sitzung zur nächsten erhalten, bis Sie ihn ändern.
 
-`Diese Sitzung wiederherstellen` setzt Regeln und Auftrag auf den Anfangszustand zurück. `Als gemeinsame Regeln speichern` ist eine eigene Aktion: nur sie schreibt das Projektprofil nach `.mmcelt/instrucciones-agente.md`. `Abbrechen` speichert nichts, exportiert nichts, überwacht nichts und hinterlässt keine Sitzungsakte.
+In der Vorschau ist kein Block bearbeitbar. Regeln und Auftrag werden unter `✏️ Bearbeiten` → `🧭 Projekt und Anweisungen für die KI` auf den Registerkarten **Anweisungen** und **Auftragsvorlagen** geschrieben. Dieses Fenster speichert beides beim Schließen im Projekt, und `Als gemeinsame Regeln speichern` speichert die Regeln nach `.mmcelt/instrucciones-agente.md`, ohne es zu schließen. Ist der Auftrag leer, weist die Vorschau darauf hin, lässt keine Bestätigung zu und bietet `Auftrag konfigurieren...` an, das dieses Fenster auf der Registerkarte des Auftrags öffnet. `Abbrechen` speichert nichts, exportiert nichts, überwacht nichts und hinterlässt keine Sitzungsakte.
 
 ### ⚖️ Vorrang, im Prompt selbst erklärt
 Menschliche Korrekturen der Mindmap **>** MMCelt-Vertrag **>** Projektregeln **>** Auftrag der Sitzung.
 
-### 📚 Native Anweisungen werden gezeigt, nicht eingefügt
-Liegen im Projektstamm `AGENTS.md`, `CLAUDE.md` oder `GEMINI.md`, zählt die Vorschau sie auf und lässt sie lesen, fügt sie aber **nicht** in den gemeinsamen Prompt ein: Jedes Werkzeug findet seine eigene Datei mit eigenem Geltungsbereich, und alle zu kopieren würde doppelte, widersprüchliche Regeln erzeugen.
+### 📚 Native Anweisungen werden nur nach Ihrer Zustimmung eingefügt
+Liegen im Projektstamm `AGENTS.md`, `CLAUDE.md` oder `GEMINI.md`, zählt die Vorschau sie mit ihrem Status auf, fügt sie aber **nicht automatisch** ein. Jede Datei wird einzeln auf der Registerkarte **Anweisungen** desselben Fensters mit `Diese Version akzeptieren` angenommen; ab dann wird ihr Inhalt den gemeinsamen Regeln des Prompts hinzugefügt. Ändert sich die Datei danach, gilt die Zustimmung nicht mehr: Sie erscheint als `Geänderte Quelle; erneute Prüfung erforderlich` und wird erst nach erneuter Annahme wieder eingefügt.
 
 ### 🚀 Was beim Bestätigen geschieht
 Die Schaltfläche sagt, was wirklich passiert: `In Konsole starten`, wenn MMCelt die Konsole des Agenten gefunden hat, und `Für MCP vorbereiten`, wenn es keine gibt. Im zweiten Fall weist die Vorschau vorher darauf hin, mit einem hervorgehobenen Hinweis über dem Namen des Agenten.
@@ -48,7 +48,7 @@ Es werden keine Kennwörter, Schlüssel, E-Mail-Adressen oder Kontokennungen ges
 Öffnen Sie die Konsole des Agenten im Projektordner und bitten Sie ihn, die `inicio.md` dieses Ordners zu lesen. Er bekommt genau dasselbe wie beim ersten Mal, ohne Zwischenablage und ohne dass Sie sich an Ihren Text erinnern müssen. Nützlich, um einen Fehler nachzustellen und um zwei Agenten am selben Auftrag zu vergleichen.
 
 ### 🔑 Die Konten liefert das CLI, nicht MMCelt
-MMCelt fragt keine Zugangsdaten ab, speichert und verändert keine. Es stützt sich auf die Sitzung, die in `claude`, `codex` oder `gemini` bereits angemeldet ist. Es nutzt keine kostenpflichtige API, wählt kein Modell und entscheidet nichts über die Abrechnung. Die Authentifizierung bleibt vollständig beim offiziellen Werkzeug.
+MMCelt fragt keine Zugangsdaten ab, speichert und verändert keine. Es stützt sich auf die Sitzung, die in `claude`, `codex` oder `agy` bereits angemeldet ist. Es nutzt keine kostenpflichtige API, wählt kein Modell und entscheidet nichts über die Abrechnung. Die Authentifizierung bleibt vollständig beim offiziellen Werkzeug.
 
 ### 🔗 MCP und Konsole sind zwei getrennte Fähigkeiten
 Das Menü „Senden an...“ kennzeichnet jeden Agenten mit einem Symbol:
@@ -61,12 +61,15 @@ Das Menü „Senden an...“ kennzeichnet jeden Agenten mit einem Symbol:
 Dass ein Agent als über MCP verbunden erscheint, **heißt nicht**, dass sich für ihn eine Konsole öffnen lässt.
 
 ### 🌌 Offizielle Konsolen-Agenten (CLI)
-MMCelt unterstützt ausschließlich die drei offiziellen Terminal-Clients: **Claude Code**, **Codex CLI** und **Gemini CLI** (letzterer mit Kontohinweis). Grafische Clients wurden entfernt, um sicherzustellen, dass nur überprüfte und einfach zu bedienende Optionen angeboten werden.
+MMCelt unterstützt ausschließlich die drei offiziellen Terminal-Clients: **Claude Code**, **Codex CLI** und **Antigravity CLI (agy)**. Grafische Clients wurden entfernt, um sicherzustellen, dass nur überprüfte und einfach zu bedienende Optionen angeboten werden.
 
 ### 💻 Wo es geprüft ist und wo es nur umgesetzt ist
 - **Windows**: die Plattform mit geprüftem Ablauf. MMCelt öffnet ein neues Konsolenfenster direkt auf der ausführbaren Datei des Agenten. Beim Suchen gilt `PATHEXT`: Hat eine npm-Installation ein Unix-Skript ohne Endung neben den `.cmd`-Starter gelegt, wird der Starter gewählt, denn nur ihn kann Windows ausführen.
 - **Linux**: umgesetzt, aber **noch ohne geprüften echten Ablauf**. Es nutzt das erste bekannte Terminal, das es findet, unter `x-terminal-emulator`, `gnome-terminal`, `konsole` und `xfce4-terminal`. Gibt es keines, meldet es das und startet nichts.
 - **macOS**: wird noch **nicht** zugesichert. Das Projekt hat dort keinen erprobten Ablauf und verspricht lieber nichts.
+
+### 🔒 Die Karte ist gesperrt, solange der Agent arbeitet
+Sobald Sie das Senden bestätigen, kann die Karte nicht mehr bearbeitet werden: Wenn Sie und der Agent dieselbe Datei gleichzeitig ändern, verliert einer von beiden seine Arbeit. Sie können sie weiterhin ansehen, durchlaufen, Knoten auswählen, suchen und exportieren, und die untere Leiste zeigt an, dass ein Agent arbeitet. Die Sperre endet, wenn der Agent meldet, dass er fertig ist: Er markiert seine letzte Lieferung (`work_finished: true`) und MMCelt lädt diese endgültige Karte. Wenn der Agent scheitert oder sich nie meldet, hebt die Schaltfläche **Kontrolle zurückholen** in der Leiste die Sperre auf. Scheitert das Senden, bevor der Agent startet, wird die Sperre automatisch aufgehoben.
 
 ### 🔄 Automatisches Neuladen in der Regelschleife
 Aktualisiert ein Agent die Mindmap auf der Festplatte über `mmcelt_sync_ai_progress`, erkennt MMCelt das sofort und die Zeichenfläche lädt von selbst neu, mit den neuen Knoten, Zuständen und Prioritäten.

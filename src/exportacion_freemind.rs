@@ -34,7 +34,7 @@ pub enum ErrorFreemind {
 pub struct ProyectoImportadoFreemind {
     /// El mapa reconstruido, con valores por defecto donde no había metadatos de MMCelt.
     pub proyecto: Proyecto,
-    /// `false` cuando ningún nodo llevaba el bloque JSON de MMCelt: la señal de C21-D para que
+    /// `false` cuando ningún nodo llevaba el bloque JSON de MMCelt: la señal para que
     /// la interfaz avise a la persona de que el archivo no venía de MMCelt.
     pub trae_metadatos_mmcelt: bool,
 }
@@ -145,8 +145,8 @@ struct NodoEnConstruccion {
 ///
 /// Reconstruye la jerarquía desde el anidamiento real de los `<node>`. Si el `<richcontent
 /// TYPE="NOTE">` de un nodo lleva el bloque JSON de MMCelt, se restablecen su estado, prioridad,
-/// rol, revisión, comentario, ruta, etiquetas, posición y plegado exactos (C21-C). Si no lo
-/// lleva, el nodo se crea con los valores por defecto de [`Nodo::new`] (C21-D): la persona que
+/// rol, revisión, comentario, ruta, etiquetas, posición y plegado exactos. Si no lo
+/// lleva, el nodo se crea con los valores por defecto de [`Nodo::new`]: la persona que
 /// llama decide si avisar, mirando `trae_metadatos_mmcelt`.
 pub fn importar_desde_freemind(xml: &str) -> Result<ProyectoImportadoFreemind, ErrorFreemind> {
     // Sin `trim_text`: el texto de la nota se corta en varios `Event::Text` en cada frontera de
@@ -471,7 +471,7 @@ mod pruebas {
         assert_eq!(resultado.unwrap_err(), ErrorFreemind::SinContenido);
     }
 
-    /// **C21-C** — exportar un mapa de MMCelt y reimportarlo reconstruye estado, prioridad,
+    /// Exportar un mapa de MMCelt y reimportarlo reconstruye estado, prioridad,
     /// rol, revisión, comentario, etiquetas, ruta, posición, plegado y conexiones cruzadas
     /// idénticos. Ida y vuelta exacta, campo a campo.
     #[test]
@@ -525,7 +525,7 @@ mod pruebas {
         }
     }
 
-    /// **C21-D** — un `.mm` ajeno, sin ningún bloque de MMCelt, se importa con valores por
+    /// Un `.mm` ajeno, sin ningún bloque de MMCelt, se importa con valores por
     /// defecto y la señal `trae_metadatos_mmcelt` en `false`.
     #[test]
     fn importar_un_mm_ajeno_usa_valores_por_defecto_y_no_senala_metadatos() {

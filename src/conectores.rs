@@ -52,7 +52,7 @@
 //! |---|---|---|
 //! | Claude Code | `~/.claude.json` | JSON |
 //! | Codex CLI | `~/.codex/config.toml` | **TOML** |
-//! | Gemini CLI | `~/.gemini/settings.json` | JSON |
+//! | Antigravity CLI (agy) | `~/.gemini/config/mcp_config.json` | JSON |
 //!
 //! ## Precauciones
 //!
@@ -68,6 +68,7 @@
 use crate::error::{AppError, AppResult, MotivoCarpetaInvalida};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
+use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
@@ -96,7 +97,7 @@ pub enum FormatoConfiguracion {
 ///
 /// El nombre visible se traduce y puede cambiar; esta identidad es el contrato que permite
 /// elegir un adaptador sin comparar textos ni confundir productos del mismo proveedor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum IdAgente {
     /// Consola oficial de Anthropic.
     ClaudeCode,
@@ -110,22 +111,19 @@ pub enum IdAgente {
     Windsurf,
     /// Consola oficial de OpenAI.
     CodexCli,
-    /// Consola oficial de Google.
-    GeminiCli,
+    /// Consola oficial de Google Antigravity (agy).
+    #[serde(alias = "GeminiCli")]
+    Agy,
 }
 
 impl IdAgente {
-    /// Posición estable en que se muestran los agentes detectados.
-    ///
-    /// La detección futura de consolas añadirá candidatos desde otra fuente. Ordenar por la
-    /// identidad evita que el menú cambie según el orden en que el sistema devuelva archivos o
-    /// ejecutables.
-    fn orden(self) -> u8 {
+    /// Nombre de la orden con que se abre la consola del agente, si tiene consola.
+    fn orden_de_la_consola(self) -> Option<&'static str> {
         match self {
-            Self::ClaudeCode => 0,
-            Self::CodexCli => 1,
-            Self::GeminiCli => 2,
-            Self::ClaudeDesktop | Self::Antigravity | Self::Cursor | Self::Windsurf => u8::MAX,
+            Self::ClaudeCode => Some("claude"),
+            Self::CodexCli => Some("codex"),
+            Self::Agy => Some("agy"),
+            Self::ClaudeDesktop | Self::Antigravity | Self::Cursor | Self::Windsurf => None,
         }
     }
 }
@@ -162,9 +160,6 @@ pub struct Agente {
     /// Nombre visible del agente.
     pub nombre: &'static str,
 
-    /// Explicación breve de qué es, para quien no lo conozca.
-    pub descripcion: &'static str,
-
     /// Archivo de configuración donde se registra el servidor.
     pub ruta_configuracion: PathBuf,
 
@@ -189,6 +184,47 @@ pub struct Agente {
 
     /// Si el archivo de configuración ya existe físicamente en el disco.
     pub existe_configuracion: bool,
+
+    /// Cuenta de la herramienta: su carpeta de configuración y de dónde sale.
+    pub cuenta: deteccion_agentes::Cuenta,
+}
+
+/// Cuenta de un agente dada de alta a mano, tal como se guarda en las preferencias.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CuentaManual {
+    /// Herramienta a la que pertenece.
+    pub agente: IdAgente,
+    /// Carpeta de configuración de la cuenta.
+    pub carpeta: PathBuf,
+}
+
+/// Añade una cuenta a mano a las guardadas, si no estaba ya, tras validarla con la biblioteca
+/// de detección contra las cuentas ya detectadas.
+///
+/// # Errores
+/// Devuelve el motivo del rechazo, sin guardar nada, si la herramienta no admite cuentas a mano
+/// o si otra cuenta suya ya usa esa carpeta, aunque esté escrita de otra forma.
+pub(crate) fn anadir_cuenta_manual(
+    cuentas: &mut Vec<CuentaManual>,
+    nueva: CuentaManual,
+    detectadas: &[deteccion_agentes::Cuenta],
+) -> Result<(), deteccion_agentes::RechazoDeAlta> {
+    let herramienta = herramienta_de(nueva.agente)
+        .ok_or(deteccion_agentes::RechazoDeAlta::SinVariableDeCuenta)?;
+    deteccion_agentes::validar_alta_manual(herramienta, &nueva.carpeta, detectadas)?;
+    if !cuentas.contains(&nueva) {
+        cuentas.push(nueva);
+    }
+    Ok(())
+}
+
+/// Quita de las guardadas la cuenta a mano de `agente` con esa carpeta; las demás no cambian.
+pub(crate) fn quitar_cuenta_manual(
+    cuentas: &mut Vec<CuentaManual>,
+    agente: IdAgente,
+    carpeta: &Path,
+) {
+    cuentas.retain(|cuenta| !(cuenta.agente == agente && cuenta.carpeta == carpeta));
 }
 
 impl Agente {
@@ -214,6 +250,28 @@ impl Agente {
     }
 }
 
+/// Herramientas a las que se puede dar de alta una cuenta a mano, según la biblioteca de
+/// detección ([`deteccion_agentes::Herramienta::admite_alta_manual`]).
+pub fn herramientas_con_cuentas() -> Vec<(IdAgente, &'static str)> {
+    HERRAMIENTAS_CON_CONSOLA
+        .iter()
+        .filter(|(id, ..)| {
+            herramienta_de(*id).is_some_and(|herramienta| herramienta.admite_alta_manual())
+        })
+        .map(|(id, nombre, ..)| (*id, *nombre))
+        .collect()
+}
+
+/// Herramienta de la biblioteca de detección que corresponde a un agente con consola.
+fn herramienta_de(id: IdAgente) -> Option<deteccion_agentes::Herramienta> {
+    match id {
+        IdAgente::ClaudeCode => Some(deteccion_agentes::Herramienta::ClaudeCode),
+        IdAgente::CodexCli => Some(deteccion_agentes::Herramienta::CodexCli),
+        IdAgente::Agy => Some(deteccion_agentes::Herramienta::Agy),
+        _ => None,
+    }
+}
+
 /// Devuelve la carpeta personal del usuario.
 ///
 /// # Devuelve
@@ -235,12 +293,46 @@ fn carpeta_personal() -> Option<PathBuf> {
 /// Los agentes encontrados, cada uno con su estado de conexión ya comprobado. La lista
 /// está vacía si no hay ninguno.
 pub fn detectar_agentes() -> Vec<Agente> {
+    detectar_agentes_con_rutas(&RutasDeAgentes::new(), &[])
+}
+
+/// Busca los agentes de IA instalados, respetando el programa que el usuario eligió para cada uno.
+///
+/// # Parámetros
+/// - `rutas_elegidas`: las rutas de las preferencias; una que no valga se ignora y se detecta.
+/// - `manuales`: las cuentas dadas de alta a mano en las preferencias.
+pub fn detectar_agentes_con_rutas(
+    rutas_elegidas: &RutasDeAgentes,
+    manuales: &[CuentaManual],
+) -> Vec<Agente> {
     let Some(personal) = carpeta_personal() else {
         return Vec::new();
     };
     let path = std::env::var_os("PATH").unwrap_or_default();
     let pathext = std::env::var_os("PATHEXT").unwrap_or_default();
-    detectar_agentes_en_con_entorno(&personal, &path, &pathext)
+    let datos_locales = std::env::var_os(VARIABLE_DATOS_LOCALES_WINDOWS).map(PathBuf::from);
+    let entorno = EntornoDeBusqueda {
+        personal: &personal,
+        datos_locales: datos_locales.as_deref(),
+        path: &path,
+        pathext: &pathext,
+        sistema: sistema_actual(),
+    };
+    let cuentas = deteccion_agentes::con_cuentas_manuales(
+        deteccion_agentes::buscar_cuentas(&personal, |nombre| std::env::var_os(nombre)),
+        &cuentas_de_la_biblioteca(manuales),
+    );
+    agentes_de_las_cuentas(&entorno, rutas_elegidas, &cuentas)
+}
+
+/// Pasa las cuentas manuales de las preferencias al tipo de la biblioteca.
+pub(crate) fn cuentas_de_la_biblioteca(
+    manuales: &[CuentaManual],
+) -> Vec<(deteccion_agentes::Herramienta, PathBuf)> {
+    manuales
+        .iter()
+        .filter_map(|manual| Some((herramienta_de(manual.agente)?, manual.carpeta.clone())))
+        .collect()
 }
 
 /// Busca agentes bajo una carpeta personal ya determinada.
@@ -254,99 +346,331 @@ pub fn detectar_agentes() -> Vec<Agente> {
 /// # Devuelve
 /// Los agentes cuyas carpetas o configuraciones existen dentro de esa raíz.
 /// Detecta configuraciones y consolas usando un entorno suministrado expresamente.
+#[cfg(test)]
 pub(crate) fn detectar_agentes_en_con_entorno(
     personal: &Path,
     path: &OsStr,
     pathext: &OsStr,
 ) -> Vec<Agente> {
-    // (identidad, nombre, descripción, carpeta que delata la instalación,
-    //  archivo de configuración, formato)
-    let candidatos: Vec<(IdAgente, &str, &str, PathBuf, PathBuf, FormatoConfiguracion)> = vec![
-        (
-            IdAgente::ClaudeCode,
-            "Claude Code",
-            "Asistente de programación de Anthropic en la terminal",
-            personal.join(".claude"),
-            personal.join(".claude.json"),
-            FormatoConfiguracion::Json,
-        ),
-        (
-            IdAgente::CodexCli,
-            "Codex CLI",
-            "Agente de programación de OpenAI en la terminal",
-            personal.join(".codex"),
-            personal.join(".codex/config.toml"),
-            FormatoConfiguracion::Toml,
-        ),
-        (
-            IdAgente::GeminiCli,
-            "Gemini CLI",
-            "Agente de Google en una consola interactiva",
-            personal.join(".gemini"),
-            personal.join(".gemini/settings.json"),
-            FormatoConfiguracion::Json,
-        ),
-    ];
+    let entorno = EntornoDeBusqueda {
+        personal,
+        datos_locales: None,
+        path,
+        pathext,
+        sistema: sistema_actual(),
+    };
+    detectar_agentes_en(&entorno, &RutasDeAgentes::new())
+}
 
-    let mut agentes: Vec<_> = candidatos
-        .into_iter()
-        .filter_map(
-            |(id, nombre, descripcion, carpeta, ruta_configuracion, formato)| {
-                let ejecutable = match id {
-                    IdAgente::ClaudeCode => buscar_ejecutable("claude", path, pathext),
-                    IdAgente::CodexCli => buscar_ejecutable("codex", path, pathext),
-                    IdAgente::GeminiCli => buscar_ejecutable("gemini", path, pathext),
-                    _ => None,
-                };
-                let conectado = esta_conectado(&ruta_configuracion, formato);
-                let espacio_registrado = espacio_registrado(&ruta_configuracion, formato);
-                let existe_configuracion = ruta_configuracion.exists();
-                (carpeta.exists() || existe_configuracion || ejecutable.is_some()).then(|| Agente {
-                    id,
-                    nombre,
-                    descripcion,
-                    ruta_configuracion,
-                    formato,
-                    conectado,
-                    cli: ejecutable.map(|ejecutable| CapacidadCli { ejecutable }),
-                    espacio_registrado,
-                    existe_configuracion,
-                })
-            },
-        )
-        .collect();
-    agentes.sort_by_key(|agente| agente.id.orden());
+/// Detecta configuraciones y consolas en un entorno dado, con las rutas elegidas a mano.
+///
+/// # Parámetros
+/// - `entorno`: carpetas y variables donde buscar, sin leer las del proceso.
+/// - `rutas_elegidas`: el programa que el usuario fijó para cada agente, si fijó alguno.
+///
+/// # Devuelve
+/// Los agentes cuyas carpetas, configuraciones o programas existen, en orden estable.
+#[cfg(test)]
+pub(crate) fn detectar_agentes_en(
+    entorno: &EntornoDeBusqueda<'_>,
+    rutas_elegidas: &RutasDeAgentes,
+) -> Vec<Agente> {
+    let cuentas = deteccion_agentes::buscar_cuentas(entorno.personal, |_| None);
+    agentes_de_las_cuentas(entorno, rutas_elegidas, &cuentas)
+}
+
+/// Nombre visible y formato de configuración de cada herramienta con consola, en el orden en que
+/// se presentan. Su descripción traducida está en el catálogo de textos.
+const HERRAMIENTAS_CON_CONSOLA: [(IdAgente, &str, FormatoConfiguracion); 3] = [
+    (
+        IdAgente::ClaudeCode,
+        "Claude Code",
+        FormatoConfiguracion::Json,
+    ),
+    (IdAgente::CodexCli, "Codex CLI", FormatoConfiguracion::Toml),
+    (
+        IdAgente::Agy,
+        "Antigravity CLI (agy)",
+        FormatoConfiguracion::Json,
+    ),
+];
+
+/// Un agente por cada cuenta de las herramientas con consola, en orden estable.
+///
+/// Una herramienta sin ninguna cuenta pero con su programa localizado aparece con su cuenta por
+/// defecto, para que se pueda conectar aunque aún no haya creado su carpeta.
+///
+/// # Parámetros
+/// - `entorno`: carpetas y variables donde buscar los programas, sin leer las del proceso.
+/// - `rutas_elegidas`: el programa que el usuario fijó para cada herramienta, si fijó alguno.
+/// - `cuentas`: las cuentas encontradas y las dadas de alta a mano.
+pub(crate) fn agentes_de_las_cuentas(
+    entorno: &EntornoDeBusqueda<'_>,
+    rutas_elegidas: &RutasDeAgentes,
+    cuentas: &[deteccion_agentes::Cuenta],
+) -> Vec<Agente> {
+    let mut agentes = Vec::new();
+    for (id, nombre, formato) in HERRAMIENTAS_CON_CONSOLA {
+        let Some(herramienta) = herramienta_de(id) else {
+            continue;
+        };
+        let ejecutable =
+            localizar_ejecutable(id, rutas_elegidas.get(&id).map(PathBuf::as_path), entorno);
+        let mut propias: Vec<deteccion_agentes::Cuenta> = cuentas
+            .iter()
+            .filter(|cuenta| cuenta.herramienta == herramienta)
+            .cloned()
+            .collect();
+        if propias.is_empty() && ejecutable.is_some() {
+            propias.push(deteccion_agentes::Cuenta {
+                herramienta,
+                carpeta: herramienta.carpeta_por_defecto(entorno.personal),
+                origen: deteccion_agentes::OrigenDeLaCuenta::PorDefecto,
+            });
+        }
+        for cuenta in propias {
+            let ruta_configuracion = cuenta.archivo_de_configuracion(entorno.personal);
+            agentes.push(Agente {
+                id,
+                nombre,
+                conectado: esta_conectado(&ruta_configuracion, formato),
+                espacio_registrado: espacio_registrado(&ruta_configuracion, formato),
+                existe_configuracion: ruta_configuracion.exists(),
+                ruta_configuracion,
+                formato,
+                cli: ejecutable
+                    .clone()
+                    .map(|ejecutable| CapacidadCli { ejecutable }),
+                cuenta,
+            });
+        }
+    }
     agentes
 }
 
+/// Programa elegido a mano por el usuario para cada agente, guardado en sus preferencias.
+pub type RutasDeAgentes = BTreeMap<IdAgente, PathBuf>;
+
+/// Variable de entorno con la carpeta de datos locales del usuario en Windows.
+///
+/// Es la que usan los instaladores oficiales de Codex CLI y de Antigravity CLI para decidir
+/// dónde dejar su programa (ver [`CARPETAS_INSTALADOR_CODEX_WINDOWS`]).
+const VARIABLE_DATOS_LOCALES_WINDOWS: &str = "LOCALAPPDATA";
+
+/// Carpeta de programas del usuario que usan los instaladores oficiales: `~/.local/bin`.
+///
+/// Claude Code la usa en los tres sistemas («rm -f ~/.local/bin/claude» y
+/// «$env:USERPROFILE\.local\bin\claude.exe» en <https://code.claude.com/docs/en/setup>),
+/// Codex CLI en macOS y Linux («BIN_DIR="${CODEX_INSTALL_DIR:-$HOME/.local/bin}"» en
+/// <https://releases.openai.com/codex/install.sh>) y Antigravity CLI en macOS y Linux
+/// («Default binary location: ~/.local/bin/agy» en
+/// <https://antigravity.google/docs/getting-started?tab=cli>).
+const CARPETAS_BIN_DEL_USUARIO: [&str; 2] = [".local", "bin"];
+
+/// Carpetas, bajo `%LOCALAPPDATA%`, donde el instalador oficial de Codex CLI deja `codex.exe`.
+///
+/// Fuente: «$defaultVisibleBinDir = Join-Path $env:LOCALAPPDATA "Programs\OpenAI\Codex\bin"»
+/// en <https://releases.openai.com/codex/install.ps1>.
+const CARPETAS_INSTALADOR_CODEX_WINDOWS: [&str; 4] = ["Programs", "OpenAI", "Codex", "bin"];
+
+/// Carpetas, bajo `%LOCALAPPDATA%`, donde el instalador oficial de Antigravity CLI deja `agy`.
+///
+/// Fuente: «Default binary location: `C:\Users\<username>\AppData\Local\agy\bin`» en
+/// <https://antigravity.google/docs/getting-started?tab=cli>.
+const CARPETAS_INSTALADOR_AGY_WINDOWS: [&str; 2] = ["agy", "bin"];
+
+/// Sistema para el que se calculan las carpetas de instalación.
+///
+/// Se pasa como dato, y no se lee con `cfg!`, para poder comprobar el orden de búsqueda de
+/// cada sistema desde cualquiera de ellos.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Sistema {
+    /// Windows: los programas llevan extensión y hay carpeta de datos locales.
+    Windows,
+    /// macOS y Linux: los programas no llevan extensión.
+    Unix,
+}
+
+/// El sistema en que se está ejecutando MMCelt.
+///
+/// Es una función libre y no un método de [`Sistema`]: el enum es solo un dato que se pasa a la
+/// búsqueda, y `conectores` ya tiene sus tipos con comportamiento.
+pub(crate) fn sistema_actual() -> Sistema {
+    if cfg!(windows) {
+        Sistema::Windows
+    } else {
+        Sistema::Unix
+    }
+}
+
+/// Dónde se buscan los programas de los agentes, sin leer nada del proceso.
+pub(crate) struct EntornoDeBusqueda<'a> {
+    /// Carpeta personal del usuario.
+    pub(crate) personal: &'a Path,
+    /// Carpeta de datos locales (`%LOCALAPPDATA%`), solo en Windows y si se conoce.
+    pub(crate) datos_locales: Option<&'a Path>,
+    /// Contenido de la variable `PATH`.
+    pub(crate) path: &'a OsStr,
+    /// Contenido de la variable `PATHEXT` (solo cuenta en Windows).
+    pub(crate) pathext: &'a OsStr,
+    /// Sistema para el que se calculan las carpetas.
+    pub(crate) sistema: Sistema,
+}
+
+/// Texto con que se le enseña a la persona la ruta del programa de un agente.
+///
+/// Único punto que lo decide para la ventana de conexiones: quita el prefijo técnico de Windows
+/// (`\\?\`) igual que el resto de rutas de la interfaz.
+pub fn ruta_de_programa_para_interfaz(ruta: &Path) -> String {
+    crate::ui::limpiar_ruta_para_interfaz(ruta)
+}
+
+/// Carpetas, bajo la de datos locales, donde deja el programa el instalador oficial de Windows.
+fn carpetas_del_instalador_windows(id: IdAgente) -> &'static [&'static str] {
+    match id {
+        IdAgente::CodexCli => &CARPETAS_INSTALADOR_CODEX_WINDOWS,
+        IdAgente::Agy => &CARPETAS_INSTALADOR_AGY_WINDOWS,
+        _ => &[],
+    }
+}
+
+/// Rutas donde puede estar el programa de un agente, por orden, sin mirar el `PATH`.
+///
+/// Primero la carpeta del instalador oficial de Windows, si el agente tiene una; después
+/// `~/.local/bin`. Cada carpeta se
+/// combina con los nombres posibles del programa: en Windows, con las extensiones de `PATHEXT`.
+///
+/// # Devuelve
+/// Las rutas candidatas; vacía si el agente no tiene consola.
+pub(crate) fn rutas_candidatas(id: IdAgente, entorno: &EntornoDeBusqueda<'_>) -> Vec<PathBuf> {
+    let Some(orden) = id.orden_de_la_consola() else {
+        return Vec::new();
+    };
+    let nombres = nombres_segun_el_sistema(orden, entorno.pathext, entorno.sistema);
+    let carpetas_del_instalador = carpetas_del_instalador_windows(id);
+    let del_instalador = match (entorno.sistema, entorno.datos_locales) {
+        (Sistema::Windows, Some(locales)) if !carpetas_del_instalador.is_empty() => {
+            Some(unir(locales, carpetas_del_instalador))
+        }
+        _ => None,
+    };
+    let del_usuario = unir(entorno.personal, &CARPETAS_BIN_DEL_USUARIO);
+    del_instalador
+        .into_iter()
+        .chain(std::iter::once(del_usuario))
+        .flat_map(|carpeta| nombres.iter().map(move |nombre| carpeta.join(nombre)))
+        .collect()
+}
+
+/// Une una carpeta base con una lista de subcarpetas.
+fn unir(base: &Path, partes: &[&str]) -> PathBuf {
+    partes
+        .iter()
+        .fold(base.to_path_buf(), |ruta, parte| ruta.join(parte))
+}
+
+/// El programa de un agente: el elegido a mano si vale, o el que se encuentre.
+///
+/// # Parámetros
+/// - `id`: el agente.
+/// - `ruta_elegida`: el programa que fijó el usuario, si fijó alguno.
+/// - `entorno`: dónde buscar si no hay ruta elegida o no vale.
+///
+/// # Devuelve
+/// La ruta elegida si es un archivo ejecutable; si no, la primera candidata de
+/// [`rutas_candidatas`] que lo sea, y si tampoco, la primera del `PATH`. `None` si el agente
+/// no tiene consola o no hay programa en ninguna parte.
+pub(crate) fn localizar_ejecutable(
+    id: IdAgente,
+    ruta_elegida: Option<&Path>,
+    entorno: &EntornoDeBusqueda<'_>,
+) -> Option<PathBuf> {
+    let orden = id.orden_de_la_consola()?;
+    if let Some(ruta) = ruta_elegida.filter(|ruta| es_archivo_ejecutable(ruta)) {
+        return Some(ruta.to_path_buf());
+    }
+    rutas_candidatas(id, entorno)
+        .into_iter()
+        .find(|candidata| es_archivo_ejecutable(candidata))
+        .or_else(|| buscar_en_el_path(orden, entorno))
+}
+
+/// De dónde sale el programa que se usa para un agente, tal como se le explica al usuario.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EstadoDeLaRuta {
+    /// Se encontró solo, en una carpeta de instalación o en el `PATH`.
+    Detectada,
+    /// Es el que eligió el usuario.
+    ElegidaAMano,
+    /// El usuario eligió esta ruta, pero no existe o no es un programa; se usa la detección.
+    ElegidaNoValida(PathBuf),
+    /// No hay programa ni elegido ni detectado.
+    NoEncontrada,
+}
+
+/// Explica de dónde sale el programa de un agente ya detectado.
+///
+/// # Parámetros
+/// - `agente`: el agente, con el programa que se localizó.
+/// - `ruta_elegida`: la que fijó el usuario, si fijó alguna.
+pub fn estado_de_la_ruta(agente: &Agente, ruta_elegida: Option<&Path>) -> EstadoDeLaRuta {
+    let localizada = agente.cli.as_ref().map(|cli| cli.ejecutable.as_path());
+    match (ruta_elegida, localizada) {
+        (Some(elegida), Some(usada)) if elegida == usada => EstadoDeLaRuta::ElegidaAMano,
+        (Some(elegida), _) => EstadoDeLaRuta::ElegidaNoValida(elegida.to_path_buf()),
+        (None, Some(_)) => EstadoDeLaRuta::Detectada,
+        (None, None) => EstadoDeLaRuta::NoEncontrada,
+    }
+}
+
+/// Busca la orden en las carpetas del `PATH` del entorno.
+fn buscar_en_el_path(orden: &str, entorno: &EntornoDeBusqueda<'_>) -> Option<PathBuf> {
+    buscar_en_las_carpetas_del_path(orden, entorno.path, entorno.pathext, entorno.sistema)
+}
+
 /// Busca un ejecutable por las entradas separadas de `PATH` y, en Windows, `PATHEXT`.
+///
+/// Solo existe fuera de las pruebas en Unix, donde el lanzador busca con ella una terminal; la
+/// detección de agentes usa la misma búsqueda a través de [`localizar_ejecutable`].
+#[cfg(any(unix, test))]
 pub(crate) fn buscar_ejecutable(nombre: &str, path: &OsStr, pathext: &OsStr) -> Option<PathBuf> {
-    let nombres = nombres_ejecutables_candidatos(nombre, pathext);
+    buscar_en_las_carpetas_del_path(nombre, path, pathext, sistema_actual())
+}
+
+/// Único punto que recorre las carpetas de un `PATH` buscando un programa.
+///
+/// # Parámetros
+/// - `nombre`: la orden, sin extensión.
+/// - `path`: el contenido de la variable `PATH`.
+/// - `pathext`: el de `PATHEXT`, que solo cuenta en Windows.
+/// - `sistema`: el sistema para el que se generan los nombres de archivo.
+fn buscar_en_las_carpetas_del_path(
+    nombre: &str,
+    path: &OsStr,
+    pathext: &OsStr,
+    sistema: Sistema,
+) -> Option<PathBuf> {
+    let nombres = nombres_segun_el_sistema(nombre, pathext, sistema);
     std::env::split_paths(path)
         .flat_map(|carpeta| nombres.iter().map(move |nombre| carpeta.join(nombre)))
         .find(|candidato| es_archivo_ejecutable(candidato))
 }
 
-/// Genera nombres físicos sin evaluar contenido como una orden.
-fn nombres_ejecutables_candidatos(nombre: &str, pathext: &OsStr) -> Vec<String> {
-    #[cfg(windows)]
-    {
-        if Path::new(nombre).extension().is_some() {
-            return vec![nombre.to_string()];
-        }
-        pathext
-            .to_string_lossy()
-            .split(';')
-            .map(str::trim)
-            .filter(|extension| !extension.is_empty())
-            .map(|extension| format!("{nombre}{extension}"))
-            .collect()
+/// Nombres de archivo posibles de una orden en un sistema dado.
+///
+/// En Windows se le añade cada extensión de `PATHEXT`, salvo que ya traiga una; en macOS y
+/// Linux el programa no lleva extensión.
+fn nombres_segun_el_sistema(nombre: &str, pathext: &OsStr, sistema: Sistema) -> Vec<String> {
+    if sistema == Sistema::Unix || Path::new(nombre).extension().is_some() {
+        return vec![nombre.to_string()];
     }
-    #[cfg(not(windows))]
-    {
-        let _ = pathext;
-        vec![nombre.to_string()]
-    }
+    pathext
+        .to_string_lossy()
+        .split(';')
+        .map(str::trim)
+        .filter(|extension| !extension.is_empty())
+        .map(|extension| format!("{nombre}{extension}"))
+        .collect()
 }
 
 /// Comprueba el tipo de archivo y el permiso ejecutable cuando el sistema lo representa.
@@ -1208,7 +1532,7 @@ pub fn carpeta_contiene_otros_proyectos(carpeta: &Path) -> bool {
 /// Resuelve una ruta a su forma canónica cuando la carpeta existe; si no (por ejemplo, se borró
 /// entre proponerla y fijarla), conserva la propuesta tal cual en vez de fallar.
 ///
-/// Único punto de cálculo de canonicalización del espacio de trabajo (A-2): tanto sincronizar el
+/// Único punto de cálculo de canonicalización del espacio de trabajo: tanto sincronizar el
 /// espacio de trabajo con el mapa abierto como crear un proyecto directamente en una carpeta
 /// elegida pasan por aquí, para que una carpeta alcanzada por una unión de directorio no quede
 /// canónica en un flujo y sin canonizar en el otro.
@@ -1230,8 +1554,7 @@ pub fn es_carpeta_valida_para_espacio_trabajo(ruta: &Path) -> bool {
             .any(|c| matches!(c, std::path::Component::Normal(_)))
 }
 
-/// Único punto que decide qué texto de la carpeta de trabajo válida se le muestra a la persona
-/// (A-2).
+/// Único punto que decide qué texto de la carpeta de trabajo válida se le muestra a la persona.
 ///
 /// Antes de esto, «Proyecto e instrucciones» y «Conectar con mis IAs» decidían cada una por su
 /// cuenta si limpiar el prefijo técnico de Windows y sobre qué copia de la ruta hacerlo; la
@@ -1398,10 +1721,10 @@ mod pruebas {
         );
     }
 
-    /// C22-B — sobre una carpeta real, la función limpia el prefijo técnico de Windows en vez
+    /// Sobre una carpeta real, la función limpia el prefijo técnico de Windows en vez
     /// de devolver la ruta cruda que entrega `canonicalize()`.
     #[test]
-    fn c22_b_ruta_de_trabajo_para_interfaz_limpia_una_carpeta_valida() {
+    fn ruta_de_trabajo_para_interfaz_limpia_una_carpeta_valida() {
         let carpeta =
             std::env::temp_dir().join(format!("mmcelt_c22b_ruta_valida_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&carpeta).expect("crear carpeta de prueba");
@@ -1423,10 +1746,10 @@ mod pruebas {
         std::fs::remove_dir_all(&carpeta).expect("limpiar carpeta de prueba");
     }
 
-    /// C22-B — una raíz de volumen, que no delimita ningún proyecto, no produce texto: la
+    /// Una raíz de volumen, que no delimita ningún proyecto, no produce texto: la
     /// pantalla debe caer a su propio mensaje de «sin carpeta».
     #[test]
-    fn c22_b_ruta_de_trabajo_para_interfaz_devuelve_nada_para_una_raiz_de_volumen() {
+    fn ruta_de_trabajo_para_interfaz_devuelve_nada_para_una_raiz_de_volumen() {
         #[cfg(windows)]
         let raiz = std::path::PathBuf::from(r"O:\");
         #[cfg(not(windows))]

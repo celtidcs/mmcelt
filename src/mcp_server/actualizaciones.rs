@@ -138,6 +138,8 @@ pub(crate) struct SincronizacionTipada {
     pub(crate) file_path: String,
     /// Nombre opcional del agente para el recibo de devolución.
     pub(crate) agent_name: Option<String>,
+    /// El agente marca así su última entrega.
+    pub(crate) work_finished: bool,
     /// Actualizaciones convertidas una sola vez a tipos del dominio.
     pub(crate) node_updates: Vec<ActualizacionTipada>,
     /// Conexiones convertidas una sola vez a tipos del dominio.
@@ -149,6 +151,7 @@ impl From<ArgumentosSincronizar> for SincronizacionTipada {
         Self {
             file_path: valor.file_path,
             agent_name: valor.agent_name,
+            work_finished: valor.work_finished,
             node_updates: valor.node_updates.into_iter().map(Into::into).collect(),
             cross_connections: valor
                 .cross_connections

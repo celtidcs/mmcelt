@@ -41,7 +41,7 @@ Chaque rôle confère une identité distincte à la boîte du nœud sur le plan 
 - Connexions et tracés illustrant la structure organique du projet.
 
 **🤖 Pourquoi les rôles comptent-ils pour l'IA ?**
-Lorsque vous exportez ou transmettez votre carte à une IA (telle que Claude Code, Codex CLI ou Gemini CLI), le modèle ne voit pas une simple liste plate de textes :
+Lorsque vous exportez ou transmettez votre carte à une IA (telle que Claude Code, Codex CLI ou Antigravity CLI), le modèle ne voit pas une simple liste plate de textes :
 - **Comprend l'architecture :** Sait qu'un *Pilier stratégique* requiert une vision globale et ne doit pas être altéré à la légère.
 - **Distingue les doutes des certitudes :** Traite les *Hypothèses / Questions* comme des points ouverts nécessitant une analyse technique et des scénarios alternatifs.
 - **Génère des tâches cohérentes :** Lorsqu'on lui demande de développer un module, l'IA propose des *Tâches / Actions* concrètes et suggère des *Ressources / Outils* recommandés pour les accomplir.

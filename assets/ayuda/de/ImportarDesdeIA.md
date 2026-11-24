@@ -21,3 +21,5 @@ Dennoch empfiehlt es sich, **vor dem Importieren stets mit `Strg + S` zu speiche
 Die KI liefert Struktur und Inhalt, keine Darstellungsinformationen. Manuell verschobene Positionen und eingeklappte Zweige werden beim Import zurückgesetzt: Die Map wird automatisch neu angeordnet.
 
 Alle für die Entwicklung wesentlichen Daten bleiben vollständig erhalten: Titel, Notizen, Dateipfade, Tags, Rollen, Statuswerte, Prioritäten, Querverbindungen und Korrekturanweisungen.
+
+Alles, was Sie von der KI importieren, erscheint **hervorgehoben**, mit anderer Hintergrund- und Randfarbe, bis Sie den jeweiligen Knoten auswählen. Knoten ohne Prüfstatus kommen als **`🤖 KI-generiert`** an, und einer, der sich als freigegeben ausgibt, als **`⏳ Ausstehende Prüfung`**: Freigeben können nur Sie.

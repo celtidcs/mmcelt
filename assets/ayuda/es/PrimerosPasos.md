@@ -20,4 +20,4 @@ Un mapa mental es una representación gráfica de tus ideas: comienzas con un **
 ### 🧭 Por dónde continuar:
 1. Haz clic en el nodo central y pulsa `Espacio` (o doble clic) para renombrar tu proyecto.
 2. Pulsa `Tab` para crear tus primeros pilares estratégicos (nodos hijos) y `Intro` para añadir alternativas (nodos hermanos).
-3. Abre `🤖 Inteligencia Artificial` → `🧭 Proyecto e instrucciones para la IA` para explicarle a la IA el objetivo de tu proyecto en la pestaña **Proyecto**.
+3. Abre `✏️ Edición` → `🧭 Proyecto e instrucciones para la IA` para explicarle a la IA el objetivo de tu proyecto en la pestaña **Proyecto**.

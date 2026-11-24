@@ -4,7 +4,7 @@
 //! —no forma parte del estándar, pero la usan los principales editores de esquemas— el atributo
 //! `_note` para una nota de texto libre. Es exactamente lo que necesita MMCelt: título y notas
 //! del nodo viajan ahí; todo lo demás va como JSON dentro de la propia nota, según decide
-//! `crate::model::metadatos_externos` (C21-A).
+//! `crate::model::metadatos_externos`.
 //!
 //! Este módulo solo sabe de XML y de recorrer el árbol. La forma del JSON, sus marcas y cómo se
 //! separa de la prosa viven en el módulo de dominio; aquí no se duplica esa lógica.
@@ -35,7 +35,7 @@ pub enum ErrorOpml {
 pub struct ProyectoImportado {
     /// El mapa reconstruido, con valores por defecto donde no había metadatos de MMCelt.
     pub proyecto: Proyecto,
-    /// `false` cuando ningún nodo llevaba el bloque JSON de MMCelt: la señal de C21-D para que
+    /// `false` cuando ningún nodo llevaba el bloque JSON de MMCelt: la señal para que
     /// la interfaz avise a la persona de que el archivo no venía de MMCelt.
     pub trae_metadatos_mmcelt: bool,
 }
@@ -147,9 +147,9 @@ fn escribir_outline(writer: &mut Writer<Vec<u8>>, proyecto: &Proyecto, nodo: &No
 ///
 /// Reconstruye la jerarquía del árbol desde el anidamiento real de los `<outline>`. Si el
 /// `_note` de un nodo lleva el bloque JSON de MMCelt, se restablecen su estado, prioridad, rol,
-/// revisión, comentario, ruta, etiquetas, posición y plegado exactos (C21-C). Si no lo lleva,
-/// el nodo se crea con los valores por defecto de [`Nodo::new`] y solo con el texto como notas
-/// (C21-D): la persona que llama decide si avisar, mirando `trae_metadatos_mmcelt`.
+/// revisión, comentario, ruta, etiquetas, posición y plegado exactos. Si no lo lleva,
+/// el nodo se crea con los valores por defecto de [`Nodo::new`] y solo con el texto como notas:
+/// la persona que llama decide si avisar, mirando `trae_metadatos_mmcelt`.
 pub fn importar_desde_opml(xml: &str) -> Result<ProyectoImportado, ErrorOpml> {
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(true);
@@ -279,7 +279,7 @@ fn anadir_como_hijo_o_raiz(
 /// nodo correspondiente con valores por defecto donde no había JSON de MMCelt.
 ///
 /// Devuelve también si la nota llevaba un bloque de metadatos de **nodo** reconocible: es la
-/// señal exacta de C21-D, tomada directamente de si `separar_nota_importada` encontró y validó
+/// señal exacta de importación ajena, tomada directamente de si `separar_nota_importada` encontró y validó
 /// la marca, no de comparar el resultado contra unos valores por defecto a posteriori.
 fn leer_nodo_desde_atributos(
     inicio: &BytesStart,
@@ -395,7 +395,7 @@ mod pruebas {
         assert_eq!(resultado.unwrap_err(), ErrorOpml::SinContenido);
     }
 
-    /// **C21-C** — exportar un mapa de MMCelt y reimportarlo reconstruye estado, prioridad,
+    /// Exportar un mapa de MMCelt y reimportarlo reconstruye estado, prioridad,
     /// rol, revisión, comentario, etiquetas, ruta, posición, plegado y conexiones cruzadas
     /// idénticos. Ida y vuelta exacta, campo a campo.
     #[test]
@@ -449,7 +449,7 @@ mod pruebas {
         }
     }
 
-    /// **C21-D** — un OPML ajeno, sin ningún bloque de MMCelt, se importa con valores por
+    /// Un OPML ajeno, sin ningún bloque de MMCelt, se importa con valores por
     /// defecto y la señal `trae_metadatos_mmcelt` en `false`.
     #[test]
     fn importar_un_opml_ajeno_usa_valores_por_defecto_y_no_senala_metadatos() {

@@ -9,7 +9,7 @@ use crate::error::{AppError, AppResult};
 use crate::lanzador_agentes::{
     EjecutableConfirmado, EjecutorDeConsola, ResultadoLanzamiento as ProcesoIniciado,
 };
-use crate::model::Proyecto;
+use crate::model::{Proyecto, RevisionProyecto};
 use crate::proyecto_trabajo::ContextoProyecto;
 use crate::sesiones_agentes::{
     ConfirmacionSesion, EstadoLanzamiento, PromptSesionCompuesto, SesionPreparada,
@@ -74,6 +74,32 @@ pub struct TrabajoEnvio {
     pub idioma: Idioma,
 }
 
+/// Lo que contiene el archivo que escribe el envío: la instantánea del mapa tomada al pedirlo.
+///
+/// Mientras el trabajador guarda, la persona puede seguir editando o abrir nodos nuevos de la
+/// IA. Eso no está en el archivo, y al recoger el resultado tiene que seguir contando como
+/// pendiente.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstantaneaGuardada {
+    /// Revisión del mapa que se escribió.
+    pub revision: RevisionProyecto,
+    /// Nodos que en el archivo siguen resaltados como nuevos de la IA.
+    pub resaltados: std::collections::HashSet<uuid::Uuid>,
+}
+
+/// Describe lo que quedará en el archivo al guardar `proyecto`.
+pub fn instantanea_guardada(proyecto: &Proyecto) -> InstantaneaGuardada {
+    InstantaneaGuardada {
+        revision: proyecto.revision(),
+        resaltados: proyecto
+            .nodes
+            .iter()
+            .filter(|(_, nodo)| nodo.nuevo_de_la_ia)
+            .map(|(id, _)| *id)
+            .collect(),
+    }
+}
+
 /// Resultado que vuelve del trabajador al estado gráfico.
 pub struct ResultadoTrabajoEnvio {
     /// Ruta del mapa al que pertenece el resultado, usada para descartar respuestas obsoletas.
@@ -82,6 +108,8 @@ pub struct ResultadoTrabajoEnvio {
     pub mapa_guardado: bool,
     /// Huella calculada en el trabajador para que la interfaz no tenga que releer el mapa.
     pub huella_guardada: Option<u64>,
+    /// Lo que contiene el archivo, si se guardó.
+    pub instantanea: InstantaneaGuardada,
     /// Sesión preparada o fallo tipado del primer paso que no pudo completarse.
     pub resultado: AppResult<ResultadoLanzamiento>,
 }
@@ -140,8 +168,9 @@ impl EnvioEnSegundoPlano {
         }
     }
 
+    /// Trabajador de prueba que ejecuta `ejecutar` en lugar del envío real.
     #[cfg(test)]
-    fn con_funcion<F>(ctx: egui::Context, ejecutar: F) -> Self
+    pub(crate) fn con_funcion<F>(ctx: egui::Context, ejecutar: F) -> Self
     where
         F: Fn(TrabajoEnvio) -> ResultadoTrabajoEnvio + Send + 'static,
     {
@@ -164,12 +193,17 @@ struct PersistenciaEnvioLocal {
     ruta_mapa: PathBuf,
     idioma: Idioma,
     mapa_guardado: bool,
+    /// Huella de lo que escribió MMCelt, tomada nada más guardar y antes de lanzar el agente:
+    /// si se tomara después, podría ser ya la de lo que escribió el agente, y la aplicación lo
+    /// daría por propio y no lo recargaría.
+    huella_guardada: Option<u64>,
 }
 
 impl PersistenciaEnvio for PersistenciaEnvioLocal {
     fn guardar(&mut self) -> AppResult<ResultadoPreparacion> {
         crate::storage::guardar_proyecto_en_archivo(&self.proyecto, &self.ruta_mapa)?;
         self.mapa_guardado = true;
+        self.huella_guardada = crate::proyectos::huella(&self.ruta_mapa);
         Ok(ResultadoPreparacion::Preparado {
             ruta_mapa: self.ruta_mapa.clone(),
         })
@@ -187,14 +221,20 @@ impl PersistenciaEnvio for PersistenciaEnvioLocal {
 
 fn ejecutar_trabajo(trabajo: TrabajoEnvio) -> ResultadoTrabajoEnvio {
     let ruta_mapa = trabajo.ruta_mapa.clone();
+    let instantanea = instantanea_guardada(&trabajo.proyecto);
     match trabajo.solicitud.contexto.contiene(&ruta_mapa) {
         Ok(true) => {}
         Ok(false) => {
+            let error = AppError::RutaFueraDelProyectoConDetalle {
+                ruta: ruta_mapa.clone(),
+                raiz: trabajo.solicitud.contexto.raiz().to_path_buf(),
+            };
             return ResultadoTrabajoEnvio {
                 ruta_mapa,
                 mapa_guardado: false,
                 huella_guardada: None,
-                resultado: Err(AppError::RutaFueraDelProyecto),
+                instantanea,
+                resultado: Err(error),
             };
         }
         Err(error) => {
@@ -202,6 +242,7 @@ fn ejecutar_trabajo(trabajo: TrabajoEnvio) -> ResultadoTrabajoEnvio {
                 ruta_mapa,
                 mapa_guardado: false,
                 huella_guardada: None,
+                instantanea,
                 resultado: Err(error),
             };
         }
@@ -211,6 +252,7 @@ fn ejecutar_trabajo(trabajo: TrabajoEnvio) -> ResultadoTrabajoEnvio {
         ruta_mapa: trabajo.ruta_mapa,
         idioma: trabajo.idioma,
         mapa_guardado: false,
+        huella_guardada: None,
     };
     let ejecutor = crate::lanzador_agentes::ConsolaDelSistema;
     let lanzador = LanzadorConEjecutor::nuevo(&ejecutor);
@@ -220,10 +262,8 @@ fn ejecutar_trabajo(trabajo: TrabajoEnvio) -> ResultadoTrabajoEnvio {
     ResultadoTrabajoEnvio {
         ruta_mapa,
         mapa_guardado: persistencia.mapa_guardado,
-        huella_guardada: persistencia
-            .mapa_guardado
-            .then(|| crate::proyectos::huella(&persistencia.ruta_mapa))
-            .flatten(),
+        huella_guardada: persistencia.huella_guardada,
+        instantanea,
         resultado,
     }
 }
@@ -313,7 +353,10 @@ where
         }
         let ResultadoPreparacion::Preparado { ruta_mapa } = self.persistencia.guardar()?;
         if !solicitud.contexto.contiene(&ruta_mapa)? {
-            return Err(AppError::RutaFueraDelProyecto);
+            return Err(AppError::RutaFueraDelProyectoConDetalle {
+                ruta: ruta_mapa,
+                raiz: solicitud.contexto.raiz().to_path_buf(),
+            });
         }
         self.persistencia.exportar(&ruta_mapa)?;
         let mut sesion = self.sesiones.preparar(
@@ -442,6 +485,100 @@ mod pruebas_segundo_plano {
         }
     }
 
+    /// Carpeta temporal con una raíz autorizada y una ruta hermana.
+    fn con_destino_fuera_del_proyecto(probar: impl FnOnce(TrabajoEnvio, &Path, &Path)) {
+        let carpeta =
+            std::env::temp_dir().join(format!("mmcelt-envio-ruta-{}", uuid::Uuid::new_v4()));
+        let autorizada = carpeta.join("autorizada");
+        std::fs::create_dir_all(&autorizada).expect("crear raíz de prueba");
+        struct Limpiar(PathBuf);
+        impl Drop for Limpiar {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        let _limpiar = Limpiar(carpeta.clone());
+        let mut trabajo = trabajo_de_prueba(&autorizada);
+        let ruta = carpeta.join("fuera.mmcelt");
+        trabajo.ruta_mapa = ruta.clone();
+        let raiz = trabajo.solicitud.contexto.raiz().to_path_buf();
+        probar(trabajo, &ruta, &raiz);
+    }
+
+    /// La presentación necesita ambos datos concretos para explicar el rechazo.
+    fn exigir_rutas_del_rechazo(
+        resultado: AppResult<ResultadoLanzamiento>,
+        ruta: &Path,
+        raiz: &Path,
+    ) {
+        match resultado {
+            Err(AppError::RutaFueraDelProyectoConDetalle {
+                ruta: rechazada,
+                raiz: permitida,
+            }) => {
+                assert_eq!(rechazada, ruta);
+                assert_eq!(permitida, raiz);
+            }
+            otro => panic!("se esperaba rechazo con ruta y raíz: {otro:?}"),
+        }
+    }
+
+    #[test]
+    fn envio_sincrono_conserva_ruta_y_raiz_del_rechazo() {
+        struct RutaPreparada(PathBuf);
+        impl PersistenciaEnvio for RutaPreparada {
+            fn guardar(&mut self) -> AppResult<ResultadoPreparacion> {
+                Ok(ResultadoPreparacion::Preparado {
+                    ruta_mapa: self.0.clone(),
+                })
+            }
+            fn exportar(&mut self, _: &Path) -> AppResult<()> {
+                panic!("el envío rechazado no debe exportar");
+            }
+        }
+        con_destino_fuera_del_proyecto(|trabajo, ruta, raiz| {
+            let consola = crate::lanzador_agentes::ConsolaDelSistema;
+            let lanzador = LanzadorConEjecutor::nuevo(&consola);
+            let mut persistencia = RutaPreparada(trabajo.ruta_mapa);
+            let resultado =
+                EnvioAAgente::nuevo(&lanzador, &mut persistencia, &RepositorioSesionesLocal)
+                    .ejecutar(trabajo.solicitud);
+            exigir_rutas_del_rechazo(resultado, ruta, raiz);
+        });
+    }
+
+    #[test]
+    fn envio_en_segundo_plano_conserva_ruta_y_raiz_del_rechazo() {
+        con_destino_fuera_del_proyecto(|trabajo, ruta, raiz| {
+            let rechazado = ejecutar_trabajo(trabajo);
+            assert!(!rechazado.mapa_guardado);
+            assert!(!ruta.exists());
+            exigir_rutas_del_rechazo(rechazado.resultado, ruta, raiz);
+        });
+    }
+
+    /// La huella de lo guardado se toma al guardar, antes de lanzar al agente: si se tomara al
+    /// terminar el trabajo, podría ser ya la de lo que escribió el agente.
+    #[test]
+    fn guardar_anota_la_huella_de_lo_que_escribio_mmcelt() {
+        let carpeta =
+            std::env::temp_dir().join(format!("mmcelt-envio-huella-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&carpeta).expect("crear carpeta de prueba");
+        let ruta = carpeta.join("mapa.mmcelt");
+        let mut persistencia = PersistenciaEnvioLocal {
+            proyecto: Proyecto::nuevo_vacio("Prueba".to_owned()),
+            ruta_mapa: ruta.clone(),
+            idioma: Idioma::Espanol,
+            mapa_guardado: false,
+            huella_guardada: None,
+        };
+        persistencia.guardar().expect("guardar el mapa");
+        let huella = crate::proyectos::huella(&ruta);
+        assert!(huella.is_some());
+        assert_eq!(persistencia.huella_guardada, huella);
+        std::fs::remove_dir_all(carpeta).expect("limpiar");
+    }
+
     #[test]
     fn preparar_un_envio_no_bloquea_el_fotograma() {
         let carpeta = std::env::temp_dir().join(format!("mmcelt-envio-{}", uuid::Uuid::new_v4()));
@@ -457,6 +594,7 @@ mod pruebas_segundo_plano {
                     ruta_mapa: trabajo.ruta_mapa,
                     mapa_guardado: true,
                     huella_guardada: Some(7),
+                    instantanea: instantanea_guardada(&trabajo.proyecto),
                     resultado: Ok(ResultadoLanzamiento::PreparadoMcp {
                         sesion: SesionPreparada {
                             carpeta: PathBuf::new(),
@@ -465,7 +603,7 @@ mod pruebas_segundo_plano {
                             metadatos: crate::sesiones_agentes::MetadatosSesion {
                                 version_formato: 1,
                                 id_sesion: uuid::Uuid::nil(),
-                                fecha_utc: chrono::DateTime::UNIX_EPOCH,
+                                fecha_utc: jiff::Timestamp::UNIX_EPOCH,
                                 agente: IdAgente::CodexCli,
                                 mapa_relativo: PathBuf::from("prueba.mmcelt"),
                                 fuentes_incorporadas: Vec::new(),

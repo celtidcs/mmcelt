@@ -209,6 +209,12 @@ pub struct ThemeConfig {
     /// Borde de un nodo seleccionado.
     pub borde_del_nodo_seleccionado: Color32,
 
+    /// Fondo de un nodo que la IA acaba de crear y la persona todavía no ha abierto.
+    pub fondo_del_nodo_nuevo_de_la_ia: Color32,
+
+    /// Borde de un nodo que la IA acaba de crear y la persona todavía no ha abierto.
+    pub borde_del_nodo_nuevo_de_la_ia: Color32,
+
     /// Color del texto principal: títulos de nodo y contenido.
     pub texto_principal: Color32,
 
@@ -306,6 +312,8 @@ impl ThemeConfig {
             fondo_de_la_raiz: Color32::from_rgb(46, 58, 82),
             borde_del_nodo: Color32::from_rgb(51, 61, 82),
             borde_del_nodo_seleccionado: Color32::from_rgb(96, 165, 250),
+            fondo_del_nodo_nuevo_de_la_ia: Color32::from_rgb(26, 18, 50),
+            borde_del_nodo_nuevo_de_la_ia: Color32::from_rgb(167, 139, 250),
             texto_principal: Color32::from_rgb(238, 242, 248),
             texto_secundario: Color32::from_rgb(180, 192, 212),
             texto_atenuado: Color32::from_rgb(147, 157, 175),
@@ -354,6 +362,8 @@ impl ThemeConfig {
             fondo_de_la_raiz: Color32::from_rgb(245, 233, 208),
             borde_del_nodo: Color32::from_rgb(216, 209, 196),
             borde_del_nodo_seleccionado: Color32::from_rgb(194, 65, 12),
+            fondo_del_nodo_nuevo_de_la_ia: Color32::from_rgb(221, 214, 254),
+            borde_del_nodo_nuevo_de_la_ia: Color32::from_rgb(124, 58, 237),
             texto_principal: Color32::from_rgb(42, 39, 33),
             texto_secundario: Color32::from_rgb(74, 68, 59),
             texto_atenuado: Color32::from_rgb(100, 94, 84),
@@ -400,6 +410,8 @@ impl ThemeConfig {
             fondo_de_la_raiz: Color32::from_rgb(38, 38, 38),
             borde_del_nodo: Color32::from_rgb(255, 255, 255),
             borde_del_nodo_seleccionado: Color32::from_rgb(255, 255, 0),
+            fondo_del_nodo_nuevo_de_la_ia: Color32::from_rgb(80, 0, 110),
+            borde_del_nodo_nuevo_de_la_ia: Color32::from_rgb(255, 0, 255),
             texto_principal: Color32::from_rgb(255, 255, 255),
             texto_secundario: Color32::from_rgb(220, 220, 220),
             texto_atenuado: Color32::from_rgb(170, 170, 170),
@@ -752,6 +764,7 @@ mod tests {
                 ("panel", tema.fondo_del_panel),
                 ("nodo", tema.fondo_del_nodo),
                 ("nodo raiz", tema.fondo_de_la_raiz),
+                ("nodo nuevo de la IA", tema.fondo_del_nodo_nuevo_de_la_ia),
                 ("etiqueta", tema.fondo_de_la_insignia),
                 ("control", tema.superficie),
                 ("control senalado", tema.superficie_con_cursor),
@@ -779,6 +792,7 @@ mod tests {
             let superficies = [
                 ("panel", tema.fondo_del_panel),
                 ("nodo", tema.fondo_del_nodo),
+                ("nodo nuevo de la IA", tema.fondo_del_nodo_nuevo_de_la_ia),
                 ("control", tema.superficie),
                 ("lienzo", tema.fondo_del_lienzo),
                 ("etiqueta", tema.fondo_de_la_insignia),
@@ -814,6 +828,7 @@ mod tests {
                 ("panel", tema.fondo_del_panel),
                 ("control", tema.superficie),
                 ("nodo", tema.fondo_del_nodo),
+                ("nodo nuevo de la IA", tema.fondo_del_nodo_nuevo_de_la_ia),
                 ("etiqueta", tema.fondo_de_la_insignia),
                 ("lienzo", tema.fondo_del_lienzo),
             ];
@@ -933,6 +948,36 @@ mod tests {
     }
 
     #[test]
+    /// Un nodo nuevo de la IA se distingue de un vistazo: su fondo no se confunde con el de un
+    /// nodo corriente ni con el de la raíz, y su borde se ve sobre su fondo y sobre el lienzo.
+    fn el_nodo_nuevo_de_la_ia_destaca() {
+        for modo in AppThemeMode::TODOS {
+            let tema = ThemeConfig::new(modo);
+            for (nombre, otro) in [
+                ("nodo", tema.fondo_del_nodo),
+                ("nodo raiz", tema.fondo_de_la_raiz),
+            ] {
+                let medido = contraste(tema.fondo_del_nodo_nuevo_de_la_ia, otro);
+                assert!(
+                    medido >= 1.12,
+                    "{modo:?}: el fondo del nodo nuevo de la IA y el de {nombre} se confunden (contraste {medido:.2})"
+                );
+            }
+            for (nombre, fondo) in [
+                ("su fondo", tema.fondo_del_nodo_nuevo_de_la_ia),
+                ("lienzo", tema.fondo_del_lienzo),
+            ] {
+                exigir_contraste(
+                    tema.borde_del_nodo_nuevo_de_la_ia,
+                    fondo,
+                    CONTRASTE_MINIMO_GRAFICO,
+                    &format!("{modo:?} / borde del nodo nuevo de la IA sobre {nombre}"),
+                );
+            }
+        }
+    }
+
+    #[test]
     /// Lienzo, panel y nodo se distinguen entre sí.
     ///
     /// Si dos coinciden, la interfaz se aplana y el panel deja de leerse como una capa
@@ -984,6 +1029,8 @@ mod tests {
                 ("node_root_bg", tema.fondo_de_la_raiz),
                 ("node_border", tema.borde_del_nodo),
                 ("node_border_selected", tema.borde_del_nodo_seleccionado),
+                ("node_new_ai_bg", tema.fondo_del_nodo_nuevo_de_la_ia),
+                ("node_new_ai_border", tema.borde_del_nodo_nuevo_de_la_ia),
                 ("text_primary", tema.texto_principal),
                 ("text_secondary", tema.texto_secundario),
                 ("text_muted", tema.texto_atenuado),

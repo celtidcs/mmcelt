@@ -16,7 +16,7 @@
 //!
 //! ## Por qué `guia_de`, `titulo_de` y `resumen_de` son largas a propósito
 //!
-//! Miden 418, 234 y 154 líneas, por encima del límite del estándar 2 de `CLAUDE.md`. Son
+//! Miden 418, 234 y 154 líneas, muy por encima de lo que se espera de una función. Son
 //! el mismo caso que [`crate::textos`]: tablas de datos, no lógica. Su complejidad real es
 //! 1, porque un `match` de mapeo no decide nada; lo que crece es el número de temas de
 //! ayuda —hoy 24— multiplicado por los seis idiomas.
@@ -257,12 +257,12 @@ pub fn titulo_de(tema: TemaDeAyuda, idioma: Idioma) -> &'static str {
         (TemaDeAyuda::ChatGPTCustomGPT, Idioma::ChinoSimplificado) => {
             "🟢 与 Codex CLI 及 ChatGPT 集成"
         }
-        (TemaDeAyuda::GeminiGems, Idioma::Espanol) => "🔵 Integración con Gemini CLI",
-        (TemaDeAyuda::GeminiGems, Idioma::Ingles) => "🔵 Integration with Gemini CLI",
-        (TemaDeAyuda::GeminiGems, Idioma::Frances) => "🔵 Intégration avec Gemini CLI",
-        (TemaDeAyuda::GeminiGems, Idioma::Aleman) => "🔵 Integration mit Gemini CLI",
-        (TemaDeAyuda::GeminiGems, Idioma::Ruso) => "🔵 Интеграция с Gemini CLI",
-        (TemaDeAyuda::GeminiGems, Idioma::ChinoSimplificado) => "🔵 与 Gemini CLI 集成",
+        (TemaDeAyuda::GeminiGems, Idioma::Espanol) => "🔵 Integración con Antigravity CLI (agy)",
+        (TemaDeAyuda::GeminiGems, Idioma::Ingles) => "🔵 Integration with Antigravity CLI (agy)",
+        (TemaDeAyuda::GeminiGems, Idioma::Frances) => "🔵 Intégration avec Antigravity CLI (agy)",
+        (TemaDeAyuda::GeminiGems, Idioma::Aleman) => "🔵 Integration mit Antigravity CLI (agy)",
+        (TemaDeAyuda::GeminiGems, Idioma::Ruso) => "🔵 Интеграция с Antigravity CLI (agy)",
+        (TemaDeAyuda::GeminiGems, Idioma::ChinoSimplificado) => "🔵 与 Antigravity CLI (agy) 集成",
     }
 }
 
@@ -421,12 +421,24 @@ pub fn resumen_de(tema: TemaDeAyuda, idioma: Idioma) -> &'static str {
         (TemaDeAyuda::ChatGPTCustomGPT, Idioma::Aleman) => "Nutzen Sie die KI von OpenAI im Terminal mit Codex CLI oder im Browser mit ChatGPT.",
         (TemaDeAyuda::ChatGPTCustomGPT, Idioma::Ruso) => "Используйте ИИ OpenAI в терминале с Codex CLI или в браузере с ChatGPT.",
         (TemaDeAyuda::ChatGPTCustomGPT, Idioma::ChinoSimplificado) => "在终端中使用 Codex CLI 或在浏览器中使用 ChatGPT 畅享 OpenAI 的 AI 能力。",
-        (TemaDeAyuda::GeminiGems, Idioma::Espanol) => "Conecta Gemini CLI con MMCelt o usa una clave de API gratuita de Google AI Studio.",
-        (TemaDeAyuda::GeminiGems, Idioma::Ingles) => "Connect Gemini CLI with MMCelt or use a free Google AI Studio API key.",
-        (TemaDeAyuda::GeminiGems, Idioma::Frances) => "Connectez Gemini CLI avec MMCelt ou utilisez une clé d'API gratuite Google AI Studio.",
-        (TemaDeAyuda::GeminiGems, Idioma::Aleman) => "Verbinden Sie Gemini CLI mit MMCelt oder nutzen Sie einen kostenlosen Google AI Studio API-Schlüssel.",
-        (TemaDeAyuda::GeminiGems, Idioma::Ruso) => "Подключите Gemini CLI к MMCelt или используйте бесплатный ключ API Google AI Studio.",
-        (TemaDeAyuda::GeminiGems, Idioma::ChinoSimplificado) => "将 Gemini CLI 连接至 MMCelt，或使用 Google AI Studio 免费 API 密钥。",
+        (TemaDeAyuda::GeminiGems, Idioma::Espanol) => {
+            "Conecta Antigravity CLI (agy) con MMCelt usando tu cuenta de Google."
+        }
+        (TemaDeAyuda::GeminiGems, Idioma::Ingles) => {
+            "Connect Antigravity CLI (agy) with MMCelt using your Google account."
+        }
+        (TemaDeAyuda::GeminiGems, Idioma::Frances) => {
+            "Connectez Antigravity CLI (agy) avec MMCelt en utilisant votre compte Google."
+        }
+        (TemaDeAyuda::GeminiGems, Idioma::Aleman) => {
+            "Verbinden Sie Antigravity CLI (agy) mit MMCelt über Ihr Google-Konto."
+        }
+        (TemaDeAyuda::GeminiGems, Idioma::Ruso) => {
+            "Подключите Antigravity CLI (agy) к MMCelt, используя аккаунт Google."
+        }
+        (TemaDeAyuda::GeminiGems, Idioma::ChinoSimplificado) => {
+            "使用您的 Google 账户将 Antigravity CLI (agy) 连接至 MMCelt。"
+        }
     }
 }
 

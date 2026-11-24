@@ -33,7 +33,7 @@ or automatically if you used automated dispatch.
 
 ### ✍️ What you decide, and where
 
-- **Your overall intent:** `🤖 Artificial Intelligence` → `🧭 Project and instructions for AI` → **Project** tab.
+- **Your overall intent:** `✏️ Edit` → `🧭 Project and instructions for AI` → **Project** tab.
 - **What is accepted and what is not:** mark nodes as `🛡️ Human Approved` or
   `⚠️ Requires Correction`, and send them with
   `🤖 Artificial Intelligence` → `🛑 Send Corrections and Directives to the AI...`.
@@ -93,8 +93,8 @@ You can work comfortably from your regular web browser:
 4. When the AI replies with a block in JSON or Markdown format, copy it.
 5. In MMCelt, click `🤖 Artificial Intelligence` → `📥 Import from AI (ChatGPT, Claude, Gemini)...` and paste the response. Your new branches will appear on the map immediately.
 
-If in the future you install an agent in your system terminal (such as Claude Code, Codex CLI, or Gemini CLI),
-MMCelt will recognize it as soon as it is in your PATH.
+If in the future you install an agent in your system terminal (such as Claude Code, Codex CLI, or Antigravity CLI),
+MMCelt will recognize it as soon as it finds it: it looks in the official installer's folder, in .local/bin in your home folder and in the PATH, and in `🔌 Connect MMCelt with my AIs...` you can pick its program by hand with `📂 Change path...`.
 
 ### 📚 Where to go next, depending on your goal
 

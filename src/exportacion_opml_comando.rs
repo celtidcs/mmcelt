@@ -3,7 +3,7 @@
 //! Enlaza el diálogo de archivo, `crate::exportacion_opml` (que solo sabe de XML) y el estado
 //! de la aplicación. Vive fuera de `impl AplicacionMapaMental` a propósito, siguiendo el mismo
 //! patrón que `guardado_como.rs` y `traslado.rs`: la orquestación de un flujo de usuario no es
-//! responsabilidad del objeto central del mapa (A-3), así que no le suma un método más.
+//! responsabilidad del objeto central del mapa, así que no le suma un método más.
 //!
 //! No lleva la comprobación de solo lectura por raíz de volumen: exportar escribe en un archivo
 //! elegido por la persona, fuera del espacio de trabajo activo, y no lo pone en riesgo; importar
@@ -12,7 +12,7 @@
 use crate::textos::Texto;
 use crate::AplicacionMapaMental;
 
-/// Exporta el mapa activo a un documento OPML (tanda 5, C21-A).
+/// Exporta el mapa activo a un documento OPML.
 ///
 /// Los campos de MMCelt sin equivalente nativo en OPML —estado, prioridad, rol, revisión,
 /// comentario, ruta, conexiones cruzadas— viajan como JSON dentro de la nota de cada nodo, según
@@ -38,7 +38,7 @@ pub fn exportar(app: &mut AplicacionMapaMental) {
     }
 }
 
-/// Importa un mapa desde un documento OPML (tanda 5, C21-C/C21-D).
+/// Importa un mapa desde un documento OPML.
 ///
 /// Si el archivo lleva el bloque JSON de MMCelt, reconstruye estado, prioridad, rol, revisión,
 /// comentario, ruta, etiquetas, posición, plegado y conexiones cruzadas exactos. Si no —un
@@ -70,7 +70,7 @@ pub fn importar(app: &mut AplicacionMapaMental) {
     }
 }
 
-/// Prepara el proyecto reconstruido y el aviso a mostrar tras un `importar_desde_opml` (PH-0925-2).
+/// Prepara el proyecto reconstruido y el aviso a mostrar tras un `importar_desde_opml`.
 ///
 /// Separada de [`importar`] para poder comprobarla sin diálogos de archivo: un documento ajeno no
 /// trae posiciones de MMCelt, así que todos sus nodos nacen amontonados en el origen si no se
@@ -98,8 +98,8 @@ mod pruebas {
     use super::*;
     use crate::textos::Idioma;
 
-    /// **PH-0925-2** — un OPML ajeno amontona todos los nodos en el origen; el comando debe
-    /// dejarlos en posiciones distintas llamando a la disposición automática.
+    /// Comprueba que un OPML ajeno que amontona todos los nodos en el origen
+    /// quede en posiciones distintas llamando a la disposición automática.
     #[test]
     fn preparar_mapa_importado_dispone_un_opml_ajeno() {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -127,8 +127,8 @@ mod pruebas {
         );
     }
 
-    /// **PH-0925-2, lado positivo** — un OPML propio de MMCelt no se toca: sus posiciones deben
-    /// sobrevivir exactas.
+    /// Comprueba el lado positivo: un OPML propio de MMCelt no se toca y sus posiciones
+    /// sobreviven exactas.
     #[test]
     fn preparar_mapa_importado_no_toca_un_opml_propio() {
         let mut original = crate::model::Proyecto::nuevo_vacio("Con posiciones");

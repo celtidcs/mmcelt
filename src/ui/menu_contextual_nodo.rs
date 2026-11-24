@@ -1,7 +1,8 @@
 //! # Menú contextual de un nodo (`ui/menu_contextual_nodo.rs`)
 //!
 //! Clic derecho sin arrastrar sobre una tarjeta: el nodo queda seleccionado y aparece, en ese
-//! punto, un menú con lo que se suele hacer con él. Arrastrar con el botón derecho sigue moviendo la cámara: `egui` solo da por
+//! punto, un menú con lo que se suele hacer con él (catálogo fijado el
+//! 2026-09-30). Arrastrar con el botón derecho sigue moviendo la cámara: `egui` solo da por
 //! hecho un clic si el puntero no superó el umbral de arrastre.
 //!
 //! El lienzo solo anota dónde cayó el clic; aquí se decide sobre qué nodo, se dibuja el menú y
@@ -42,7 +43,7 @@ pub enum AccionDelMenu {
     Prioridad(PrioridadNodo),
     /// Cambiar su estado de control humano.
     Revision(EstadoRevision),
-    /// Cambiar su rol (PH-1007-3).
+    /// Cambiar su rol.
     Rol(RolNodo),
 }
 
@@ -118,7 +119,7 @@ pub(crate) fn atender_el_menu_contextual(app: &mut AplicacionMapaMental, ctx: &e
         app.lienzo_mut().actualizar_vista().menu_contextual = None;
         return;
     };
-    let respuesta = egui::Area::new(egui::Id::new("menu_contextual_nodo"))
+    let respuesta = egui::Area::new(egui::Id::unique("menu_contextual_nodo"))
         .order(egui::Order::Foreground)
         .fixed_pos(Pos2::new(menu.en_pantalla[0], menu.en_pantalla[1]))
         .show(ctx, |ui| {

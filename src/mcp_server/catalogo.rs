@@ -65,6 +65,7 @@ fn herramienta_crear_mapa() -> Value {
             "properties": {
                 "file_path": { "type": "string", "description": AYUDA_DEL_CAMPO_RUTA },
                 "agent_name": { "type": "string", "description": "Nombre del agente que devolverá el mapa, por ejemplo Claude Code, ChatGPT Codex o Gemini Antigravity." },
+                "work_finished": { "type": "boolean", "description": "Ponlo a true solo en tu última entrega, cuando hayas terminado todo el trabajo. Mientras no llega, MMCelt mantiene el mapa bloqueado para que la persona no edite a la vez que tú." },
                 "title": { "type": "string", "description": "Título del proyecto" },
                 "creator_vision": { "type": "string", "description": "Qué busca plasmar el usuario y la visión del proyecto" },
                 "project_goals": { "type": "string", "description": "Objetivos y entregables deseados" },
@@ -140,6 +141,7 @@ fn herramienta_sincronizar_progreso() -> Value {
             "properties": {
                 "file_path": { "type": "string", "description": AYUDA_DEL_CAMPO_RUTA },
                 "agent_name": { "type": "string", "description": "Nombre del agente que devuelve la modificación." },
+                "work_finished": { "type": "boolean", "description": "Ponlo a true solo en tu última entrega, cuando hayas terminado todo el trabajo. Mientras no llega, MMCelt mantiene el mapa bloqueado para que la persona no edite a la vez que tú." },
                 "node_updates": {
                     "type": "array",
                     "description": "Nodos a actualizar. Cada entrada señala su nodo con «id», con «title» o con los dos; hay que indicar al menos uno. Si el título no existe en el mapa, el nodo se crea colgando de «parent_id» o de «parent_title», o de la raíz si no se indica ninguno. Un título que corresponde a varios nodos rechaza la llamada entera sin escribir nada, y la respuesta enumera los candidatos con su UUID: repite entonces la llamada con «id». Para añadir solo conexiones, manda una lista vacía.",

@@ -2,12 +2,12 @@
 //!
 //! Enlaza el diálogo de archivo, `crate::exportacion_freemind` (que solo sabe de XML) y el
 //! estado de la aplicación. Vive fuera de `impl AplicacionMapaMental` a propósito, igual que
-//! `exportacion_opml_comando.rs`: ver el motivo detallado ahí (A-3, P6, P7).
+//! `exportacion_opml_comando.rs`: ver el motivo detallado ahí.
 
 use crate::textos::Texto;
 use crate::AplicacionMapaMental;
 
-/// Exporta el mapa activo a un documento `.mm` de FreeMind/Freeplane (tanda 5, C21-B).
+/// Exporta el mapa activo a un documento `.mm` de FreeMind/Freeplane.
 ///
 /// Los campos de MMCelt sin equivalente nativo en `.mm` viajan como JSON dentro de la nota de
 /// cada nodo, según decide el módulo interno de metadatos externos del dominio. Nada se pierde.
@@ -32,7 +32,7 @@ pub fn exportar(app: &mut AplicacionMapaMental) {
     }
 }
 
-/// Importa un mapa desde un documento `.mm` (tanda 5, C21-B/C21-C/C21-D).
+/// Importa un mapa desde un documento `.mm`.
 ///
 /// Si el archivo lleva el bloque JSON de MMCelt, reconstruye estado, prioridad, rol, revisión,
 /// comentario, ruta, etiquetas, posición, plegado y conexiones cruzadas exactos. Si no —un
@@ -64,7 +64,7 @@ pub fn importar(app: &mut AplicacionMapaMental) {
     }
 }
 
-/// Prepara el proyecto reconstruido y el aviso tras un `importar_desde_freemind` (PH-0925-2).
+/// Prepara el proyecto reconstruido y el aviso tras un `importar_desde_freemind`.
 ///
 /// Separada de [`importar`] para poder comprobarla sin diálogos de archivo: un documento ajeno no
 /// trae posiciones de MMCelt, así que todos sus nodos nacen amontonados en el origen si no se
@@ -95,8 +95,8 @@ mod pruebas {
     use super::*;
     use crate::textos::Idioma;
 
-    /// **PH-0925-2** — un `.mm` ajeno amontona todos los nodos en el origen; el comando debe
-    /// dejarlos en posiciones distintas llamando a la disposición automática.
+    /// Comprueba que un `.mm` ajeno que amontona todos los nodos en el origen
+    /// quede en posiciones distintas llamando a la disposición automática.
     #[test]
     fn preparar_mapa_importado_dispone_un_mm_ajeno() {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -121,8 +121,8 @@ mod pruebas {
         );
     }
 
-    /// **PH-0925-2, lado positivo** — un `.mm` propio de MMCelt no se toca: sus posiciones deben
-    /// sobrevivir exactas.
+    /// Comprueba el lado positivo: un `.mm` propio de MMCelt no se toca y sus posiciones
+    /// sobreviven exactas.
     #[test]
     fn preparar_mapa_importado_no_toca_un_mm_propio() {
         let mut original = crate::model::Proyecto::nuevo_vacio("Con posiciones");

@@ -101,18 +101,26 @@ pub(crate) fn registrar_guardado(
     proyecto: &Proyecto,
     ruta: &Path,
 ) {
-    registrar_guardado_con_huella(estado, proyecto, ruta, crate::proyectos::huella(ruta));
+    registrar_guardado_con_huella(
+        estado,
+        proyecto.revision(),
+        ruta,
+        crate::proyectos::huella(ruta),
+    );
 }
 
 /// Registra un guardado cuya huella ya se calculó fuera del hilo gráfico.
+///
+/// `revision` es la del mapa que se escribió, no necesariamente la que hay en pantalla: lo que
+/// se editó después sigue contando como cambio sin guardar.
 pub(crate) fn registrar_guardado_con_huella(
     estado: &mut EstadoPersistencia,
-    proyecto: &Proyecto,
+    revision: crate::model::RevisionProyecto,
     ruta: &Path,
     huella: Option<u64>,
 ) {
     estado.ruta_actual = Some(ruta.to_path_buf());
-    estado.autoguardado.dar_por_copiado(proyecto);
+    estado.autoguardado.dar_por_copiado(revision);
     borrar_copia_de_recuperacion(estado);
     estado.recuperacion = None;
     estado.ultima_huella_guardada = huella;

@@ -8,7 +8,7 @@
 //! Hasta la 0.4.9, la capa de interfaz no tenía una sola prueba que la ejecutara. Todo lo que
 //! la vigilaba **leía el código fuente buscando texto**, y esa técnica falla de dos formas que
 //! ya han ocurrido de verdad en este proyecto: un comentario cuenta como código, y `cargo fmt`
-//! rompe la búsqueda al partir una línea. La decimotercera pasada encontró seis vallas que no
+//! rompe la búsqueda al partir una línea. Una revisión encontró seis vallas que no
 //! sujetaban nada, y las seis fallaban por eso.
 //!
 //! Lo que se perdía con ese método no es un detalle. Han aparecido **ocho controles que no

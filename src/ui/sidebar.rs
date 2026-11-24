@@ -55,7 +55,12 @@ pub fn dibujar_panel_lateral(app: &mut AplicacionMapaMental, ui: &mut egui::Ui) 
                     dibujar_buscador_de_nodos(app, ui);
 
                     if let Some(selected_id) = app.mapa().nodo_seleccionado() {
-                        dibujar_inspector_del_nodo(app, ui, selected_id);
+                        // Con el mapa bloqueado por un agente, el nodo se puede leer pero no
+                        // cambiar.
+                        let editable = !app.agentes().bloqueo.esta_bloqueado();
+                        ui.add_enabled_ui(editable, |ui| {
+                            dibujar_inspector_del_nodo(app, ui, selected_id);
+                        });
                     } else {
                         ui.vertical_centered(|ui| {
                             ui.add_space(20.0);
@@ -1055,7 +1060,7 @@ fn dibujar_las_notas(
             .small()
             .color(estilo.color_atenuado),
     );
-    // Antes se recolocaba el mapa entero en **cada pulsación**. Desde PH-1007-4 las notas no
+    // Antes se recolocaba el mapa entero en **cada pulsación**. Ahora las notas no
     // cambian el tamaño de la tarjeta (la fila de iconos se reserva siempre), así que esta
     // comparación no recoloca nunca; se conserva para que, si el estimador vuelve a mirar las
     // notas, el inspector lo siga respetando sin tener que acordarse de este sitio.
@@ -1377,7 +1382,7 @@ fn dar_el_foco_con_todo_seleccionado(ui: &egui::Ui, campo: egui::text_edit::Text
 /// Fijo, y no derivado de su posición en el panel, para que `Ctrl+F` pueda darle el foco
 /// desde fuera y para que el foco no se pierda si cambia lo que se dibuja por encima.
 pub(crate) fn id_del_buscador() -> egui::Id {
-    egui::Id::new("buscador_de_nodos")
+    egui::Id::unique("buscador_de_nodos")
 }
 
 /// Dibuja el buscador de nodos, en lo alto del panel lateral.

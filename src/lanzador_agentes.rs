@@ -29,6 +29,9 @@ pub struct EjecutableConfirmado {
     pub ruta_canonica: PathBuf,
     /// Identidad que debe mantenerse hasta el instante del lanzamiento.
     pub identidad: IdentidadArchivo,
+    /// Variable de entorno que elige la cuenta del agente al abrir su consola, si su
+    /// herramienta tiene una (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`).
+    pub ajuste_de_cuenta: Option<deteccion_agentes::AjusteDeEntorno>,
 }
 
 /// Programa y argumentos ya separados para abrir una consola oficial.
@@ -42,6 +45,13 @@ pub struct OrdenCli {
     pub directorio: PathBuf,
     /// Confirmación que el adaptador real vuelve a comprobar justo antes de crear el proceso.
     pub ejecutable_confirmado: EjecutableConfirmado,
+}
+
+/// Pone o quita en `comando` la variable que elige la cuenta del agente de `orden`.
+pub(crate) fn ajustar_la_cuenta(orden: &OrdenCli, comando: &mut std::process::Command) {
+    if let Some(ajuste) = &orden.ejecutable_confirmado.ajuste_de_cuenta {
+        ajuste.aplicar_a(comando);
+    }
 }
 
 /// Confirmación mínima devuelta por el sistema al crear el proceso de consola.
@@ -98,7 +108,13 @@ pub fn orden_para(
     );
     let argumentos = match agente {
         IdAgente::ClaudeCode | IdAgente::CodexCli => vec![mensaje],
-        IdAgente::GeminiCli => vec!["-i".to_string(), mensaje],
+        IdAgente::Agy => vec![
+            "--new-project".to_string(),
+            "--add-dir".to_string(),
+            ruta_portable(contexto.raiz()),
+            "-i".to_string(),
+            mensaje,
+        ],
         IdAgente::ClaudeDesktop | IdAgente::Antigravity | IdAgente::Cursor | IdAgente::Windsurf => {
             return Err(AppError::lectura(
                 "consola del agente",
@@ -154,6 +170,7 @@ pub fn confirmar_ejecutable(
     Ok(EjecutableConfirmado {
         ruta_canonica,
         identidad,
+        ajuste_de_cuenta: agente.cuenta.ajuste_de_entorno(),
     })
 }
 
@@ -193,9 +210,24 @@ fn medir_ejecutable(ruta: &Path) -> AppResult<IdentidadArchivo> {
     })
 }
 
-/// Normaliza únicamente el separador de una ruta relativa ya validada.
-fn ruta_portable(ruta: &Path) -> String {
-    ruta.to_string_lossy().replace('\\', "/")
+/// Retira el prefijo de ruta extendida (verbatim `\\?\` o `\\?\UNC\`) que `canonicalize`
+/// antepone en Windows, para que las herramientas de consola reciban una ruta limpia.
+pub(crate) fn retirar_prefijo_verbatim(ruta: &Path) -> PathBuf {
+    let texto = ruta.to_string_lossy();
+    if let Some(resto) = texto.strip_prefix(r"\\?\UNC\") {
+        PathBuf::from(format!(r"\\{resto}"))
+    } else if let Some(resto) = texto.strip_prefix(r"\\?\") {
+        PathBuf::from(resto)
+    } else {
+        ruta.to_path_buf()
+    }
+}
+
+/// Normaliza una ruta a formato portable con barras inclinadas `/`, retirando
+/// prefijos técnicos de Windows (`\\?\` o `\\?\UNC\`) para no contaminar argumentos de consola.
+pub(crate) fn ruta_portable(ruta: &Path) -> String {
+    let limpia = retirar_prefijo_verbatim(ruta);
+    limpia.to_string_lossy().replace('\\', "/")
 }
 
 /// Abre directamente una consola nueva en Windows, sin construir una cadena para `cmd.exe`.
@@ -205,7 +237,9 @@ fn abrir_en_el_sistema(orden: &OrdenCli) -> AppResult<ResultadoLanzamiento> {
 
     const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
     verificar_ejecutable(&orden.ejecutable_confirmado)?;
-    let proceso = std::process::Command::new(&orden.programa)
+    let mut comando = std::process::Command::new(&orden.programa);
+    ajustar_la_cuenta(orden, &mut comando);
+    let proceso = comando
         .args(&orden.argumentos)
         .current_dir(&orden.directorio)
         .creation_flags(CREATE_NEW_CONSOLE)
@@ -254,7 +288,9 @@ fn abrir_en_el_sistema(orden: &OrdenCli) -> AppResult<ResultadoLanzamiento> {
             ))
         }
     };
-    let proceso = std::process::Command::new(&terminal)
+    let mut comando = std::process::Command::new(&terminal);
+    ajustar_la_cuenta(orden, &mut comando);
+    let proceso = comando
         .arg(separador)
         .arg(&orden.programa)
         .args(&orden.argumentos)

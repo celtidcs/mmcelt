@@ -457,7 +457,7 @@ fn dibujar_instrucciones(
     idioma: Idioma,
     ui: &mut egui::Ui,
 ) -> AccionProyectoIa {
-    // Misma ruta que consultan «Conectar con mis IAs» y el aviso de error (A-2): un único punto de
+    // Misma ruta que consultan «Conectar con mis IAs» y el aviso de error: un único punto de
     // verdad en el dominio, no una canonicalización propia de esta pantalla.
     let ruta_mostrada =
         crate::conectores::ruta_de_trabajo_para_interfaz(&app.agentes().espacio_de_trabajo)

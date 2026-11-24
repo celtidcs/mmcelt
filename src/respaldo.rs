@@ -55,7 +55,7 @@ pub fn copiar_antes_de_sobrescribir(ruta: &Path) -> std::io::Result<Option<PathB
 /// Una ruta que no existe en el momento de comprobarlo.
 fn nombre_libre(ruta: &Path) -> PathBuf {
     let extension = ruta.extension().and_then(|e| e.to_str()).unwrap_or("bak");
-    let marca = chrono::Local::now().format(FORMATO_MARCA);
+    let marca = jiff::ZonedDateTime::now().strftime(FORMATO_MARCA);
 
     let candidata = ruta.with_extension(format!("{extension}.{marca}.bak"));
     if !candidata.exists() {

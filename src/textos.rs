@@ -21,7 +21,7 @@
 //! ## Por qué hay seis funciones de quinientas líneas, y por qué se quedan así
 //!
 //! Las funciones [`Texto::espanol`], [`Texto::ingles`] y las otras cuatro miden entre 526 y
-//! 577 líneas, muy por encima del límite que fija el estándar 2 de `CLAUDE.md`. Es
+//! 577 líneas, muy por encima de lo que se espera de una función. Es
 //! deliberado, y estas son las razones, medidas el 2026-09-06.
 //!
 //! **No son lógica: son una tabla.** Un `match` de mapeo puro no tiene ninguna decisión
@@ -373,7 +373,7 @@ pub enum Texto {
     ArchivoExportarMarkdown,
     ArchivoDialogoSeleccionarCarpeta,
 
-    // -- Menú Archivo: exportar e importar OPML (tanda 5) --
+    // -- Menú Archivo: exportar e importar OPML --
     ArchivoExportarOpml,
     ArchivoImportarOpml,
     ModalOpmlEsquemaOpml,
@@ -384,7 +384,7 @@ pub enum Texto {
     ContextoExportarOpml,
     ContextoImportarOpml,
 
-    // -- Menú Archivo: exportar e importar .mm de FreeMind/Freeplane (tanda 5) --
+    // -- Menú Archivo: exportar e importar .mm de FreeMind/Freeplane --
     ArchivoExportarFreemind,
     ArchivoImportarFreemind,
     ModalFreemindEsquemaMm,
@@ -421,7 +421,8 @@ pub enum Texto {
     SueltaHacerHijo,
     /// Opción del menú de suelta: crear una conexión cruzada hacia el destino.
     SueltaConectar,
-    /// Opción del menú de suelta: dejarlo junto al destino sin taparlo.
+    /// Opción del menú de suelta: dejarlo junto al destino sin taparlo y, si es su hermano,
+    /// ponerlo detrás de él en el orden.
     SueltaMoverSinTapar,
     /// Opción del menú de suelta: deshacer el arrastre.
     SueltaCancelar,
@@ -432,7 +433,7 @@ pub enum Texto {
     /// Por qué «Hacer hijo» no está disponible en el menú de suelta.
     SueltaNoSePuedeHacerHijo,
     /// Por qué «Hacer hermano» no está disponible en el menú de suelta: el destino es la raíz, ya
-    /// son hermanos o se formaría un bucle (PH-1007-7).
+    /// son hermanos o se formaría un bucle.
     SueltaNoSePuedeHacerHermano,
     /// Título del menú contextual que abre el clic derecho sobre un nodo.
     MenuContextualTitulo,
@@ -447,6 +448,10 @@ pub enum Texto {
     IaSinAgentesDetectados,
     IaDetenerSeguimiento,
     IaVigilandoCambios,
+    BloqueoAgenteTrabajando,
+    BloqueoRecuperarControl,
+    AvisoBloqueoEdicionRechazada,
+    AvisoAgenteTermino,
     IaImportarDesdeIa,
     IaCopiarPromptMaestro,
     IaEnviarCorrecciones,
@@ -493,7 +498,7 @@ pub enum Texto {
     AyudaVerTodosLosAtajos,
 
     // --- Las ventanas: importar, prompt maestro, vista previa, correcciones, ficha del
-    // proyecto, atajos, acerca de, recuperación y conexión con agentes. Tanda TRAD-004.
+    // proyecto, atajos, acerca de, recuperación y conexión con agentes.
     //
     // Siete de estas claves llevan huecos, y **los que van con nombre se rellenan por ese
     // nombre**: cambiarlo en una traducción rompe el formateo. Los anónimos se rellenan
@@ -681,6 +686,16 @@ pub enum Texto {
     BotonGuardarCopiaAqui,
     /// Guardar y trabajar en la carpeta nueva
     BotonGuardarYTrabajarEnNueva,
+    /// Título de la ventana que pregunta al cerrar con cambios sin guardar
+    CierreConCambiosTitulo,
+    /// Explicación de la ventana del cierre con cambios sin guardar
+    CierreConCambiosExplicacion,
+    /// Botón «Guardar» de la ventana del cierre
+    CierreBotonGuardar,
+    /// Botón «No guardar» de la ventana del cierre
+    CierreBotonNoGuardar,
+    /// Botón «Cancelar» de la ventana del cierre
+    CierreBotonCancelar,
     /// (Sin carpeta de proyecto)
     ModalSinCarpetaDeProyecto,
     /// Esta información se colocará en la sección principal del Markdown para que la IA entienda co...
@@ -777,10 +792,8 @@ pub enum Texto {
     ModalLosAgentesSoloPodran,
     /// No se encontró ningún agente de IA en este equipo.
     ModalNoSeEncontroNingun,
-    /// MMCelt reconoce Claude Code, Codex CLI y Gemini CLI.
+    /// MMCelt reconoce Claude Code, Codex CLI y Antigravity CLI (agy).
     ModalMmceltReconoceClaudeCode,
-    /// Advertencia sobre el requisito de cuenta de Gemini CLI y su estado de verificación en MMCelt.
-    ModalAdvertenciaGeminiCli,
     /// Instala alguno y pulsa «Volver a buscar»: no hace falta reiniciar MMCelt.
     ModalInstalaAlgunoYPulsa,
     /// Agentes encontrados
@@ -815,6 +828,46 @@ pub enum Texto {
     ModalApuntaALaCarpeta,
     /// 🔄 Actualizar la carpeta
     ModalActualizarLaCarpeta,
+    /// Programa: {}
+    ModalProgramaDelAgente,
+    /// detectado automáticamente
+    ModalProgramaDetectado,
+    /// elegido a mano
+    ModalProgramaElegidoAMano,
+    /// No se ha encontrado el programa de este agente.
+    ModalProgramaNoEncontrado,
+    /// 📂 Cambiar ruta...
+    ModalCambiarRuta,
+    /// Elige a mano el programa de este agente si está instalado en otra carpeta
+    ModalCambiarRutaAyuda,
+    /// Usar la detección
+    ModalUsarLaDeteccion,
+    ModalCuentaDelAgente,
+    ModalAnadirCuenta,
+    ModalAnadirCuentaAyuda,
+    ModalElegirCarpetaDeCuenta,
+    /// Motivo de no añadir una cuenta a mano: la herramienta no lo admite
+    ModalAltaNoAdmitida,
+    /// Motivo de no añadir una cuenta a mano: la carpeta ya es una cuenta
+    ModalAltaCarpetaYaUsada,
+    ModalQuitarCuenta,
+    ModalQuitarCuentaAyuda,
+    /// Descripción de Claude Code en su ficha
+    AgenteDescripcionClaudeCode,
+    /// Descripción de Codex CLI en su ficha
+    AgenteDescripcionCodexCli,
+    /// Descripción de Antigravity CLI en su ficha
+    AgenteDescripcionAgy,
+    /// Título del error al guardar las preferencias
+    ModalPreferenciasNoGuardadas,
+    /// Documento para la IA: título e introducción de cómo devolver el trabajo
+    ContratoDevolverIntroduccion,
+    /// Documento para la IA: herramientas en orden y reglas de identidad
+    ContratoDevolverFlujo,
+    /// La ruta elegida «{}» no existe o no es un programa; se usa la detección automática.
+    ModalRutaElegidaNoValida,
+    /// Elige el programa de {}
+    ModalElegirProgramaDe,
     /// desconectado de
     ModalDesconectadoDe,
     /// MMCelt {accion} {}. Reinícialo para que surta efecto.
@@ -836,10 +889,7 @@ pub enum Texto {
     /// Archivo Markdown (*.md)
     ModalArchivoMarkdownMd,
 
-    // --- El inspector de nodo (panel lateral derecho). Tanda TRAD-003. ---
-    //
-    // Traducidas y cruzadas contra una traducción ciega independiente antes de
-    // integrarse.
+    // --- El inspector de nodo (panel lateral derecho) ---
     //
     // Tres de estas claves NO llevan el nombre de la tecla dentro del texto:
     // `InspectorBotonHijoAyuda`, `InspectorBotonHermanoAyuda` e
@@ -1382,6 +1432,23 @@ pub enum Texto {
 }
 
 impl Texto {
+    /// Descripción breve de un agente con consola, para quien no lo conozca.
+    ///
+    /// # Devuelve
+    /// `None` para las identidades históricas, que ya no se ofrecen.
+    pub fn descripcion_del_agente(agente: crate::conectores::IdAgente) -> Option<Texto> {
+        use crate::conectores::IdAgente;
+        match agente {
+            IdAgente::ClaudeCode => Some(Texto::AgenteDescripcionClaudeCode),
+            IdAgente::CodexCli => Some(Texto::AgenteDescripcionCodexCli),
+            IdAgente::Agy => Some(Texto::AgenteDescripcionAgy),
+            IdAgente::ClaudeDesktop
+            | IdAgente::Antigravity
+            | IdAgente::Cursor
+            | IdAgente::Windsurf => None,
+        }
+    }
+
     /// Devuelve este texto en el idioma indicado.
     ///
     /// # Parámetros
@@ -1560,7 +1627,7 @@ impl Texto {
             Texto::IaConectarConMisIas => "🔌 Conectar MMCelt con mis IAs...",
             Texto::IaConectarConMisIasAyuda => {
                 "Detecta los agentes de consola instalados (Claude Code, \
-                 Codex CLI, Gemini CLI) y los conecta con MMCelt en un clic"
+                 Codex CLI, Antigravity CLI (agy)) y los conecta con MMCelt en un clic"
             }
             Texto::IaMenuEnviarA => "📤 Enviar a...",
             Texto::IaMenuEnviarAAyuda => {
@@ -1569,6 +1636,10 @@ impl Texto {
             Texto::IaSinAgentesDetectados => "No se detectaron agentes instalados.",
             Texto::IaDetenerSeguimiento => "⏹ Detener seguimiento",
             Texto::IaVigilandoCambios => "🟢 Vigilando cambios de la IA",
+            Texto::BloqueoAgenteTrabajando => "🔒 Un agente está trabajando en este mapa: no se puede editar hasta que termine",
+            Texto::BloqueoRecuperarControl => "Recuperar el control",
+            Texto::AvisoBloqueoEdicionRechazada => "El mapa está bloqueado mientras el agente trabaja: el cambio no se ha aplicado",
+            Texto::AvisoAgenteTermino => "✅ El agente ha terminado: el mapa vuelve a ser editable",
             Texto::IaImportarDesdeIa => "📥 Importar desde IA (ChatGPT, Claude, Gemini)...",
             Texto::IaCopiarPromptMaestro => "📋 Copiar Prompt Maestro para IA...",
             Texto::IaEnviarCorrecciones => "🛑 Enviar Correcciones y Directivas a la IA...",
@@ -1618,7 +1689,7 @@ impl Texto {
             Texto::AyudaServidorMcp => "🟣 Servidor MCP y agentes de IA...",
             Texto::AyudaClaudeCode => "🟣 Claude Code (CLI de terminal)...",
             Texto::AyudaChatGpt => "🟢 Codex CLI y ChatGPT...",
-            Texto::AyudaGemini => "🔵 Gemini CLI...",
+            Texto::AyudaGemini => "🔵 Antigravity CLI (agy)...",
             Texto::AyudaVerTodosLosAtajos => "⌨️ Ver Todos los Atajos de Teclado...",
 
             Texto::ModalSeEncontroTrabajoSin => "🛟 Se encontró trabajo sin guardar",
@@ -1716,6 +1787,11 @@ impl Texto {
             }
             Texto::BotonGuardarCopiaAqui => "Guardar una copia aquí",
             Texto::BotonGuardarYTrabajarEnNueva => "Guardar y trabajar en la carpeta nueva",
+            Texto::CierreConCambiosTitulo => "¿Guardar los cambios antes de cerrar?",
+            Texto::CierreConCambiosExplicacion => "El mapa tiene cambios que no se han guardado. Si cierras sin guardar, se perderán.",
+            Texto::CierreBotonGuardar => "Guardar",
+            Texto::CierreBotonNoGuardar => "No guardar",
+            Texto::CierreBotonCancelar => "Cancelar",
             Texto::ModalSinCarpetaDeProyecto => "(Sin carpeta de proyecto)",
             Texto::ModalEstaInformacionSeColocara => "Esta información se colocará en la sección principal del Markdown para que la IA entienda con total precisión qué quieres conseguir:",
             Texto::ModalQueHasIntentadoPlasmar => "🎯 ¿Qué has intentado plasmar en este mapa? (Visión del Creador):",
@@ -1765,9 +1841,8 @@ impl Texto {
             Texto::ModalCarpetaDeTrabajo => "Carpeta de trabajo",
             Texto::ModalLosAgentesSoloPodran => "Los agentes solo podrán leer y escribir dentro de esta carpeta. Cualquier ruta fuera de ella se rechaza, aunque el modelo la pida.",
             Texto::ModalNoSeEncontroNingun => "No se encontró ningún agente de IA en este equipo.",
-            Texto::ModalMmceltReconoceClaudeCode => "MMCelt reconoce Claude Code, Codex CLI y Gemini CLI.",
-            Texto::ModalAdvertenciaGeminiCli => {
-                "⚠️ Requiere una cuenta autorizada por Google (no admite cuenta personal estándar)."
+            Texto::ModalMmceltReconoceClaudeCode => {
+                "MMCelt reconoce Claude Code, Codex CLI y Antigravity CLI (agy)."
             }
             Texto::ModalInstalaAlgunoYPulsa => "Instala alguno y pulsa «Volver a buscar»: no hace falta reiniciar MMCelt.",
             Texto::ModalAgentesEncontrados => "Agentes encontrados",
@@ -1786,6 +1861,29 @@ impl Texto {
             Texto::ModalConectadoAOtraCarpeta => "⚠ conectado a otra carpeta",
             Texto::ModalApuntaALaCarpeta => "Su configuración autoriza esta otra carpeta:",
             Texto::ModalActualizarLaCarpeta => "🔄 Actualizar la carpeta",
+            Texto::ModalProgramaDelAgente => "Programa: {}",
+            Texto::ModalProgramaDetectado => "detectado automáticamente",
+            Texto::ModalProgramaElegidoAMano => "elegido a mano",
+            Texto::ModalProgramaNoEncontrado => "No se ha encontrado el programa de este agente.",
+            Texto::ModalCambiarRuta => "📂 Cambiar ruta...",
+            Texto::ModalCambiarRutaAyuda => "Elige a mano el programa de este agente si está instalado en otra carpeta",
+            Texto::ModalUsarLaDeteccion => "Usar la detección",
+            Texto::ModalCuentaDelAgente => "cuenta «{}»",
+            Texto::ModalAnadirCuenta => "Añadir cuenta",
+            Texto::ModalAnadirCuentaAyuda => "Da de alta a mano la carpeta de configuración de otra cuenta de un agente.",
+            Texto::ModalElegirCarpetaDeCuenta => "Elige la carpeta de la cuenta de {}",
+            Texto::ModalAltaNoAdmitida => "{} no admite cuentas añadidas a mano: su consola no usaría esa carpeta.",
+            Texto::ModalAltaCarpetaYaUsada => "Esa carpeta ya es una cuenta de {}: no se añade otra vez.",
+            Texto::ModalQuitarCuenta => "Quitar cuenta",
+            Texto::ModalQuitarCuentaAyuda => "Deja de mostrar esta cuenta añadida a mano; no borra nada del disco.",
+            Texto::AgenteDescripcionClaudeCode => "Asistente de programación de Anthropic en la terminal",
+            Texto::AgenteDescripcionCodexCli => "Agente de programación de OpenAI en la terminal",
+            Texto::AgenteDescripcionAgy => "Agente de programación de Google en la terminal",
+            Texto::ModalPreferenciasNoGuardadas => "No se pudieron guardar las preferencias",
+            Texto::ContratoDevolverIntroduccion => "## 🔄 9. CÓMO DEVOLVER TU TRABAJO A ESTE MAPA\n\nMMCelt expone un servidor MCP. No edites el archivo `.mmcelt` directamente: usa sus herramientas para conservar la supervisión humana y las copias de seguridad.\n\n",
+            Texto::ContratoDevolverFlujo => "1. `mmcelt_workspace_info`: descubre la carpeta autorizada y los mapas disponibles.\n2. `mmcelt_read_mindmap`: lee nodos, UUID, títulos y conexiones.\n3. `mmcelt_get_human_feedback`: lee correcciones y decisiones humanas.\n4. `mmcelt_sync_ai_progress`: devuelve avances al mapa existente sin sustituirlo.\n5. `mmcelt_create_mindmap`: crea un mapa nuevo; no sustituye un mapa humano.\n6. `mmcelt_export_ai_markdown`: regenera este documento cuando sea necesario.\n\nIdentidad: usa el UUID siempre que haya títulos repetidos; si envías UUID y título, ambos deben concordar. Nunca declares una aprobación humana ni cambies `review_status`: lo añadido por la IA nace como `GeneradoPorIA`. Cuando termines todo el trabajo, marca `work_finished: true` en tu última llamada a `mmcelt_sync_ai_progress` (o `mmcelt_create_mindmap`): hasta entonces MMCelt mantiene el mapa bloqueado para la persona.\n\n",
+            Texto::ModalRutaElegidaNoValida => "La ruta elegida «{}» no existe o no es un programa; se usa la detección automática.",
+            Texto::ModalElegirProgramaDe => "Elige el programa de {}",
             Texto::ModalDesconectadoDe => "desconectado de",
             Texto::ModalMmceltAccionReinicialoPara => "MMCelt {accion} {}. Reinícialo para que surta efecto.",
             Texto::ModalCopiaDeSeguridad => " Copia de seguridad: {}",
@@ -2226,7 +2324,7 @@ impl Texto {
             Texto::IaConectarConMisIas => "🔌 Connect MMCelt with my AIs...",
             Texto::IaConectarConMisIasAyuda => {
                 "Detects installed console agents (Claude Code, \
-                 Codex CLI, Gemini CLI) and connects them to MMCelt in one click"
+                 Codex CLI, Antigravity CLI (agy)) and connects them to MMCelt in one click"
             }
             Texto::IaMenuEnviarA => "📤 Send to...",
             Texto::IaMenuEnviarAAyuda => {
@@ -2235,6 +2333,10 @@ impl Texto {
             Texto::IaSinAgentesDetectados => "No installed agents were detected.",
             Texto::IaDetenerSeguimiento => "⏹ Stop tracking",
             Texto::IaVigilandoCambios => "🟢 Watching for AI changes",
+            Texto::BloqueoAgenteTrabajando => "🔒 An agent is working on this map: it cannot be edited until it finishes",
+            Texto::BloqueoRecuperarControl => "Take back control",
+            Texto::AvisoBloqueoEdicionRechazada => "The map is locked while the agent works: the change was not applied",
+            Texto::AvisoAgenteTermino => "✅ The agent has finished: the map can be edited again",
             Texto::IaImportarDesdeIa => "📥 Import from AI (ChatGPT, Claude, Gemini)...",
             Texto::IaCopiarPromptMaestro => "📋 Copy Master Prompt for AI...",
             Texto::IaEnviarCorrecciones => "🛑 Send Corrections and Directives to the AI...",
@@ -2288,7 +2390,7 @@ impl Texto {
             Texto::AyudaServidorMcp => "🟣 MCP Server & AI Agents...",
             Texto::AyudaClaudeCode => "🟣 Claude Code (Terminal CLI)...",
             Texto::AyudaChatGpt => "🟢 Codex CLI & ChatGPT...",
-            Texto::AyudaGemini => "🔵 Gemini CLI...",
+            Texto::AyudaGemini => "🔵 Antigravity CLI (agy)...",
             Texto::AyudaVerTodosLosAtajos => "⌨️ View All the Keyboard Shortcuts...",
 
             Texto::ModalSeEncontroTrabajoSin => "🛟 Unsaved work found",
@@ -2386,6 +2488,11 @@ impl Texto {
             }
             Texto::BotonGuardarCopiaAqui => "Save a copy here",
             Texto::BotonGuardarYTrabajarEnNueva => "Save and work in the new folder",
+            Texto::CierreConCambiosTitulo => "Save changes before closing?",
+            Texto::CierreConCambiosExplicacion => "The map has changes that have not been saved. If you close without saving, they will be lost.",
+            Texto::CierreBotonGuardar => "Save",
+            Texto::CierreBotonNoGuardar => "Don't save",
+            Texto::CierreBotonCancelar => "Cancel",
             Texto::ModalSinCarpetaDeProyecto => "(No project folder)",
             Texto::ModalEstaInformacionSeColocara => "This information will be placed in the primary Markdown section so the AI understands your goals with precision:",
             Texto::ModalQueHasIntentadoPlasmar => "🎯 What did you aim to capture in this map? (Creator's Vision):",
@@ -2435,9 +2542,8 @@ impl Texto {
             Texto::ModalCarpetaDeTrabajo => "Working directory",
             Texto::ModalLosAgentesSoloPodran => "Agents can only read and write within this directory. Paths outside are strictly rejected.",
             Texto::ModalNoSeEncontroNingun => "No AI agents found on this machine.",
-            Texto::ModalMmceltReconoceClaudeCode => "MMCelt detects Claude Code, Codex CLI, and Gemini CLI.",
-            Texto::ModalAdvertenciaGeminiCli => {
-                "⚠️ Requires an authorized Google account (standard personal accounts not supported)."
+            Texto::ModalMmceltReconoceClaudeCode => {
+                "MMCelt detects Claude Code, Codex CLI, and Antigravity CLI (agy)."
             }
             Texto::ModalInstalaAlgunoYPulsa => "Install one and click \"Scan Again\": no need to restart MMCelt.",
             Texto::ModalAgentesEncontrados => "Detected agents",
@@ -2456,6 +2562,29 @@ impl Texto {
             Texto::ModalConectadoAOtraCarpeta => "⚠ connected to another folder",
             Texto::ModalApuntaALaCarpeta => "Its configuration authorizes this other folder:",
             Texto::ModalActualizarLaCarpeta => "🔄 Update the folder",
+            Texto::ModalProgramaDelAgente => "Program: {}",
+            Texto::ModalProgramaDetectado => "detected automatically",
+            Texto::ModalProgramaElegidoAMano => "chosen by hand",
+            Texto::ModalProgramaNoEncontrado => "This agent's program was not found.",
+            Texto::ModalCambiarRuta => "📂 Change path...",
+            Texto::ModalCambiarRutaAyuda => "Choose this agent's program by hand if it is installed in another folder",
+            Texto::ModalUsarLaDeteccion => "Use detection",
+            Texto::ModalCuentaDelAgente => "account «{}»",
+            Texto::ModalAnadirCuenta => "Add account",
+            Texto::ModalAnadirCuentaAyuda => "Manually add the configuration folder of another account of an agent.",
+            Texto::ModalElegirCarpetaDeCuenta => "Choose the account folder for {}",
+            Texto::ModalAltaNoAdmitida => "{} does not support manually added accounts: its console would not use that folder.",
+            Texto::ModalAltaCarpetaYaUsada => "That folder is already a {} account: it is not added again.",
+            Texto::ModalQuitarCuenta => "Remove account",
+            Texto::ModalQuitarCuentaAyuda => "Stops showing this manually added account; nothing is deleted from disk.",
+            Texto::AgenteDescripcionClaudeCode => "Anthropic's coding assistant in the terminal",
+            Texto::AgenteDescripcionCodexCli => "OpenAI's coding agent in the terminal",
+            Texto::AgenteDescripcionAgy => "Google's coding agent in the terminal",
+            Texto::ModalPreferenciasNoGuardadas => "The preferences could not be saved",
+            Texto::ContratoDevolverIntroduccion => "## 🔄 9. HOW TO RETURN YOUR WORK TO THIS MAP\n\nMMCelt exposes an MCP server. Do not edit the `.mmcelt` file directly: use its tools to preserve human supervision and backups.\n\n",
+            Texto::ContratoDevolverFlujo => "1. `mmcelt_workspace_info`: discover the authorized folder and available maps.\n2. `mmcelt_read_mindmap`: read nodes, UUIDs, titles and connections.\n3. `mmcelt_get_human_feedback`: read human corrections and decisions.\n4. `mmcelt_sync_ai_progress`: return progress to the existing map without replacing it.\n5. `mmcelt_create_mindmap`: create a new map; never replace a human map.\n6. `mmcelt_export_ai_markdown`: regenerate this document when needed.\n\nIdentity: use the UUID whenever titles repeat; if UUID and title are both sent, they must match. Never claim human approval or change `review_status`: AI additions are born as `GeneradoPorIA`. When all your work is done, set `work_finished: true` in your last call to `mmcelt_sync_ai_progress` (or `mmcelt_create_mindmap`): until then MMCelt keeps the map locked for the person.\n\n",
+            Texto::ModalRutaElegidaNoValida => "The chosen path \"{}\" does not exist or is not a program; automatic detection is used.",
+            Texto::ModalElegirProgramaDe => "Choose the program of {}",
             Texto::ModalDesconectadoDe => "disconnected from",
             Texto::ModalMmceltAccionReinicialoPara => "MMCelt {accion} {}. Restart it for changes to take effect.",
             Texto::ModalCopiaDeSeguridad => "Backup: {}",
@@ -2863,12 +2992,16 @@ impl Texto {
             Texto::MenuContextualTitulo => "Actions du nœud",
             Texto::IconoTieneNotas => "📝 Contient des notes : sélectionnez-le pour les lire dans l'inspecteur",
             Texto::IaConectarConMisIas => "🔌 Connecter MMCelt à mes IA...",
-            Texto::IaConectarConMisIasAyuda => "Détecte les agents en console installés (Claude Code, Codex CLI, Gemini CLI) et les connecte à MMCelt en un clic",
+            Texto::IaConectarConMisIasAyuda => "Détecte les agents en console installés (Claude Code, Codex CLI, Antigravity CLI (agy)) et les connecte à MMCelt en un clic",
             Texto::IaMenuEnviarA => "📤 Envoyer à...",
             Texto::IaMenuEnviarAAyuda => "Enregistre la carte, exporte le document pour l'IA et active le suivi automatique",
             Texto::IaSinAgentesDetectados => "Aucun agent installé détecté.",
             Texto::IaDetenerSeguimiento => "⏹ Arrêter le suivi",
             Texto::IaVigilandoCambios => "🟢 Surveillance des modifications de l'IA",
+            Texto::BloqueoAgenteTrabajando => "🔒 Un agent travaille sur cette carte : elle ne peut pas être modifiée avant qu'il ait terminé",
+            Texto::BloqueoRecuperarControl => "Reprendre la main",
+            Texto::AvisoBloqueoEdicionRechazada => "La carte est verrouillée pendant que l'agent travaille : la modification n'a pas été appliquée",
+            Texto::AvisoAgenteTermino => "✅ L'agent a terminé : la carte est de nouveau modifiable",
             Texto::IaImportarDesdeIa => "📥 Importer depuis l'IA (ChatGPT, Claude, Gemini)...",
             Texto::IaCopiarPromptMaestro => "📋 Copier le prompt principal pour l'IA...",
             Texto::IaEnviarCorrecciones => "🛑 Envoyer corrections et directives à l'IA...",
@@ -2907,7 +3040,7 @@ impl Texto {
             Texto::AyudaServidorMcp => "🟣 Serveur MCP et agents IA...",
             Texto::AyudaClaudeCode => "🟣 Claude Code (CLI de terminal)...",
             Texto::AyudaChatGpt => "🟢 Codex CLI et ChatGPT...",
-            Texto::AyudaGemini => "🔵 Gemini CLI...",
+            Texto::AyudaGemini => "🔵 Antigravity CLI (agy)...",
             Texto::AyudaVerTodosLosAtajos => "⌨️ Voir tous les raccourcis clavier...",
 
             Texto::ModalSeEncontroTrabajoSin => "🛟 Travail non enregistré trouvé",
@@ -3005,6 +3138,11 @@ impl Texto {
             }
             Texto::BotonGuardarCopiaAqui => "Enregistrer une copie ici",
             Texto::BotonGuardarYTrabajarEnNueva => "Enregistrer et travailler dans le nouveau dossier",
+            Texto::CierreConCambiosTitulo => "Enregistrer les modifications avant de fermer ?",
+            Texto::CierreConCambiosExplicacion => "La carte contient des modifications non enregistrées. Si vous fermez sans enregistrer, elles seront perdues.",
+            Texto::CierreBotonGuardar => "Enregistrer",
+            Texto::CierreBotonNoGuardar => "Ne pas enregistrer",
+            Texto::CierreBotonCancelar => "Annuler",
             Texto::ModalSinCarpetaDeProyecto => "(Aucun dossier de projet)",
             Texto::ModalEstaInformacionSeColocara => "Ces informations seront placées en tête du Markdown pour que l'IA comprenne précisément vos attentes :",
             Texto::ModalQueHasIntentadoPlasmar => "🎯 Qu'avez-vous voulu exprimer dans cette carte ? (Vision du créateur) :",
@@ -3054,9 +3192,8 @@ impl Texto {
             Texto::ModalCarpetaDeTrabajo => "Dossier de travail",
             Texto::ModalLosAgentesSoloPodran => "Les agents ne peuvent lire et écrire que dans ce dossier. Tout chemin externe est refusé.",
             Texto::ModalNoSeEncontroNingun => "Aucun agent d'IA détecté sur cette machine.",
-            Texto::ModalMmceltReconoceClaudeCode => "MMCelt reconnaît Claude Code, Codex CLI et Gemini CLI.",
-            Texto::ModalAdvertenciaGeminiCli => {
-                "⚠️ Nécessite un compte autorisé par Google (les comptes personnels standards ne sont pas pris en charge)."
+            Texto::ModalMmceltReconoceClaudeCode => {
+                "MMCelt reconnaît Claude Code, Codex CLI et Antigravity CLI (agy)."
             }
             Texto::ModalInstalaAlgunoYPulsa => "Installez-en un et cliquez sur « Réanalyser » : pas besoin de redémarrer MMCelt.",
             Texto::ModalAgentesEncontrados => "Agents détectés",
@@ -3075,6 +3212,29 @@ impl Texto {
             Texto::ModalConectadoAOtraCarpeta => "⚠ connecté à un autre dossier",
             Texto::ModalApuntaALaCarpeta => "Sa configuration autorise cet autre dossier :",
             Texto::ModalActualizarLaCarpeta => "🔄 Mettre à jour le dossier",
+            Texto::ModalProgramaDelAgente => "Programme : {}",
+            Texto::ModalProgramaDetectado => "détecté automatiquement",
+            Texto::ModalProgramaElegidoAMano => "choisi à la main",
+            Texto::ModalProgramaNoEncontrado => "Le programme de cet agent est introuvable.",
+            Texto::ModalCambiarRuta => "📂 Changer le chemin...",
+            Texto::ModalCambiarRutaAyuda => "Choisissez à la main le programme de cet agent s'il est installé dans un autre dossier",
+            Texto::ModalUsarLaDeteccion => "Utiliser la détection",
+            Texto::ModalCuentaDelAgente => "compte « {} »",
+            Texto::ModalAnadirCuenta => "Ajouter un compte",
+            Texto::ModalAnadirCuentaAyuda => "Ajoute à la main le dossier de configuration d'un autre compte d'un agent.",
+            Texto::ModalElegirCarpetaDeCuenta => "Choisissez le dossier du compte de {}",
+            Texto::ModalAltaNoAdmitida => "{} n'accepte pas de comptes ajoutés à la main : sa console n'utiliserait pas ce dossier.",
+            Texto::ModalAltaCarpetaYaUsada => "Ce dossier est déjà un compte de {} : il n'est pas ajouté à nouveau.",
+            Texto::ModalQuitarCuenta => "Retirer le compte",
+            Texto::ModalQuitarCuentaAyuda => "Cesse d'afficher ce compte ajouté à la main ; rien n'est supprimé du disque.",
+            Texto::AgenteDescripcionClaudeCode => "Assistant de programmation d'Anthropic dans le terminal",
+            Texto::AgenteDescripcionCodexCli => "Agent de programmation d'OpenAI dans le terminal",
+            Texto::AgenteDescripcionAgy => "Agent de programmation de Google dans le terminal",
+            Texto::ModalPreferenciasNoGuardadas => "Impossible d'enregistrer les préférences",
+            Texto::ContratoDevolverIntroduccion => "## 🔄 9. COMMENT RENVOYER VOTRE TRAVAIL À CETTE CARTE\n\nMMCelt expose un serveur MCP. Ne modifiez pas directement le fichier `.mmcelt` : utilisez ses outils afin de préserver la supervision humaine et les sauvegardes.\n\n",
+            Texto::ContratoDevolverFlujo => "1. `mmcelt_workspace_info` : découvrir le dossier autorisé et les cartes disponibles.\n2. `mmcelt_read_mindmap` : lire les nœuds, UUID, titres et connexions.\n3. `mmcelt_get_human_feedback` : lire les corrections et décisions humaines.\n4. `mmcelt_sync_ai_progress` : renvoyer les progrès sans remplacer la carte.\n5. `mmcelt_create_mindmap` : créer une nouvelle carte, jamais remplacer une carte humaine.\n6. `mmcelt_export_ai_markdown` : régénérer ce document.\n\nIdentité : utilisez l’UUID lorsque les titres se répètent ; UUID et titre doivent correspondre. Ne revendiquez jamais une approbation humaine et ne modifiez pas `review_status` : les ajouts de l’IA naissent `GeneradoPorIA`. Quand tout votre travail est terminé, indiquez `work_finished: true` dans votre dernier appel à `mmcelt_sync_ai_progress` (ou `mmcelt_create_mindmap`) : jusque-là, MMCelt garde la carte verrouillée pour la personne.\n\n",
+            Texto::ModalRutaElegidaNoValida => "Le chemin choisi « {} » n'existe pas ou n'est pas un programme ; la détection automatique est utilisée.",
+            Texto::ModalElegirProgramaDe => "Choisissez le programme de {}",
             Texto::ModalDesconectadoDe => "déconnecté de",
             Texto::ModalMmceltAccionReinicialoPara => "MMCelt {accion} {}. Redémarrez-le pour appliquer les changements.",
             Texto::ModalCopiaDeSeguridad => "Sauvegarde : {}",
@@ -3482,12 +3642,16 @@ impl Texto {
             Texto::MenuContextualTitulo => "Knotenaktionen",
             Texto::IconoTieneNotas => "📝 Enthält Notizen: auswählen, um sie im Inspektor zu lesen",
             Texto::IaConectarConMisIas => "🔌 MMCelt mit meinen KIs verbinden...",
-            Texto::IaConectarConMisIasAyuda => "Erkennt installierte Konsolen-Agenten (Claude Code, Codex CLI, Gemini CLI) und verbindet sie mit einem Klick mit MMCelt",
+            Texto::IaConectarConMisIasAyuda => "Erkennt installierte Konsolen-Agenten (Claude Code, Codex CLI, Antigravity CLI (agy)) und verbindet sie mit einem Klick mit MMCelt",
             Texto::IaMenuEnviarA => "📤 Senden an...",
             Texto::IaMenuEnviarAAyuda => "Speichert die Mindmap, exportiert das KI-Dokument und aktiviert die automatische Verfolgung",
             Texto::IaSinAgentesDetectados => "Keine installierten Agenten erkannt.",
             Texto::IaDetenerSeguimiento => "⏹ Verfolgung beenden",
             Texto::IaVigilandoCambios => "🟢 KI-Änderungen werden überwacht",
+            Texto::BloqueoAgenteTrabajando => "🔒 Ein Agent arbeitet an dieser Karte: Sie kann erst bearbeitet werden, wenn er fertig ist",
+            Texto::BloqueoRecuperarControl => "Kontrolle zurückholen",
+            Texto::AvisoBloqueoEdicionRechazada => "Die Karte ist gesperrt, solange der Agent arbeitet: Die Änderung wurde nicht übernommen",
+            Texto::AvisoAgenteTermino => "✅ Der Agent ist fertig: Die Karte kann wieder bearbeitet werden",
             Texto::IaImportarDesdeIa => "📥 Aus KI importieren (ChatGPT, Claude, Gemini)...",
             Texto::IaCopiarPromptMaestro => "📋 Master-Prompt für KI kopieren...",
             Texto::IaEnviarCorrecciones => "🛑 Korrekturen und Anweisungen an die KI senden...",
@@ -3526,7 +3690,7 @@ impl Texto {
             Texto::AyudaServidorMcp => "🟣 MCP-Server und KI-Agenten...",
             Texto::AyudaClaudeCode => "🟣 Claude Code (Terminal-CLI)...",
             Texto::AyudaChatGpt => "🟢 Codex CLI und ChatGPT...",
-            Texto::AyudaGemini => "🔵 Gemini CLI...",
+            Texto::AyudaGemini => "🔵 Antigravity CLI (agy)...",
             Texto::AyudaVerTodosLosAtajos => "⌨️ Alle Tastenkürzel anzeigen...",
 
             Texto::ModalSeEncontroTrabajoSin => "🛟 Ungespeicherte Arbeit gefunden",
@@ -3624,6 +3788,11 @@ impl Texto {
             }
             Texto::BotonGuardarCopiaAqui => "Kopie hier speichern",
             Texto::BotonGuardarYTrabajarEnNueva => "Speichern und im neuen Ordner arbeiten",
+            Texto::CierreConCambiosTitulo => "Änderungen vor dem Schließen speichern?",
+            Texto::CierreConCambiosExplicacion => "Die Karte enthält ungespeicherte Änderungen. Wenn Sie ohne Speichern schließen, gehen sie verloren.",
+            Texto::CierreBotonGuardar => "Speichern",
+            Texto::CierreBotonNoGuardar => "Nicht speichern",
+            Texto::CierreBotonCancelar => "Abbrechen",
             Texto::ModalSinCarpetaDeProyecto => "(Kein Projektordner)",
             Texto::ModalEstaInformacionSeColocara => "Diese Angaben werden im Hauptabschnitt des Markdowns platziert, damit die KI Ihre Ziele genau versteht:",
             Texto::ModalQueHasIntentadoPlasmar => "🎯 Was möchten Sie mit dieser Mindmap ausdrücken? (Vision des Erstellers):",
@@ -3673,9 +3842,8 @@ impl Texto {
             Texto::ModalCarpetaDeTrabajo => "Arbeitsverzeichnis",
             Texto::ModalLosAgentesSoloPodran => "Agenten können nur in diesem Verzeichnis lesen und schreiben. Externe Pfade werden abgewiesen.",
             Texto::ModalNoSeEncontroNingun => "Keine KI-Agenten auf diesem Rechner gefunden.",
-            Texto::ModalMmceltReconoceClaudeCode => "MMCelt erkennt Claude Code, Codex CLI und Gemini CLI.",
-            Texto::ModalAdvertenciaGeminiCli => {
-                "⚠️ Erfordert ein von Google autorisiertes Konto (Standard-Privatkonten werden nicht unterstützt)."
+            Texto::ModalMmceltReconoceClaudeCode => {
+                "MMCelt erkennt Claude Code, Codex CLI und Antigravity CLI (agy)."
             }
             Texto::ModalInstalaAlgunoYPulsa => "Installieren Sie einen Agenten und klicken Sie auf „Erneut suchen“: Neustart nicht nötig.",
             Texto::ModalAgentesEncontrados => "Gefundene Agenten",
@@ -3694,6 +3862,29 @@ impl Texto {
             Texto::ModalConectadoAOtraCarpeta => "⚠ mit einem anderen Ordner verbunden",
             Texto::ModalApuntaALaCarpeta => "Seine Konfiguration erlaubt diesen anderen Ordner:",
             Texto::ModalActualizarLaCarpeta => "🔄 Ordner aktualisieren",
+            Texto::ModalProgramaDelAgente => "Programm: {}",
+            Texto::ModalProgramaDetectado => "automatisch erkannt",
+            Texto::ModalProgramaElegidoAMano => "von Hand gewählt",
+            Texto::ModalProgramaNoEncontrado => "Das Programm dieses Agenten wurde nicht gefunden.",
+            Texto::ModalCambiarRuta => "📂 Pfad ändern...",
+            Texto::ModalCambiarRutaAyuda => "Wählen Sie das Programm dieses Agenten von Hand, wenn es in einem anderen Ordner installiert ist",
+            Texto::ModalUsarLaDeteccion => "Erkennung verwenden",
+            Texto::ModalCuentaDelAgente => "Konto „{}“",
+            Texto::ModalAnadirCuenta => "Konto hinzufügen",
+            Texto::ModalAnadirCuentaAyuda => "Fügt den Konfigurationsordner eines weiteren Kontos eines Agenten von Hand hinzu.",
+            Texto::ModalElegirCarpetaDeCuenta => "Wähle den Kontoordner für {}",
+            Texto::ModalAltaNoAdmitida => "{} unterstützt keine von Hand hinzugefügten Konten: seine Konsole würde diesen Ordner nicht verwenden.",
+            Texto::ModalAltaCarpetaYaUsada => "Dieser Ordner ist bereits ein Konto von {}: Er wird nicht erneut hinzugefügt.",
+            Texto::ModalQuitarCuenta => "Konto entfernen",
+            Texto::ModalQuitarCuentaAyuda => "Zeigt dieses von Hand hinzugefügte Konto nicht mehr an; auf der Festplatte wird nichts gelöscht.",
+            Texto::AgenteDescripcionClaudeCode => "Programmierassistent von Anthropic im Terminal",
+            Texto::AgenteDescripcionCodexCli => "Programmieragent von OpenAI im Terminal",
+            Texto::AgenteDescripcionAgy => "Programmieragent von Google im Terminal",
+            Texto::ModalPreferenciasNoGuardadas => "Die Einstellungen konnten nicht gespeichert werden",
+            Texto::ContratoDevolverIntroduccion => "## 🔄 9. SO GIBST DU DEINE ARBEIT AN DIESE KARTE ZURÜCK\n\nMMCelt stellt einen MCP-Server bereit. Bearbeite die `.mmcelt`-Datei nicht direkt: Verwende seine Werkzeuge, damit menschliche Kontrolle und Sicherungen erhalten bleiben.\n\n",
+            Texto::ContratoDevolverFlujo => "1. `mmcelt_workspace_info`: autorisierten Ordner und Karten ermitteln.\n2. `mmcelt_read_mindmap`: Knoten, UUIDs, Titel und Verbindungen lesen.\n3. `mmcelt_get_human_feedback`: menschliche Korrekturen und Entscheidungen lesen.\n4. `mmcelt_sync_ai_progress`: Fortschritt zurückgeben, ohne die Karte zu ersetzen.\n5. `mmcelt_create_mindmap`: eine neue Karte erstellen, keine menschliche Karte ersetzen.\n6. `mmcelt_export_ai_markdown`: dieses Dokument neu erzeugen.\n\nIdentität: Bei doppelten Titeln die UUID verwenden; UUID und Titel müssen übereinstimmen. Niemals menschliche Freigabe beanspruchen oder `review_status` ändern: KI-Ergänzungen entstehen als `GeneradoPorIA`. Wenn deine gesamte Arbeit fertig ist, setze `work_finished: true` in deinem letzten Aufruf von `mmcelt_sync_ai_progress` (oder `mmcelt_create_mindmap`): Bis dahin hält MMCelt die Karte für die Person gesperrt.\n\n",
+            Texto::ModalRutaElegidaNoValida => "Der gewählte Pfad „{}“ existiert nicht oder ist kein Programm; die automatische Erkennung wird verwendet.",
+            Texto::ModalElegirProgramaDe => "Programm von {} wählen",
             Texto::ModalDesconectadoDe => "getrennt von",
             Texto::ModalMmceltAccionReinicialoPara => "MMCelt {accion} {}. Starten Sie es neu, um Änderungen anzuwenden.",
             Texto::ModalCopiaDeSeguridad => "Backup: {}",
@@ -4103,12 +4294,16 @@ impl Texto {
             Texto::MenuContextualTitulo => "Действия с узлом",
             Texto::IconoTieneNotas => "📝 Есть заметки: выберите узел, чтобы прочитать их в инспекторе",
             Texto::IaConectarConMisIas => "🔌 Подключить MMCelt к моим ИИ...",
-            Texto::IaConectarConMisIasAyuda => "Определяет установленные консольные агенты (Claude Code, Codex CLI, Gemini CLI) и подключает их к MMCelt в один клик",
+            Texto::IaConectarConMisIasAyuda => "Определяет установленные консольные агенты (Claude Code, Codex CLI, Antigravity CLI (agy)) и подключает их к MMCelt в один клик",
             Texto::IaMenuEnviarA => "📤 Отправить в...",
             Texto::IaMenuEnviarAAyuda => "Сохраняет карту, экспортирует документ для ИИ и включает автоматическое отслеживание",
             Texto::IaSinAgentesDetectados => "Установленные агенты не обнаружены.",
             Texto::IaDetenerSeguimiento => "⏹ Остановить отслеживание",
             Texto::IaVigilandoCambios => "🟢 Отслеживание изменений ИИ",
+            Texto::BloqueoAgenteTrabajando => "🔒 С этой картой работает агент: её нельзя редактировать, пока он не закончит",
+            Texto::BloqueoRecuperarControl => "Вернуть управление",
+            Texto::AvisoBloqueoEdicionRechazada => "Карта заблокирована, пока работает агент: изменение не применено",
+            Texto::AvisoAgenteTermino => "✅ Агент закончил: карту снова можно редактировать",
             Texto::IaImportarDesdeIa => "📥 Импортировать из ИИ (ChatGPT, Claude, Gemini)...",
             Texto::IaCopiarPromptMaestro => "📋 Копировать мастер-промпт для ИИ...",
             Texto::IaEnviarCorrecciones => "🛑 Отправить исправления и указания для ИИ...",
@@ -4147,7 +4342,7 @@ impl Texto {
             Texto::AyudaServidorMcp => "🟣 Сервер MCP и агенты ИИ...",
             Texto::AyudaClaudeCode => "🟣 Claude Code (терминальный CLI)...",
             Texto::AyudaChatGpt => "🟢 Codex CLI и ChatGPT...",
-            Texto::AyudaGemini => "🔵 Gemini CLI...",
+            Texto::AyudaGemini => "🔵 Antigravity CLI (agy)...",
             Texto::AyudaVerTodosLosAtajos => "⌨️ Просмотреть все горячие клавиши...",
 
             Texto::ModalSeEncontroTrabajoSin => "🛟 Обнаружены несохранённые данные",
@@ -4245,6 +4440,11 @@ impl Texto {
             }
             Texto::BotonGuardarCopiaAqui => "Сохранить копию здесь",
             Texto::BotonGuardarYTrabajarEnNueva => "Сохранить и работать в новой папке",
+            Texto::CierreConCambiosTitulo => "Сохранить изменения перед закрытием?",
+            Texto::CierreConCambiosExplicacion => "В карте есть несохранённые изменения. Если закрыть без сохранения, они будут потеряны.",
+            Texto::CierreBotonGuardar => "Сохранить",
+            Texto::CierreBotonNoGuardar => "Не сохранять",
+            Texto::CierreBotonCancelar => "Отмена",
             Texto::ModalSinCarpetaDeProyecto => "(Нет папки проекта)",
             Texto::ModalEstaInformacionSeColocara => "Эти сведения будут добавлены в начало Markdown, чтобы ИИ точно понял ваши цели:",
             Texto::ModalQueHasIntentadoPlasmar => "🎯 Что вы стремились отразить в этой карте? (Видение автора):",
@@ -4294,9 +4494,8 @@ impl Texto {
             Texto::ModalCarpetaDeTrabajo => "Рабочая папка",
             Texto::ModalLosAgentesSoloPodran => "Агенты могут читать и писать только в этой папке. Внешние пути отклоняются.",
             Texto::ModalNoSeEncontroNingun => "На этом компьютере не обнаружено агентов ИИ.",
-            Texto::ModalMmceltReconoceClaudeCode => "MMCelt поддерживает Claude Code, Codex CLI и Gemini CLI.",
-            Texto::ModalAdvertenciaGeminiCli => {
-                "⚠️ Требуется авторизованный аккаунт Google (стандартные личные аккаунты не поддерживаются)."
+            Texto::ModalMmceltReconoceClaudeCode => {
+                "MMCelt поддерживает Claude Code, Codex CLI и Antigravity CLI (agy)."
             }
             Texto::ModalInstalaAlgunoYPulsa => "Установите агент и нажмите «Повторить поиск»: перезапуск не требуется.",
             Texto::ModalAgentesEncontrados => "Обнаруженные агенты",
@@ -4315,6 +4514,29 @@ impl Texto {
             Texto::ModalConectadoAOtraCarpeta => "⚠ подключено к другой папке",
             Texto::ModalApuntaALaCarpeta => "Его настройки разрешают другую папку:",
             Texto::ModalActualizarLaCarpeta => "🔄 Обновить папку",
+            Texto::ModalProgramaDelAgente => "Программа: {}",
+            Texto::ModalProgramaDetectado => "найдена автоматически",
+            Texto::ModalProgramaElegidoAMano => "выбрана вручную",
+            Texto::ModalProgramaNoEncontrado => "Программа этого агента не найдена.",
+            Texto::ModalCambiarRuta => "📂 Изменить путь...",
+            Texto::ModalCambiarRutaAyuda => "Выберите программу этого агента вручную, если она установлена в другой папке",
+            Texto::ModalUsarLaDeteccion => "Использовать поиск",
+            Texto::ModalCuentaDelAgente => "учётная запись «{}»",
+            Texto::ModalAnadirCuenta => "Добавить учётную запись",
+            Texto::ModalAnadirCuentaAyuda => "Вручную добавляет папку настроек другой учётной записи агента.",
+            Texto::ModalElegirCarpetaDeCuenta => "Выберите папку учётной записи {}",
+            Texto::ModalAltaNoAdmitida => "{} не поддерживает учётные записи, добавленные вручную: его консоль не будет использовать эту папку.",
+            Texto::ModalAltaCarpetaYaUsada => "Эта папка уже является учётной записью {}: повторно она не добавляется.",
+            Texto::ModalQuitarCuenta => "Убрать учётную запись",
+            Texto::ModalQuitarCuentaAyuda => "Перестаёт показывать эту добавленную вручную учётную запись; с диска ничего не удаляется.",
+            Texto::AgenteDescripcionClaudeCode => "Помощник по программированию от Anthropic в терминале",
+            Texto::AgenteDescripcionCodexCli => "Агент для программирования от OpenAI в терминале",
+            Texto::AgenteDescripcionAgy => "Агент для программирования от Google в терминале",
+            Texto::ModalPreferenciasNoGuardadas => "Не удалось сохранить настройки",
+            Texto::ContratoDevolverIntroduccion => "## 🔄 9. КАК ВЕРНУТЬ РАБОТУ В ЭТУ КАРТУ\n\nMMCelt предоставляет сервер MCP. Не редактируйте файл `.mmcelt` напрямую: используйте его инструменты, чтобы сохранить контроль человека и резервные копии.\n\n",
+            Texto::ContratoDevolverFlujo => "1. `mmcelt_workspace_info`: узнать разрешённую папку и доступные карты.\n2. `mmcelt_read_mindmap`: прочитать узлы, UUID, заголовки и связи.\n3. `mmcelt_get_human_feedback`: прочитать исправления и решения человека.\n4. `mmcelt_sync_ai_progress`: вернуть результат, не заменяя карту.\n5. `mmcelt_create_mindmap`: создать новую карту, не заменять карту человека.\n6. `mmcelt_export_ai_markdown`: заново создать этот документ.\n\nИдентификация: при повторяющихся заголовках используйте UUID; UUID и заголовок должны совпадать. Не присваивайте одобрение человека и не меняйте `review_status`: добавления ИИ создаются как `GeneradoPorIA`. Когда вся работа закончена, укажите `work_finished: true` в последнем вызове `mmcelt_sync_ai_progress` (или `mmcelt_create_mindmap`): до этого MMCelt держит карту заблокированной для человека.\n\n",
+            Texto::ModalRutaElegidaNoValida => "Выбранный путь «{}» не существует или не является программой; используется автоматический поиск.",
+            Texto::ModalElegirProgramaDe => "Выберите программу {}",
             Texto::ModalDesconectadoDe => "отключено от",
             Texto::ModalMmceltAccionReinicialoPara => "MMCelt {accion} {}. Перезапустите его для применения изменений.",
             Texto::ModalCopiaDeSeguridad => "Резервная копия: {}",
@@ -4722,12 +4944,16 @@ impl Texto {
             Texto::MenuContextualTitulo => "节点操作",
             Texto::IconoTieneNotas => "📝 包含备注：选中该节点即可在检查器中阅读",
             Texto::IaConectarConMisIas => "🔌 将MMCelt连接到我的AI...",
-            Texto::IaConectarConMisIasAyuda => "自动检测已安装的控制台智能体（Claude Code、Codex CLI、Gemini CLI）并一键连接到MMCelt",
+            Texto::IaConectarConMisIasAyuda => "自动检测已安装的控制台智能体（Claude Code、Codex CLI、Antigravity CLI (agy)）并一键连接到MMCelt",
             Texto::IaMenuEnviarA => "📤 发送到...",
             Texto::IaMenuEnviarAAyuda => "保存思维导图，导出 AI 文档并启用自动跟踪",
             Texto::IaSinAgentesDetectados => "未检测到已安装的智能体。",
             Texto::IaDetenerSeguimiento => "⏹ 停止跟踪",
             Texto::IaVigilandoCambios => "🟢 正在监视 AI 更改",
+            Texto::BloqueoAgenteTrabajando => "🔒 有代理正在处理此导图：完成前无法编辑",
+            Texto::BloqueoRecuperarControl => "收回控制权",
+            Texto::AvisoBloqueoEdicionRechazada => "代理工作期间导图已锁定：更改未应用",
+            Texto::AvisoAgenteTermino => "✅ 代理已完成：导图可以再次编辑",
             Texto::IaImportarDesdeIa => "📥 从AI导入（ChatGPT、Claude、Gemini）...",
             Texto::IaCopiarPromptMaestro => "📋 复制供AI使用的主提示词...",
             Texto::IaEnviarCorrecciones => "🛑 向AI发送修正意见与指令...",
@@ -4766,7 +4992,7 @@ impl Texto {
             Texto::AyudaServidorMcp => "🟣 MCP 服务器与 AI 智能体...",
             Texto::AyudaClaudeCode => "🟣 Claude Code（终端 CLI）...",
             Texto::AyudaChatGpt => "🟢 Codex CLI 与 ChatGPT...",
-            Texto::AyudaGemini => "🔵 Gemini CLI...",
+            Texto::AyudaGemini => "🔵 Antigravity CLI (agy)...",
             Texto::AyudaVerTodosLosAtajos => "⌨️ 查看所有键盘快捷键...",
 
             Texto::ModalSeEncontroTrabajoSin => "🛟 发现未保存的内容",
@@ -4864,6 +5090,11 @@ impl Texto {
             }
             Texto::BotonGuardarCopiaAqui => "在此保存副本",
             Texto::BotonGuardarYTrabajarEnNueva => "保存并在新文件夹中工作",
+            Texto::CierreConCambiosTitulo => "关闭前保存更改？",
+            Texto::CierreConCambiosExplicacion => "导图中有尚未保存的更改。如果不保存就关闭，这些更改将会丢失。",
+            Texto::CierreBotonGuardar => "保存",
+            Texto::CierreBotonNoGuardar => "不保存",
+            Texto::CierreBotonCancelar => "取消",
             Texto::ModalSinCarpetaDeProyecto => "(无项目文件夹)",
             Texto::ModalEstaInformacionSeColocara => "此信息将置于 Markdown 核心区域，以便AI精确理解您的预期目标：",
             Texto::ModalQueHasIntentadoPlasmar => "🎯 您希望通过此导图表达什么？（创建者愿景）：",
@@ -4913,9 +5144,8 @@ impl Texto {
             Texto::ModalCarpetaDeTrabajo => "工作目录",
             Texto::ModalLosAgentesSoloPodran => "AI代理仅允许读写该目录内的文件。任何外部路径均会被严格拒绝。",
             Texto::ModalNoSeEncontroNingun => "在此计算机上未检测到AI代理。",
-            Texto::ModalMmceltReconoceClaudeCode => "MMCelt 支持 Claude Code、Codex CLI 与 Gemini CLI。",
-            Texto::ModalAdvertenciaGeminiCli => {
-                "⚠️ 需要 Google 授权的账户类型（不支持标准个人账户）。"
+            Texto::ModalMmceltReconoceClaudeCode => {
+                "MMCelt 支持 Claude Code、Codex CLI 与 Antigravity CLI (agy)。"
             }
             Texto::ModalInstalaAlgunoYPulsa => "请安装相应代理后点击“重新扫描”：无需重启 MMCelt。",
             Texto::ModalAgentesEncontrados => "已检测到的代理",
@@ -4934,6 +5164,29 @@ impl Texto {
             Texto::ModalConectadoAOtraCarpeta => "⚠ 已连接至其他文件夹",
             Texto::ModalApuntaALaCarpeta => "其配置中的文件夹是：",
             Texto::ModalActualizarLaCarpeta => "🔄 更新文件夹",
+            Texto::ModalProgramaDelAgente => "程序：{}",
+            Texto::ModalProgramaDetectado => "自动检测",
+            Texto::ModalProgramaElegidoAMano => "手动选择",
+            Texto::ModalProgramaNoEncontrado => "未找到此代理的程序。",
+            Texto::ModalCambiarRuta => "📂 更改路径...",
+            Texto::ModalCambiarRutaAyuda => "如果此代理的程序安装在其他文件夹中，请手动选择",
+            Texto::ModalUsarLaDeteccion => "使用自动检测",
+            Texto::ModalCuentaDelAgente => "账户“{}”",
+            Texto::ModalAnadirCuenta => "添加账户",
+            Texto::ModalAnadirCuentaAyuda => "手动添加智能体另一个账户的配置文件夹。",
+            Texto::ModalElegirCarpetaDeCuenta => "选择 {} 的账户文件夹",
+            Texto::ModalAltaNoAdmitida => "{} 不支持手动添加的账户：它的控制台不会使用该文件夹。",
+            Texto::ModalAltaCarpetaYaUsada => "该文件夹已是 {} 的账户：不会再次添加。",
+            Texto::ModalQuitarCuenta => "移除账户",
+            Texto::ModalQuitarCuentaAyuda => "不再显示这个手动添加的账户；不会从磁盘删除任何内容。",
+            Texto::AgenteDescripcionClaudeCode => "Anthropic 的终端编程助手",
+            Texto::AgenteDescripcionCodexCli => "OpenAI 的终端编程代理",
+            Texto::AgenteDescripcionAgy => "Google 的终端编程代理",
+            Texto::ModalPreferenciasNoGuardadas => "无法保存偏好设置",
+            Texto::ContratoDevolverIntroduccion => "## 🔄 9. 如何将工作返回此思维导图\n\nMMCelt 提供 MCP 服务器。请勿直接编辑 `.mmcelt` 文件；请使用其工具，以保留人工监督和备份。\n\n",
+            Texto::ContratoDevolverFlujo => "1. `mmcelt_workspace_info`：查找授权文件夹和可用导图。\n2. `mmcelt_read_mindmap`：读取节点、UUID、标题和连接。\n3. `mmcelt_get_human_feedback`：读取人工修正和决定。\n4. `mmcelt_sync_ai_progress`：将进度返回现有导图，不替换导图。\n5. `mmcelt_create_mindmap`：创建新导图，不替换人工导图。\n6. `mmcelt_export_ai_markdown`：在需要时重新生成本文档。\n\n标识：标题重复时使用 UUID；同时发送 UUID 和标题时两者必须一致。不得声称人工批准或更改 `review_status`；AI 新增内容标记为 `GeneradoPorIA`。全部工作完成后，请在最后一次调用 `mmcelt_sync_ai_progress`（或 `mmcelt_create_mindmap`）时设置 `work_finished: true`：在此之前，MMCelt 会为用户锁定该导图。\n\n",
+            Texto::ModalRutaElegidaNoValida => "所选路径“{}”不存在或不是程序；将使用自动检测。",
+            Texto::ModalElegirProgramaDe => "选择 {} 的程序",
             Texto::ModalDesconectadoDe => "已断开与",
             Texto::ModalMmceltAccionReinicialoPara => "MMCelt {accion} {}。请重启该代理以使更改生效。",
             Texto::ModalCopiaDeSeguridad => "备份路径：{}",
@@ -5228,7 +5481,7 @@ impl Texto {
     /// no era cierto: una clave nueva que no llegara a esta lista se escapaba en silencio de
     /// las dos comprobaciones que la usan.
     #[cfg(test)]
-    pub const TODOS: [Texto; 596] = [
+    pub const TODOS: [Texto; 627] = [
         Texto::MenuArchivo,
         Texto::ArchivoNuevoMapa,
         Texto::ArchivoEjemplos,
@@ -5349,6 +5602,10 @@ impl Texto {
         Texto::IaSinAgentesDetectados,
         Texto::IaDetenerSeguimiento,
         Texto::IaVigilandoCambios,
+        Texto::BloqueoAgenteTrabajando,
+        Texto::BloqueoRecuperarControl,
+        Texto::AvisoBloqueoEdicionRechazada,
+        Texto::AvisoAgenteTermino,
         Texto::IaImportarDesdeIa,
         Texto::IaCopiarPromptMaestro,
         Texto::IaEnviarCorrecciones,
@@ -5390,7 +5647,7 @@ impl Texto {
         Texto::AyudaGemini,
         Texto::AyudaVerTodosLosAtajos,
         Texto::AvisoArrastreEnModoAutomatico,
-        // Las ventanas (TRAD-004).
+        // Las ventanas.
         Texto::ModalSeEncontroTrabajoSin,
         Texto::ModalLaSesionAnteriorTermino,
         Texto::ModalHayUnaCopiaAutomatica,
@@ -5482,6 +5739,11 @@ impl Texto {
         Texto::ModalGuardarComoOtraCarpetaExplicacion,
         Texto::BotonGuardarCopiaAqui,
         Texto::BotonGuardarYTrabajarEnNueva,
+        Texto::CierreConCambiosTitulo,
+        Texto::CierreConCambiosExplicacion,
+        Texto::CierreBotonGuardar,
+        Texto::CierreBotonNoGuardar,
+        Texto::CierreBotonCancelar,
         Texto::ModalSinCarpetaDeProyecto,
         Texto::ModalEstaInformacionSeColocara,
         Texto::ModalQueHasIntentadoPlasmar,
@@ -5532,7 +5794,6 @@ impl Texto {
         Texto::ModalLosAgentesSoloPodran,
         Texto::ModalNoSeEncontroNingun,
         Texto::ModalMmceltReconoceClaudeCode,
-        Texto::ModalAdvertenciaGeminiCli,
         Texto::ModalInstalaAlgunoYPulsa,
         Texto::ModalAgentesEncontrados,
         Texto::ModalVolverABuscar,
@@ -5550,6 +5811,29 @@ impl Texto {
         Texto::ModalConectadoAOtraCarpeta,
         Texto::ModalApuntaALaCarpeta,
         Texto::ModalActualizarLaCarpeta,
+        Texto::ModalProgramaDelAgente,
+        Texto::ModalProgramaDetectado,
+        Texto::ModalProgramaElegidoAMano,
+        Texto::ModalProgramaNoEncontrado,
+        Texto::ModalCambiarRuta,
+        Texto::ModalCambiarRutaAyuda,
+        Texto::ModalUsarLaDeteccion,
+        Texto::ModalCuentaDelAgente,
+        Texto::ModalAnadirCuenta,
+        Texto::ModalAnadirCuentaAyuda,
+        Texto::ModalElegirCarpetaDeCuenta,
+        Texto::ModalAltaNoAdmitida,
+        Texto::ModalAltaCarpetaYaUsada,
+        Texto::ModalQuitarCuenta,
+        Texto::ModalQuitarCuentaAyuda,
+        Texto::AgenteDescripcionClaudeCode,
+        Texto::AgenteDescripcionCodexCli,
+        Texto::AgenteDescripcionAgy,
+        Texto::ModalPreferenciasNoGuardadas,
+        Texto::ContratoDevolverIntroduccion,
+        Texto::ContratoDevolverFlujo,
+        Texto::ModalRutaElegidaNoValida,
+        Texto::ModalElegirProgramaDe,
         Texto::ModalDesconectadoDe,
         Texto::ModalMmceltAccionReinicialoPara,
         Texto::ModalCopiaDeSeguridad,
@@ -5560,7 +5844,7 @@ impl Texto {
         Texto::ModalAbrirMapaMental,
         Texto::ModalExportarMarkdownOptimizadoPara,
         Texto::ModalArchivoMarkdownMd,
-        // El inspector de nodo (TRAD-003).
+        // El inspector de nodo.
         Texto::InspectorSeleccionaUnNodo,
         Texto::InspectorSeleccionaUnNodoDetalle,
         Texto::InspectorTitulo,
@@ -6403,4 +6687,26 @@ impl ClaveError {
 /// - `rotulo`: el rótulo tal cual sale de [`Texto::en`].
 pub fn sin_dos_puntos(rotulo: &str) -> &str {
     rotulo.trim_end_matches(|c: char| c == ':' || c == '：' || c.is_whitespace())
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::{Idioma, Texto};
+    use crate::conectores::IdAgente;
+
+    /// Cada agente con consola tiene su propia descripción, distinta de las demás en cada
+    /// idioma, y las identidades históricas no tienen ninguna.
+    #[test]
+    fn cada_agente_con_consola_tiene_su_propia_descripcion() {
+        let con_consola = [IdAgente::ClaudeCode, IdAgente::CodexCli, IdAgente::Agy];
+        for idioma in Idioma::TODOS {
+            let descripciones: std::collections::HashSet<&str> = con_consola
+                .iter()
+                .filter_map(|agente| Texto::descripcion_del_agente(*agente))
+                .map(|texto| texto.en(idioma))
+                .collect();
+            assert_eq!(descripciones.len(), con_consola.len(), "{idioma:?}");
+        }
+        assert_eq!(Texto::descripcion_del_agente(IdAgente::Cursor), None);
+    }
 }

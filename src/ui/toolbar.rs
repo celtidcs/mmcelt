@@ -291,11 +291,7 @@ fn entradas_para_empezar_un_mapa(
         .button(format!("{}\tCtrl+N", Texto::ArchivoNuevoMapa.en(idioma)))
         .clicked()
     {
-        app.sustituir_el_mapa_abierto(
-            crate::model::Proyecto::nuevo_vacio(Texto::ArchivoNuevoProyectoDefecto.en(idioma)),
-            None,
-            Texto::AvisoProyectoNuevo.en(idioma),
-        );
+        crate::aplicacion::abrir_un_mapa_nuevo(app);
         ui.close();
     }
 
@@ -778,7 +774,10 @@ fn submenu_enviar_a_un_agente(app: &mut AplicacionMapaMental, ui: &mut egui::Ui,
                 };
                 if ui
                     .button(format!("{icono} {}", agente.nombre))
-                    .on_hover_text(agente.descripcion)
+                    .on_hover_text(
+                        Texto::descripcion_del_agente(agente.id)
+                            .map_or("", |texto| texto.en(idioma)),
+                    )
                     .clicked()
                 {
                     app.preparar_sesion_agente(agente);

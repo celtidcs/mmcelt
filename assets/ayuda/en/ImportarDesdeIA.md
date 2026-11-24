@@ -21,3 +21,5 @@ Nevertheless, good practice is to **save with `Ctrl + S` before importing**. The
 The AI returns structure and content, not layout presentation. Manual positions and collapsed branches are reset upon import: the map is arranged using automatic layout.
 
 Everything essential for development travels intact: titles, notes, file paths, tags, roles, statuses, priorities, cross links, and required corrections.
+
+Everything you import from the AI appears **highlighted**, with a different background and border colour, until you select each node. Nodes that arrive without a review status come in as **`🤖 AI Generated`**, and one that claims to be approved comes in as **`⏳ Pending Human Review`**: only you can give approval.

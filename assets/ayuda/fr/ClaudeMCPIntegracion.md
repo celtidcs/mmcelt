@@ -7,8 +7,11 @@ Une passerelle directe et sécurisée permettant aux intelligences artificielles
 Vous n'avez pas besoin de modifier des fichiers de configuration complexes. Connectez vos agents directement depuis l'application :
 
 1. Rendez-vous dans le menu `🤖 Intelligence artificielle` → `🔌 Connecter MMCelt à mes IA...`.
-2. MMCelt détectera automatiquement les assistants de terminal installés sur votre machine (Claude Code, Codex CLI et Gemini CLI).
+2. MMCelt détectera automatiquement les assistants de terminal installés sur votre machine (Claude Code, Codex CLI et Antigravity CLI).
 3. Cliquez sur le bouton **Connecter** en face de l'assistant de votre choix. Et voilà !
+4. Si l'assistant est installé dans un autre dossier, cliquez sur **📂 Changer le chemin...** dans sa fiche et choisissez son programme. MMCelt s'en souviendra ; **Utiliser la détection** revient à la recherche automatique.
+
+5. Si vous utilisez plusieurs comptes d'un même agent, chacun apparaît dans sa propre fiche avec le nom de son dossier (par exemple, compte « .claude2 »). MMCelt les trouve tout seul : il regarde les dossiers de votre dossier personnel nommés comme celui de l'agent suivi d'autre chose, et ceux qu'indiquent CLAUDE_CONFIG_DIR ou CODEX_HOME. **Connecter** enregistre MMCelt dans ce compte, et à l'envoi d'une carte la console s'ouvre avec lui. Si un compte se trouve ailleurs, cliquez sur **Ajouter un compte** et choisissez l'agent et son dossier ; **Retirer le compte** cesse de l'afficher sans rien supprimer. Antigravity CLI (agy) n'utilise que son compte par défaut : il n'offre aucun moyen documenté de choisir un autre dossier de configuration, donc un compte ajouté à la main ne serait pas utilisé.
 
 Si vous installez un nouvel assistant plus tard, rouvrez simplement cette fenêtre : la détection s'exécute à chaque ouverture. L'état « Connecté » garantit que l'assistant sait où trouver MMCelt et comment communiquer avec lui via `--mcp-server`.
 
@@ -44,7 +47,7 @@ L'assistant dispose de six outils officiels conçus spécialement pour collabore
 - `mmcelt_workspace_info` : Consulte le dossier autorisé et les cartes `.mmcelt` présentes. C'est le premier outil appelé pour éviter d'inventer des chemins.
 - `mmcelt_create_mindmap` : Crée de nouvelles cartes mentales au format `.mmcelt`.
 - `mmcelt_read_mindmap` : Lit la structure de votre carte, vos notes et les questions en suspens.
-- `mmcelt_sync_ai_progress` : Développe la carte en ajoutant des nœuds avec leurs rôles, priorités et relations.
+- `mmcelt_sync_ai_progress` : Développe la carte en ajoutant des nœuds avec leurs rôles, priorités et relations. Lors de sa dernière livraison, il indique `work_finished: true`, ce qui permet à MMCelt de lever le verrou de la carte.
 - `mmcelt_get_human_feedback` : Lit vos corrections et directives avant d'effectuer des modifications sensibles.
 - `mmcelt_export_ai_markdown` : Convertit la carte en un résumé structuré en Markdown.
 

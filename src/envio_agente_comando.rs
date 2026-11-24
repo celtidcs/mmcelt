@@ -205,8 +205,22 @@ pub(crate) fn iniciar_envio_confirmado(
         return Ok(false);
     }
     agentes.envio = EstadoEnvio::Preparando;
+    // Desde aquí el mapa es del agente hasta que diga que ha terminado.
+    agentes
+        .bloqueo
+        .bloquear(proyecto, &agentes.espacio_de_trabajo);
     ctx.request_repaint();
     Ok(true)
+}
+
+/// Lo que el envío dejó guardado en disco antes de lanzar al agente.
+pub(crate) struct GuardadoDelEnvio {
+    /// Archivo en el que se guardó el mapa.
+    pub ruta: PathBuf,
+    /// Huella del archivo escrito, si se pudo calcular.
+    pub huella: Option<u64>,
+    /// Qué contenía el mapa cuando se escribió: lo editado después sigue pendiente.
+    pub instantanea: crate::envio_agente::InstantaneaGuardada,
 }
 
 /// Resultado clasificado de la atención a eventos del trabajador de envío.
@@ -216,14 +230,14 @@ pub(crate) enum ReaccionEnvioSegundoPlano {
     /// El proceso concluyó con éxito y la vigilancia del mapa quedó iniciada.
     Exito {
         /// Ruta y huella si el mapa tuvo que ser guardado durante la preparación.
-        mapa_guardado: Option<(PathBuf, Option<u64>)>,
+        mapa_guardado: Option<GuardadoDelEnvio>,
         /// Indica si la vigilancia se activó por primera vez para este mapa.
         iniciada: bool,
     },
     /// Ocurrió un fallo al ejecutar o al iniciar la vigilancia posterior.
     Fallo {
         /// Ruta y huella si el mapa se llegó a guardar antes de fallar.
-        mapa_guardado: Option<(PathBuf, Option<u64>)>,
+        mapa_guardado: Option<GuardadoDelEnvio>,
         error: AppError,
     },
 }
@@ -238,30 +252,45 @@ pub(crate) fn atender_envio_en_segundo_plano(
         return ReaccionEnvioSegundoPlano::Ninguna;
     };
     let mapa_guardado = if trabajo.mapa_guardado {
-        Some((trabajo.ruta_mapa, trabajo.huella_guardada))
+        Some(GuardadoDelEnvio {
+            ruta: trabajo.ruta_mapa,
+            huella: trabajo.huella_guardada,
+            instantanea: trabajo.instantanea,
+        })
     } else {
         None
     };
     match trabajo.resultado {
-        Ok(_) => match crate::vigilancia_mapa::iniciar_vigilancia(persistencia, ctx) {
-            Ok(iniciada) => {
-                agentes.envio = EstadoEnvio::Preparado;
-                agentes.editor_sesion = None;
-                ReaccionEnvioSegundoPlano::Exito {
-                    mapa_guardado,
-                    iniciada,
+        Ok(_) => {
+            // El envío pudo guardar el mapa en una ruta nueva (un mapa sin archivo pide nombre).
+            // La vigilancia mira `ruta_actual`: tiene que apuntar ya a esa ruta, o vigilaría la
+            // anterior, o nada, y los cambios del agente no llegarían a la pantalla.
+            if let Some(guardado) = &mapa_guardado {
+                persistencia.ruta_actual = Some(guardado.ruta.clone());
+            }
+            let huella_propia = mapa_guardado.as_ref().and_then(|guardado| guardado.huella);
+            match crate::vigilancia_mapa::iniciar_vigilancia(persistencia, ctx, huella_propia) {
+                Ok(iniciada) => {
+                    agentes.envio = EstadoEnvio::Preparado;
+                    agentes.editor_sesion = None;
+                    ReaccionEnvioSegundoPlano::Exito {
+                        mapa_guardado,
+                        iniciada,
+                    }
+                }
+                Err(error) => {
+                    agentes.envio = EstadoEnvio::Fallido;
+                    agentes.bloqueo.desbloquear();
+                    ReaccionEnvioSegundoPlano::Fallo {
+                        mapa_guardado,
+                        error,
+                    }
                 }
             }
-            Err(error) => {
-                agentes.envio = EstadoEnvio::Fallido;
-                ReaccionEnvioSegundoPlano::Fallo {
-                    mapa_guardado,
-                    error,
-                }
-            }
-        },
+        }
         Err(error) => {
             agentes.envio = EstadoEnvio::Fallido;
+            agentes.bloqueo.desbloquear();
             ReaccionEnvioSegundoPlano::Fallo {
                 mapa_guardado,
                 error,
@@ -370,7 +399,7 @@ where
         crate::envio_agente::EnvioAAgente::nuevo(&lanzador, persistencia_envio, &sesiones)
             .ejecutar(solicitud)?;
     }
-    crate::vigilancia_mapa::iniciar_vigilancia(persistencia, ctx)?;
+    crate::vigilancia_mapa::iniciar_vigilancia(persistencia, ctx, None)?;
     agentes.editor_sesion = None;
     Ok(true)
 }

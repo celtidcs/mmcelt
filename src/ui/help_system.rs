@@ -54,7 +54,7 @@ pub enum TemaDeAyuda {
     ClaudeCodeTerminal,
     /// Diferencias entre ChatGPT web, Codex y un GPT personalizado.
     ChatGPTCustomGPT,
-    /// Recorridos con Gemini, Gemini CLI y Antigravity.
+    /// Recorridos con Antigravity CLI (agy) y Gemini en la web.
     GeminiGems,
     /// Significado visual de colores, ramas y estados.
     ColoresDelMapa,

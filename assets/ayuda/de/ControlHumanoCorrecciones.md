@@ -11,10 +11,17 @@ Macht MMCelt zu Ihrer **Überwachungs- und Veto-Konsole** gegenüber KI-Vorschl�
 4. Klicken Sie auf **`📋 Korrekturanweisungen kopieren`** und fügen Sie diese in den KI-Chat ein (oder lassen Sie Claude Code `mmcelt_get_human_feedback` aufrufen).
 5. Die KI liest die Veto-Vorgaben und passt ihren Code umgehend an.
 
+### 🟣 Was die KI getan hat, auf einen Blick
+- Knoten, die Sie selbst anlegen, beginnen als **`⚪ Nicht markiert`**: Sie tragen kein Prüfsymbol.
+- Ein Knoten, den die KI **gerade erstellt hat**, wird mit **einer anderen Hintergrund- und Randfarbe** gezeichnet, bis Sie ihn auswählen. Danach erhält er sein normales Aussehen zurück und behält das Symbol **`🤖 KI-generiert`**.
+- Ändert die KI **einen bereits vorhandenen Knoten**, wechselt er zu **`⏳ Ausstehende Prüfung`** und die Uhr wird in der **Warnfarbe** gezeichnet.
+
+Das Öffnen der Karte oder ihr Neuladen nach einer Änderung durch die KI entfernt die Hervorhebung nicht: Das geschieht nur, wenn Sie den Knoten auswählen. Das Entfernen ist keine Änderung der Karte und lässt sich daher nicht rückgängig machen. In der Datei bleibt es jedoch erst nach dem Speichern erhalten: Wenn Sie MMCelt ohne Speichern schließen, fragt das Programm, ob Sie speichern möchten.
+
 ### ✅ Knoten freigeben und automatische Gültigkeit
 Wenn Sie einen Knoten für gut befinden, weisen Sie ihm im Inspektor **`🛡️ Menschlich freigegeben`** zu. Dies gilt als Ihre formale Signatur. Die Kontrollen für menschliche Prüfung, Priorität und Status zeigen einheitliche Symbole im Menü und direkt auf dem Knoten der Leinwand.
 
-**Diese Freigabe erlischt automatisch bei Änderungen.** Ändert die KI später diesen Knoten — seine Notizen, seinen Status, die Priorität oder den Dateipfad —, wechselt der Status automatisch zu **`⏳ Ausstehende Prüfung`**.
+**Diese Freigabe erlischt automatisch bei Änderungen.** Ändert die KI später diesen Knoten — seine Notizen, seinen Status, die Priorität oder den Dateipfad —, wechselt der Status automatisch zu **`⏳ Ausstehende Prüfung`**. Dasselbe gilt für einen Knoten mit **`⚪ Nicht markiert`** oder **`⚠️ Korrektur erforderlich`**, den die KI ändert.
 
 Der Grund ist einleuchtend: Sie haben einen spezifischen Stand freigegeben, nicht den Knoten auf Dauer. Ohne dieses Erlöschen stünde Ihre Freigabe auf Inhalten, die Sie nie geprüft haben.
 

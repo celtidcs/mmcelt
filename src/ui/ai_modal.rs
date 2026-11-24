@@ -831,7 +831,7 @@ fn botones_de_la_conexion_cruzada(
             };
 
             // La interfaz no crea una segunda línea encima de la jerarquía ni repite una
-            // conexión que ya existe (PH-1007-2); el modelo lo admitiría, porque los
+            // conexión que ya existe; el modelo lo admitiría, porque los
             // importadores conservan lo que trae el archivo.
             if !app
                 .mapa()

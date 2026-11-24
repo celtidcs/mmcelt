@@ -25,7 +25,7 @@
 set -o pipefail
 
 # --- Versiones mínimas exigidas -----------------------------------------------
-# La que exigen egui y eframe 0.36 (`rust-version = "1.95"` en sus Cargo.toml). Con 1.85 el
+# La que exigen egui y eframe 0.37 (`rust-version = "1.95"` en sus Cargo.toml). Con 1.85 el
 # script daba el visto bueno y la compilación fallaba después.
 readonly VERSION_MINIMA_RUST="1.95.0"
 
@@ -378,7 +378,7 @@ if [ ${#problemas[@]} -eq 0 ]; then
     echo "      ${CIAN}cargo run --release${SIN_COLOR}"
     echo
     echo "  Para conectar tus agentes de IA, lo más cómodo es hacerlo desde el propio"
-    echo "  programa: menú «Inteligencia Artificial → Conectar MMCelt con mis IAs»."
+    echo "  programa: menú «Inteligencia Artificial → Conectar MMCelt con mis IAs...»."
     echo
     echo "  Y si prefieres configurarlo a mano, esta es la entrada:"
     echo

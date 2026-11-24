@@ -1,9 +1,9 @@
-//! Gestión y evaluación de destinos para «Guardar como» (PH-0119-3).
+//! Gestión y evaluación de destinos para «Guardar como».
 //!
 //! Desacopla de `aplicacion.rs` la lógica de decisión cuando el usuario guarda un mapa
 //! en disco:
-//! - Si el destino es la misma carpeta del proyecto activo, se guarda directamente sin aviso (C12-J).
-//! - Si el destino es una carpeta distinta, se ofrecen dos salidas explícitas (C12-I):
+//! - Si el destino es la misma carpeta del proyecto activo, se guarda directamente sin aviso adicional.
+//! - Si el destino es una carpeta distinta, se ofrecen dos salidas explícitas:
 //!   1. Guardar una copia aquí (el proyecto activo no se mueve).
 //!   2. Guardar y trabajar en la carpeta nueva (persiste cambios previos y traslada la sesión).
 
@@ -84,7 +84,7 @@ pub fn ejecutar_guardado_como(
             Ok(())
         }
         AccionGuardarComo::GuardarYTrabajarEnCarpetaNueva => {
-            // 1. C12-K: Asegura los cambios pendientes en el archivo actual antes de cerrar/trasladar
+            // 1. Asegura los cambios pendientes en el archivo actual antes de cerrar/trasladar
             if let Some(ruta_previa) = app.persistencia().ruta_actual.clone() {
                 if ruta_previa.exists() {
                     let _ = crate::storage::guardar_proyecto_en_archivo(

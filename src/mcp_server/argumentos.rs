@@ -24,6 +24,9 @@ pub(crate) struct ArgumentosCrearMapa {
     pub(crate) file_path: String,
     /// Nombre del agente que quedará en el recibo de devolución.
     pub(crate) agent_name: Option<String>,
+    /// El agente marca así su última entrega: la aplicación desbloquea el mapa al recibirla.
+    #[serde(default)]
+    pub(crate) work_finished: bool,
     /// Título general del proyecto nuevo.
     pub(crate) title: String,
     /// Visión de la persona creadora que el agente debe preservar.
@@ -189,6 +192,9 @@ pub(crate) struct ArgumentosSincronizar {
     pub(crate) file_path: String,
     /// Nombre que se incluirá en el recibo de devolución.
     pub(crate) agent_name: Option<String>,
+    /// El agente marca así su última entrega: la aplicación desbloquea el mapa al recibirla.
+    #[serde(default)]
+    pub(crate) work_finished: bool,
     /// Cambios de nodos, aplicados solo después de validar el lote entero.
     pub(crate) node_updates: Vec<ActualizacionNodo>,
     /// Relaciones laterales que se añadirán sin duplicar las existentes.

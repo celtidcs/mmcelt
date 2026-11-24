@@ -5,6 +5,7 @@
 
 use super::error::ErrorHerramienta;
 use super::operaciones::VARIABLE_ESPACIO_TRABAJO;
+use super::EspacioMcp;
 use crate::devolucion_agentes::{OperacionDevolucion, ReciboDevolucion};
 use crate::proyecto_trabajo::{CargaProyecto, ContextoProyecto, RepositorioProyecto};
 use std::path::{Path, PathBuf};
@@ -61,9 +62,9 @@ impl UsoDeLaRuta {
 /// # Errores
 /// Devuelve error si la variable no está definida, está vacía, o apunta a una carpeta
 /// que no existe en el disco.
-pub(super) fn espacio_de_trabajo() -> Result<PathBuf, ErrorHerramienta> {
-    let bruta = std::env::var_os(VARIABLE_ESPACIO_TRABAJO)
-        .map(PathBuf::from)
+pub(super) fn espacio_de_trabajo(espacio: &EspacioMcp) -> Result<PathBuf, ErrorHerramienta> {
+    let bruta = espacio
+        .ruta_configurada()
         .filter(|ruta| !ruta.as_os_str().is_empty())
         .ok_or_else(|| {
             ErrorHerramienta::seguridad(format!(
@@ -92,8 +93,10 @@ pub(super) fn espacio_de_trabajo() -> Result<PathBuf, ErrorHerramienta> {
 }
 
 /// Carga la identidad portable si la carpeta ya fue confirmada desde MMCelt.
-fn contexto_proyecto_configurado() -> Result<Option<ContextoProyecto>, ErrorHerramienta> {
-    let espacio = espacio_de_trabajo()?;
+fn contexto_proyecto_configurado(
+    espacio: &EspacioMcp,
+) -> Result<Option<ContextoProyecto>, ErrorHerramienta> {
+    let espacio = espacio_de_trabajo(espacio)?;
     if !espacio.join(".mmcelt/configuracion.json").is_file() {
         return Ok(None);
     }
@@ -113,11 +116,13 @@ fn contexto_proyecto_configurado() -> Result<Option<ContextoProyecto>, ErrorHerr
 /// El recibo describe lo que el agente afirma devolver. No sustituye la validación de la ruta ni
 /// autoriza la escritura, que ya debe haber atravesado las comprobaciones de este módulo.
 pub(super) fn preparar_devolucion(
+    espacio: &EspacioMcp,
     ruta: &Path,
     nombre_agente: Option<&str>,
     operacion: OperacionDevolucion,
+    trabajo_terminado: bool,
 ) -> Result<Option<(ContextoProyecto, ReciboDevolucion)>, ErrorHerramienta> {
-    let Some(contexto) = contexto_proyecto_configurado()? else {
+    let Some(contexto) = contexto_proyecto_configurado(espacio)? else {
         return Ok(None);
     };
     let relativa = ruta.strip_prefix(contexto.raiz()).map_err(|_| {
@@ -127,7 +132,7 @@ pub(super) fn preparar_devolucion(
         .map(str::trim)
         .filter(|nombre| !nombre.is_empty())
         .unwrap_or("Agente MCP");
-    let recibo =
+    let mut recibo =
         ReciboDevolucion::nuevo(&contexto, relativa, modelo, operacion).map_err(|error| {
             ErrorHerramienta::argumento(
                 error
@@ -135,6 +140,7 @@ pub(super) fn preparar_devolucion(
                     .en(super::operaciones::idioma_del_usuario()),
             )
         })?;
+    recibo.trabajo_terminado = trabajo_terminado;
     Ok(Some((contexto, recibo)))
 }
 
@@ -154,7 +160,7 @@ pub(super) fn publicar_devolucion(
         )
     })?;
     let ruta = contexto
-        .resolver_relativa(Path::new(".mmcelt/devolucion.json"))
+        .resolver_relativa(Path::new(crate::devolucion_agentes::RUTA_DEL_RECIBO))
         .map_err(|error| {
             ErrorHerramienta::seguridad(
                 error
@@ -256,7 +262,11 @@ fn resolver_desde_el_antepasado_existente(candidata: &Path) -> Result<PathBuf, E
 /// # Errores
 /// [`ErrorHerramienta::argumento`] si la ruta viene vacía, y [`ErrorHerramienta::seguridad`]
 /// en todos los demás casos.
-pub(super) fn validar_ruta(ruta: &str, uso: UsoDeLaRuta) -> Result<PathBuf, ErrorHerramienta> {
+pub(super) fn validar_ruta(
+    espacio: &EspacioMcp,
+    ruta: &str,
+    uso: UsoDeLaRuta,
+) -> Result<PathBuf, ErrorHerramienta> {
     if ruta.trim().is_empty() {
         return Err(ErrorHerramienta::argumento(
             "La ruta del archivo no puede estar vacía.",
@@ -268,7 +278,7 @@ pub(super) fn validar_ruta(ruta: &str, uso: UsoDeLaRuta) -> Result<PathBuf, Erro
     rechazar_si_algun_nombre_lleva_dos_puntos(ruta)?;
     rechazar_si_algun_nombre_acaba_en_punto_o_espacio(ruta)?;
 
-    let raiz = espacio_de_trabajo()?;
+    let raiz = espacio_de_trabajo(espacio)?;
     let candidata = raiz.join(ruta);
 
     // La ruta puede no existir aún, porque se va a crear. En ese caso hay que resolver el

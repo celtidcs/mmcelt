@@ -23,17 +23,26 @@ pub(crate) enum AccionCargaExterna {
 ///
 /// Devuelve `true` cuando existe un archivo que vigilar y el observador quedó instalado. Si el
 /// mapa aún no tiene ruta, no hace nada y devuelve `false`.
+///
+/// # Parámetros
+/// - `huella_de_lo_guardado`: huella de lo que escribió MMCelt, si se conoce. Se toma como
+///   propia en lugar de leer el disco, porque el agente pudo escribir ya entre el guardado y
+///   este momento, y su escritura no dio ningún aviso: nadie vigilaba aún.
 pub(crate) fn iniciar_vigilancia(
     estado: &mut EstadoPersistencia,
     ctx: &egui::Context,
+    huella_de_lo_guardado: Option<u64>,
 ) -> AppResult<bool> {
-    let Some(ruta) = &estado.ruta_actual else {
+    let Some(ruta) = estado.ruta_actual.clone() else {
         return Ok(false);
     };
-    let vigilante = crate::vigilante::VigilanteArchivo::iniciar(ruta, ctx.clone())?;
-    if let Some(huella) = crate::proyectos::huella(ruta) {
+    let vigilante = crate::vigilante::VigilanteArchivo::iniciar(&ruta, ctx.clone())?;
+    if let Some(huella) = huella_de_lo_guardado.or_else(|| crate::proyectos::huella(&ruta)) {
         estado.ultima_huella_guardada = Some(huella);
     }
+    // Se lee ya una vez: si el archivo no es lo que escribió MMCelt, se recarga sin esperar a
+    // un aviso que no llegará.
+    estado.cargador_externo.solicitar(ruta);
     estado.vigilante = Some(vigilante);
     Ok(true)
 }
@@ -91,7 +100,9 @@ fn aplicar_carga_externa(
         return AccionCargaExterna::RetenerPorCambiosLocales;
     }
 
-    estado.autoguardado.dar_por_copiado(&nuevo_proyecto);
+    estado
+        .autoguardado
+        .dar_por_copiado(nuevo_proyecto.revision());
     estado.ultima_huella_guardada = Some(resultado.huella);
     estado.cambio_externo_pendiente = false;
     AccionCargaExterna::Sustituir(Box::new(nuevo_proyecto))

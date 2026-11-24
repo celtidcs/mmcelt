@@ -41,6 +41,9 @@ use crate::theme::AppThemeMode;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+/// Los ajustes del aviso de versión nueva tienen su forma en la biblioteca común.
+pub use aviso_version_github::AjustesDeVersionNueva;
+
 /// Nombre del archivo de preferencias dentro del directorio de datos.
 const ARCHIVO_PREFERENCIAS: &str = "preferencias.json";
 
@@ -197,70 +200,24 @@ pub struct Preferencias {
 
     /// Si al arrancar se pregunta a GitHub por la última versión publicada.
     ///
-    /// Activa de fábrica: cada inicio comprueba si hay una actualización. Quien la desactiva no
-    /// genera ningún tráfico de red al arrancar.
+    /// Activa de fábrica por comportamiento predeterminado («cada inicio debe comprobar si hay una
+    /// actualización»). Quien la desactiva no genera ningún tráfico de red al arrancar.
     pub comprobar_version_nueva: bool,
 
     /// Dónde y cómo se pregunta por la versión nueva.
     pub ajustes_de_version: AjustesDeVersionNueva,
-}
 
-/// Repositorio público de MMCelt, de donde salen las versiones publicadas.
-pub const REPOSITORIO_DE_VERSIONES_POR_DEFECTO: &str = "celtidcs/mmcelt";
+    /// Programa que el usuario eligió a mano para cada agente de consola.
+    ///
+    /// Manda sobre la detección mientras sea un programa que existe; si deja de serlo, la
+    /// ventana de conexiones lo avisa y se usa el detectado. De `conectores` solo se usa la
+    /// identidad del agente, `IdAgente`, que es lo que da a la clave un tipo cerrado: una
+    /// clave que no sea un agente conocido no se puede leer.
+    pub rutas_de_agentes: std::collections::BTreeMap<crate::conectores::IdAgente, PathBuf>,
 
-/// Raíz de la API REST de GitHub.
-pub const URL_API_DE_VERSIONES_POR_DEFECTO: &str = "https://api.github.com";
-
-/// Raíz de la web de GitHub, para el enlace del aviso.
-pub const URL_WEB_DE_VERSIONES_POR_DEFECTO: &str = "https://github.com";
-
-/// Segundos que se espera, como mucho, la respuesta de GitHub.
-///
-/// Diez segundos sobran para una petición de unos pocos kilobytes incluso en una conexión
-/// lenta, y la espera ocurre en un hilo aparte: nunca la nota la interfaz.
-pub const SEGUNDOS_DE_ESPERA_DE_VERSION_POR_DEFECTO: u64 = 10;
-
-/// Bytes que se aceptan leer, como mucho, de la respuesta.
-///
-/// La respuesta de `releases/latest` ocupa unos pocos kilobytes; incluye las notas de la
-/// versión y la lista de archivos. Un mebibyte deja un margen holgado y, a la vez, impide que
-/// una respuesta anómala consuma memoria sin límite.
-pub const LIMITE_DE_RESPUESTA_DE_VERSION_POR_DEFECTO: u64 = 1024 * 1024;
-
-/// Dónde y cómo se pregunta por la última versión publicada.
-///
-/// Vive en las preferencias, y no en el código, para poder apuntar a otro repositorio o a
-/// GitHub Enterprise sin recompilar. Como es texto que cualquiera puede editar, se valida
-/// antes de usarse (`OrigenDeLasVersiones::desde_ajustes`, en `version_publicada.rs`).
-///
-/// Los campos ausentes del archivo toman su valor de [`ajustes_de_version_de_fabrica`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default = "ajustes_de_version_de_fabrica")]
-pub struct AjustesDeVersionNueva {
-    /// `dueño/nombre` del repositorio.
-    pub repositorio: String,
-    /// Raíz de la API, solo `https://`.
-    pub url_api: String,
-    /// Raíz de la web, solo `https://`.
-    pub url_web: String,
-    /// Tiempo máximo de espera de la respuesta, en segundos. Cero no es válido.
-    pub segundos_de_espera: u64,
-    /// Tamaño máximo de la respuesta, en bytes. Cero no es válido.
-    pub limite_de_respuesta_en_bytes: u64,
-}
-
-/// Los ajustes de fábrica: el repositorio público de MMCelt en GitHub.
-///
-/// # Devuelve
-/// Unos ajustes que superan la validación de `OrigenDeLasVersiones::desde_ajustes`.
-pub fn ajustes_de_version_de_fabrica() -> AjustesDeVersionNueva {
-    AjustesDeVersionNueva {
-        repositorio: REPOSITORIO_DE_VERSIONES_POR_DEFECTO.to_string(),
-        url_api: URL_API_DE_VERSIONES_POR_DEFECTO.to_string(),
-        url_web: URL_WEB_DE_VERSIONES_POR_DEFECTO.to_string(),
-        segundos_de_espera: SEGUNDOS_DE_ESPERA_DE_VERSION_POR_DEFECTO,
-        limite_de_respuesta_en_bytes: LIMITE_DE_RESPUESTA_DE_VERSION_POR_DEFECTO,
-    }
+    /// Cuentas de agentes que el usuario dio de alta a mano, además de las que se encuentran
+    /// solas.
+    pub cuentas_de_agentes: Vec<crate::conectores::CuentaManual>,
 }
 
 /// Plantilla de encargo personalizada guardada por el usuario en sus preferencias globales.
@@ -293,7 +250,9 @@ impl Default for Preferencias {
             sugerencia_mostrada: false,
             plantillas_usuario: Vec::new(),
             comprobar_version_nueva: true,
-            ajustes_de_version: ajustes_de_version_de_fabrica(),
+            ajustes_de_version: crate::aviso_de_version::ajustes_de_fabrica(),
+            rutas_de_agentes: std::collections::BTreeMap::new(),
+            cuentas_de_agentes: Vec::new(),
         }
     }
 }
@@ -432,6 +391,24 @@ impl Preferencias {
                 "ajustes_de_version",
                 &mut preferencias.ajustes_de_version,
             );
+            leer(
+                &guardado,
+                "rutas_de_agentes",
+                &mut preferencias.rutas_de_agentes,
+            );
+            leer(
+                &guardado,
+                "cuentas_de_agentes",
+                &mut preferencias.cuentas_de_agentes,
+            );
+        }
+
+        // La biblioteca deja vacío el repositorio que falte, porque no conoce ninguno. En
+        // MMCelt un archivo sin él tiene que seguir preguntando por el repositorio de fábrica,
+        // como hacía antes de separar el aviso en la biblioteca.
+        if preferencias.ajustes_de_version.repositorio.is_empty() {
+            preferencias.ajustes_de_version.repositorio =
+                crate::aviso_de_version::REPOSITORIO_DE_VERSIONES_POR_DEFECTO.to_string();
         }
 
         // Una escala fuera de rango dejaría la interfaz inutilizable, y en el caso

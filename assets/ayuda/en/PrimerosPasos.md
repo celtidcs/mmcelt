@@ -20,4 +20,4 @@ A mind map is a graphical representation of your ideas: you start with a **centr
 ### 🧭 Where to go next:
 1. Click the central node and press `Space` (or double-click) to rename your project.
 2. Press `Tab` to create your first strategic pillars (child nodes) and `Enter` to add alternatives (sibling nodes).
-3. Open `🤖 Artificial Intelligence` → `🧭 Project and instructions for AI` to explain your project's goal to the AI in the **Project** tab.
+3. Open `✏️ Edit` → `🧭 Project and instructions for AI` to explain your project's goal to the AI in the **Project** tab.

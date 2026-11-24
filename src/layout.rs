@@ -23,8 +23,7 @@ const ALTURA_DEL_TITULO_EN_UNA_LINEA: f32 = 48.0;
 /// Alto de la fila inferior de la tarjeta, la del icono de rol y el de notas.
 ///
 /// El rol se pinta en todas las tarjetas, así que la fila se reserva siempre. Antes solo la
-/// reservaban las notas: en una tarjeta sin ellas el rol quedaba pegado debajo de la prioridad
-/// (PH-1007-4).
+/// reservaban las notas: en una tarjeta sin ellas el rol quedaba pegado debajo de la prioridad.
 const ALTURA_DE_LA_FILA_DE_ICONOS: f32 = 14.0;
 
 /// Altura base de un nodo estándar: el título en una línea y la fila de iconos.

@@ -14,7 +14,7 @@ ist genau das, was eine Antwort zwar hervorragend klingen, aber völlig nutzlos 
 
 ### 📝 Wie die Eingabe erfolgt
 
-1. Öffnen Sie **`🤖 Künstliche Intelligenz`** → **`🧭 Projekt und Anweisungen für die KI`** (auch über die Schaltfläche im rechten Seitenpanel oder nach Bearbeitung unter `✏️ Bearbeiten` erreichbar).
+1. Öffnen Sie **`✏️ Bearbeiten`** → **`🧭 Projekt und Anweisungen für die KI`** (auch über die Schaltfläche `🧭 Vision bearbeiten` im Seitenpanel erreichbar).
 2. Füllen Sie die drei Felder aus. Keines ist zwingend vorgeschrieben, aber je konkreter, desto besser:
    - **Vision:** Was Sie inhaltlich abbilden möchten. In ein oder zwei prägnanten Sätzen, in Ihren eigenen Worten.
    - **Ziele:** Welche greifbaren Ergebnisse Sie anstreben. „Meilensteine und Liefergegenstände“, keine vagen Wünsche.
@@ -78,21 +78,21 @@ Dieser Arbeitsschritt wird oft übersehen, gehört jedoch zu den wertvollsten Sc
 Wenn Sie **`🤖 Künstliche Intelligenz`** → **`📤 Senden an...`** aufrufen und einen Agenten wählen, **wird noch
 nichts an den Agenten gesendet**. Es öffnet sich eine Vorschau mit dem vollständigen Text in vier Blöcken:
 
-| Block | Editierbar? | Bedeutung |
+| Block | In der Vorschau editierbar? | Bedeutung |
 |---|---|---|
 | **MMCelt-Vertrag (geschützt)** | Nein | Die Mindestregeln, identisch für alle Agenten |
-| **Gemeinsame Projektregeln** | **Ja** | Ihre dauerhafte Arbeitsweise für jede Sitzung |
+| **Gemeinsame Projektregeln** | Nein: Sie schreiben sie in diesem Fenster | Ihre dauerhafte Arbeitsweise für jede Sitzung |
 | **Mindmap-Kontext (erzeugt)** | Nein | Aus der Map generiert; Änderung erfordert Map-Anpassung |
-| **Auftrag dieser Sitzung** | **Ja** | Das konkrete Ziel, das Sie **jetzt** erreichen möchten |
+| **Auftrag dieser Sitzung** | Nein: Sie schreiben ihn in diesem Fenster | Das konkrete Ziel, das Sie **jetzt** erreichen möchten |
 
 Widersprechen sich zwei Anweisungen, bestimmt das Dokument selbst die Rangfolge,
 von stark nach schwach: **Ihre Korrekturen auf der Map**, der MMCelt-Vertrag,
 die Projektregeln und zuletzt der Auftrag der Sitzung.
 
-Darunter befinden sich vier Aktionsschaltflächen. `Diese Sitzung zurücksetzen` verwirft Anpassungen.
-`Als gemeinsame Regeln speichern` ist die **einzige** Aktion, die Ihr Profil
-dauerhaft in `.mmcelt/instrucciones-agente.md` festhält.
-`Abbrechen` schließt den Vorgang rückstandsfrei. Die letzte Schaltfläche startet den Agenten.
+Regeln und Auftrag, die beiden Blöcke, über die Sie entscheiden, schreiben Sie hier in den Registerkarten
+**Anweisungen** und **Auftragsvorlagen**. `Als gemeinsame Regeln speichern` ist die **einzige** Aktion,
+die Ihr Profil dauerhaft in `.mmcelt/instrucciones-agente.md` festhält. Die Vorschau hat nur zwei
+Schaltflächen: `Abbrechen`, das den Vorgang rückstandsfrei schließt, und die, die den Agenten startet.
 
 **Lesen Sie die Vorschau mindestens einmal.** Ändern sich Map, Regeln oder eine Quelldatei nach dem Öffnen der
 Bestätigung, stuft MMCelt diese als abgelaufen ein und verlangt eine erneute Prüfung. Dadurch erhalten `inicio.md`

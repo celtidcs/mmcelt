@@ -19,7 +19,7 @@ El campo de archivo (`file_path`) es el puente que une la idea abstracta con el 
 ### 💡 Consejos prácticos y uso con la IA:
 
 **🤖 ¿Cómo aprovecha esto la inteligencia artificial?**
-Cuando trabajas con un asistente (como Claude Code, Codex CLI o Gemini CLI), o cuando exportas el resumen del proyecto en Markdown:
+Cuando trabajas con un asistente (como Claude Code, Codex CLI o Antigravity CLI), o cuando exportas el resumen del proyecto en Markdown:
 - La IA lee exactamente qué archivo corresponde a cada nodo.
 - Sabe de antemano dónde debe aplicar sus cambios sin tener que buscar a ciegas en todo tu repositorio.
 - Te ayuda a mantener una correspondencia limpia y ordenada entre la arquitectura conceptual y el código fuente.

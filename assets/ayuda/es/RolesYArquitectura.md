@@ -41,7 +41,7 @@ Cada rol aporta una identidad clara a la caja del nodo dentro del lienzo gráfic
 - Conexiones y líneas que reflejan la estructura orgánica del proyecto.
 
 **🤖 ¿Por qué le importan los roles a la IA?**
-Cuando exportas o envías tu mapa a una IA (como Claude Code, Codex CLI o Gemini CLI), el modelo no ve una lista plana de textos:
+Cuando exportas o envías tu mapa a una IA (como Claude Code, Codex CLI o Antigravity CLI), el modelo no ve una lista plana de textos:
 - **Entiende la arquitectura:** Sabe que un *Pilar Estratégico* requiere una visión global y no debe modificarse a la ligera.
 - **Diferencia dudas de certezas:** Trata las *Hipótesis / Dudas* como preguntas que necesitan análisis técnico y alternativas.
 - **Genera tareas coherentes:** Al pedirle que desarrolle un módulo, la IA propondrá *Acciones / Tareas* concretas y te sugerirá *Recursos / Herramientas* recomendadas para resolverlo.

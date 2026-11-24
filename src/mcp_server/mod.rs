@@ -4,6 +4,9 @@
 //! línea JSON-RPC. El protocolo, los argumentos, los errores y las operaciones permanecen en
 //! módulos separados para que cada frontera tenga un único motivo de cambio.
 
+mod contexto;
+pub(crate) use contexto::EspacioMcp;
+
 mod actualizaciones;
 mod argumentos;
 mod catalogo;

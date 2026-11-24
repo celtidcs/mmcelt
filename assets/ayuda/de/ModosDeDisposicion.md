@@ -30,7 +30,7 @@ Wenn Sie einen Knoten ziehen und ihn mit seiner Mitte über einer anderen Karte 
 - **`➕ Zum Kind machen`**: Der Knoten hängt mit allen seinen Zweigen nun am Knoten darunter. Die Option ist deaktiviert, wenn das nicht geht: Der Knoten darunter ist bereits sein Elternknoten, der gezogene ist die Wurzel, oder der Knoten darunter liegt in seinen eigenen Zweigen (es entstünde eine Schleife).
 - **`↔ Zum Geschwister machen`**: Der Knoten hängt nun am selben Elternknoten wie der Knoten darunter, direkt dahinter. Nicht verfügbar, wenn der Knoten darunter die Wurzel ist oder beide bereits Geschwister sind.
 - **`🔗 Mit Verknüpfung verbinden`**: Erstellt eine Querverbindung zum Knoten darunter und setzt den gezogenen Knoten an seinen Platz zurück. Nicht verfügbar, wenn sie bereits Eltern und Kind oder schon verbunden sind: Es wäre eine zweite Linie über der, die sie bereits verbindet.
-- **`➡ Hierher verschieben, ohne zu verdecken`**: Legt ihn neben den Knoten darunter, an die nächste freie Stelle, ohne eine Karte zu verdecken.
+- **`➡ Hierher verschieben, ohne zu verdecken`**: Legt ihn neben den Knoten darunter, an die nächste freie Stelle, ohne eine Karte zu verdecken. Ist es ein Geschwisterknoten, wird er außerdem in der Reihenfolge direkt dahinter gesetzt.
 - **`↩ Abbrechen`**: Setzt ihn an seinen Platz zurück. `Esc` oder ein Klick außerhalb des Menüs bewirken dasselbe.
 
 Solange das Menü offen ist, wirken die Tasten, die die Mindmap ändern, nicht. Jede Option lässt sich mit `Strg + Z` rückgängig machen.

@@ -14,7 +14,7 @@ a response sound very plausible while being utterly useless.
 
 ### 📝 How to fill it in
 
-1. Open **`🤖 Artificial Intelligence`** → **`🧭 Project and instructions for AI`** (also accessible from the side panel button or after editing in `✏️ Edit`).
+1. Open **`✏️ Edit`** → **`🧭 Project and instructions for AI`** (the `🧭 Edit Vision` button in the side panel also opens it).
 2. Fill in the three fields. None are mandatory, but the more specific they are, the better:
    - **Vision:** what you are trying to create. In one or two sentences, in your own words.
    - **Goals:** what concrete results you seek. "Milestones and deliverables", not wishes.
@@ -78,21 +78,21 @@ This part often goes unnoticed, yet it is one of the most powerful features of t
 When you use **`🤖 Artificial Intelligence`** → **`📤 Send to...`** and choose an agent, **nothing
 is sent yet**. A dispatch preview window opens displaying the complete text across four distinct blocks:
 
-| Block | Can it be edited? | What it is |
+| Block | Edited in the preview? | What it is |
 |---|---|---|
 | **MMCelt contract (protected)** | No | Baseline rules, identical for all agents |
-| **Common project rules** | **Yes** | Your way of working, applied to every session |
+| **Common project rules** | No: written in this window | Your way of working, applied to every session |
 | **Mind map context (generated)** | No | Generated from the canvas; to alter it, edit the map |
-| **Task for this session** | **Yes** | What you want to accomplish **now**, in this session |
+| **Task for this session** | No: written in this window | What you want to accomplish **now**, in this session |
 
 If two instructions contradict each other, the document itself defines the hierarchy, from strongest
 to weakest: **your corrections on the map**, the MMCelt contract, project rules, and finally, the task
 for this session.
 
-Below are four action buttons. `Reset this session` restores the prompt.
-`Save as common rules` is the **only** action that permanently writes your
-preferences to `.mmcelt/instrucciones-agente.md`.
-`Cancel` discards everything without leaving any trace. And the final button launches the agent.
+The rules and the task, the two blocks you decide, are written here, in the **Instructions**
+and **Task templates** tabs. `Save as common rules` is the **only** action that permanently writes your
+preferences to `.mmcelt/instrucciones-agente.md`. The preview itself has only two buttons:
+`Cancel`, which discards everything without leaving any trace, and the one that launches the agent.
 
 **Read through it at least once.** If the map, rules, or a source file change after opening the
 confirmation dialog, MMCelt marks the preview as expired and requires you to review again. This guarantees

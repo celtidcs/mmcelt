@@ -25,7 +25,7 @@
 //! La serialización sigue emitiendo siempre el nombre canónico, así que el formato en
 //! disco no cambia.
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -228,14 +228,19 @@ impl From<EstadoNodo> for String {
 /// Estado de supervisión y control humano para el bucle *Human-in-the-loop*.
 ///
 /// Igual que el resto de enumeraciones del módulo, tolera valores desconocidos al
-/// deserializar degradando a [`EstadoRevision::PendienteRevision`].
+/// deserializar degradando a [`EstadoRevision::PendienteRevision`]: un estado que no se
+/// entiende se trata como algo que la persona debe revisar, nunca como trabajo suyo.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(from = "String", into = "String")]
 pub enum EstadoRevision {
+    /// Sin ninguna marca de revisión: es lo que tiene un nodo que ha creado la propia persona.
+    /// No se dibuja ningún indicador en la tarjeta.
+    #[default]
+    SinMarcar,
     /// Generado automáticamente por un modelo de IA (pendiente de auditoría humana).
     GeneradoPorIA,
-    /// Propuesto y a la espera de validación del usuario supervisor.
-    #[default]
+    /// A la espera de que la persona lo revise: la IA cambió un nodo que ya existía, o la
+    /// persona lo marcó así a mano.
     PendienteRevision,
     /// Validado, autorizado y aprobado explícitamente por el usuario humano.
     AprobadoPorHumano,
@@ -250,7 +255,8 @@ impl EstadoRevision {
     /// a mano, así que una nueva existía en el modelo pero no se podía elegir en la
     /// interfaz. Es el mismo motivo por el que existen `AppThemeMode::TODOS` y
     /// `TemaDeAyuda::TODOS`.
-    pub const TODOS: [EstadoRevision; 4] = [
+    pub const TODOS: [EstadoRevision; 5] = [
+        EstadoRevision::SinMarcar,
         EstadoRevision::GeneradoPorIA,
         EstadoRevision::PendienteRevision,
         EstadoRevision::AprobadoPorHumano,
@@ -268,6 +274,7 @@ impl EstadoRevision {
     /// `Some(estado)` si el texto coincide con una variante admitida, o `None` si no.
     pub fn reconocer_texto(texto: &str) -> Option<Self> {
         match texto.trim().to_lowercase().as_str() {
+            "sinmarcar" | "sin_marcar" | "unmarked" | "none" => Some(EstadoRevision::SinMarcar),
             "generadoporia" | "generado_por_ia" | "ai_generated" | "ia" => {
                 Some(EstadoRevision::GeneradoPorIA)
             }
@@ -292,6 +299,7 @@ impl EstadoRevision {
     /// Nombre canónico con el que el estado se escribe en disco.
     pub fn nombre_canonico(&self) -> &'static str {
         match self {
+            EstadoRevision::SinMarcar => "SinMarcar",
             EstadoRevision::GeneradoPorIA => "GeneradoPorIA",
             EstadoRevision::PendienteRevision => "PendienteRevision",
             EstadoRevision::AprobadoPorHumano => "AprobadoPorHumano",
@@ -303,7 +311,7 @@ impl EstadoRevision {
     ///
     /// # Esto no es un rótulo decorativo
     ///
-    /// Estas cuatro variantes son el control de supervisión humana: distinguen lo que ha
+    /// Estas variantes son el control de supervisión humana: distinguen lo que ha
     /// escrito la máquina de lo que ha revisado una persona, y de ese estado depende que la
     /// sincronización con la IA pueda o no sobrescribir un nodo. Una traducción que difumine
     /// esa distinción —«validado» a secas, sin decir contra qué— es un fallo de seguridad,
@@ -319,31 +327,37 @@ impl EstadoRevision {
     pub fn nombre_para_interfaz(&self, idioma: crate::textos::Idioma) -> &'static str {
         use crate::textos::Idioma;
         match (self, idioma) {
+            (EstadoRevision::SinMarcar, Idioma::Espanol) => "⚪ Sin marcar",
             (EstadoRevision::GeneradoPorIA, Idioma::Espanol) => "🤖 Generado por IA",
             (EstadoRevision::PendienteRevision, Idioma::Espanol) => "⏳ Pendiente de Revisión",
             (EstadoRevision::AprobadoPorHumano, Idioma::Espanol) => "🛡️ Aprobado por Usuario",
             (EstadoRevision::RequiereCorreccion, Idioma::Espanol) => "⚠️ Requiere Corrección",
 
+            (EstadoRevision::SinMarcar, Idioma::Ingles) => "⚪ Unmarked",
             (EstadoRevision::GeneradoPorIA, Idioma::Ingles) => "🤖 AI Generated",
             (EstadoRevision::PendienteRevision, Idioma::Ingles) => "⏳ Pending Human Review",
             (EstadoRevision::AprobadoPorHumano, Idioma::Ingles) => "🛡️ Human Approved",
             (EstadoRevision::RequiereCorreccion, Idioma::Ingles) => "⚠️ Requires Correction",
 
+            (EstadoRevision::SinMarcar, Idioma::Frances) => "⚪ Non marqué",
             (EstadoRevision::GeneradoPorIA, Idioma::Frances) => "🤖 Généré par l'IA",
             (EstadoRevision::PendienteRevision, Idioma::Frances) => "⏳ En attente de révision",
             (EstadoRevision::AprobadoPorHumano, Idioma::Frances) => "🛡️ Approuvé par l'humain",
             (EstadoRevision::RequiereCorreccion, Idioma::Frances) => "⚠️ Correction requise",
 
+            (EstadoRevision::SinMarcar, Idioma::Aleman) => "⚪ Nicht markiert",
             (EstadoRevision::GeneradoPorIA, Idioma::Aleman) => "🤖 KI-generiert",
             (EstadoRevision::PendienteRevision, Idioma::Aleman) => "⏳ Ausstehende Prüfung",
             (EstadoRevision::AprobadoPorHumano, Idioma::Aleman) => "🛡️ Menschlich freigegeben",
             (EstadoRevision::RequiereCorreccion, Idioma::Aleman) => "⚠️ Korrektur erforderlich",
 
+            (EstadoRevision::SinMarcar, Idioma::Ruso) => "⚪ Без отметки",
             (EstadoRevision::GeneradoPorIA, Idioma::Ruso) => "🤖 Создано ИИ",
             (EstadoRevision::PendienteRevision, Idioma::Ruso) => "⏳ Ожидает проверки",
             (EstadoRevision::AprobadoPorHumano, Idioma::Ruso) => "🛡️ Одобрено человеком",
             (EstadoRevision::RequiereCorreccion, Idioma::Ruso) => "⚠️ Требует исправления",
 
+            (EstadoRevision::SinMarcar, Idioma::ChinoSimplificado) => "⚪ 未标记",
             (EstadoRevision::GeneradoPorIA, Idioma::ChinoSimplificado) => "🤖 AI生成",
             (EstadoRevision::PendienteRevision, Idioma::ChinoSimplificado) => "⏳ 待人工复核",
             (EstadoRevision::AprobadoPorHumano, Idioma::ChinoSimplificado) => "🛡️ 人工已核准",
@@ -354,6 +368,7 @@ impl EstadoRevision {
     /// Devuelve el emoji del estado de revisión.
     pub fn emoji(&self) -> &'static str {
         match self {
+            EstadoRevision::SinMarcar => "⚪",
             EstadoRevision::GeneradoPorIA => "🤖",
             EstadoRevision::PendienteRevision => "⏳",
             EstadoRevision::AprobadoPorHumano => "🛡️",
@@ -361,12 +376,15 @@ impl EstadoRevision {
         }
     }
 
-    /// Símbolo visual para la tarjeta del nodo en el lienzo (C19-C, PH-0925-1).
+    /// Símbolo visual para la tarjeta del nodo en el lienzo.
     ///
-    /// Devuelve símbolo para todos los estados de revisión humana: `GeneradoPorIA` (🤖),
-    /// `AprobadoPorHumano` (🛡️), `RequiereCorreccion` (⚠️) y `PendienteRevision` (⏳).
+    /// Devuelve símbolo para los estados que piden atención o dejan constancia de la revisión:
+    /// `GeneradoPorIA` (🤖), `AprobadoPorHumano` (🛡️), `RequiereCorreccion` (⚠️) y
+    /// `PendienteRevision` (⏳). `SinMarcar` no lleva símbolo: un nodo de la propia persona no
+    /// tiene nada que revisar.
     pub fn simbolo_en_nodo(&self) -> Option<&'static str> {
         match self {
+            EstadoRevision::SinMarcar => None,
             EstadoRevision::GeneradoPorIA => Some("🤖"),
             EstadoRevision::AprobadoPorHumano => Some("🛡️"),
             EstadoRevision::RequiereCorreccion => Some("⚠️"),
@@ -498,7 +516,7 @@ impl PrioridadNodo {
         }
     }
 
-    /// Símbolo visual o emoji representativo de la prioridad para destacar en el lienzo (C19-C, C19-E, PH-0925-1).
+    /// Símbolo visual o emoji representativo de la prioridad para destacar en el lienzo.
     ///
     /// Devuelve símbolo para todas las prioridades: `Critica` (🔥), `Alta` (⚡), `Media` (🔷) y `Baja` (🔽).
     pub fn simbolo(&self) -> Option<&'static str> {
@@ -958,6 +976,12 @@ pub struct Nodo {
     /// Notas de corrección explícita exigidas a la IA por el usuario.
     #[serde(default)]
     pub correction_feedback: String,
+    /// La IA acaba de crear este nodo y la persona todavía no lo ha abierto. Mientras es
+    /// `true`, la tarjeta se dibuja resaltada. Solo se escribe en el archivo cuando es `true`,
+    /// así que los mapas sin nodos nuevos de la IA no cambian, y un archivo sin el campo lo lee
+    /// como `false`.
+    #[serde(default, skip_serializing_if = "es_falso")]
+    pub nuevo_de_la_ia: bool,
     /// Coordenadas `[X, Y]` del nodo en el lienzo 2D infinito.
     pub pos: [f32; 2],
     /// Indica si sus ramas hijas están plegadas/ocultas.
@@ -1044,10 +1068,27 @@ impl Nodo {
             },
             review_status: EstadoRevision::default(),
             correction_feedback: String::new(),
+            nuevo_de_la_ia: false,
             pos,
             collapsed: false,
         }
     }
+
+    /// Quita el resalte de nodo nuevo de la IA, porque la persona ya lo ha abierto.
+    ///
+    /// No toca el estado de revisión: el nodo sigue siendo `GeneradoPorIA` hasta que la
+    /// persona lo apruebe o lo cambie.
+    ///
+    /// # Devuelve
+    /// `true` si el nodo estaba resaltado y ha dejado de estarlo.
+    pub fn marcar_como_visto(&mut self) -> bool {
+        std::mem::replace(&mut self.nuevo_de_la_ia, false)
+    }
+}
+
+/// Para `skip_serializing_if`: no escribe en el archivo un indicador que vale `false`.
+fn es_falso(valor: &bool) -> bool {
+    !*valor
 }
 
 /// Versión vigente del esquema persistente `.mmcelt`.
@@ -1116,9 +1157,9 @@ pub struct Proyecto {
     /// Nombre del autor o creador del mapa.
     pub author: String,
     /// Fecha de creación del proyecto (UTC).
-    pub created_at: DateTime<Utc>,
+    pub created_at: Timestamp,
     /// Fecha de última modificación (UTC).
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: Timestamp,
     /// ID del nodo raíz central.
     pub root_id: Uuid,
     /// Todos los nodos del mapa, indexados por su identificador.
@@ -1182,8 +1223,8 @@ impl Proyecto {
             project_goals: String::new(),
             target_audience_or_context: String::new(),
             author: String::new(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            created_at: Timestamp::now(),
+            updated_at: Timestamp::now(),
             root_id,
             nodes,
             connections: Vec::new(),
@@ -1235,7 +1276,7 @@ impl Proyecto {
     /// # Devuelve
     /// El identificador del nodo recién creado.
     pub fn anadir_hijo(&mut self, parent_id: Uuid, title: impl Into<String>) -> Uuid {
-        self.updated_at = Utc::now();
+        self.updated_at = Timestamp::now();
         let parent_pos = self
             .nodes
             .get(&parent_id)
@@ -1322,7 +1363,7 @@ impl Proyecto {
             return;
         }
 
-        self.updated_at = Utc::now();
+        self.updated_at = Timestamp::now();
 
         // Toda la descendencia, para borrarla con el nodo.
         let mut por_borrar = Vec::new();
@@ -1517,7 +1558,7 @@ impl Proyecto {
     /// No mira la jerarquía a propósito: la usan los importadores y el servidor MCP, y lo que
     /// trae un archivo o un agente —incluida una relación etiquetada entre padre e hijo— se
     /// conserva tal cual. La interfaz pregunta antes a [`Proyecto::conexion_cruzada_admitida`]
-    /// para no dibujar una segunda línea encima de la de la jerarquía (PH-1007-2).
+    /// para no dibujar una segunda línea encima de la de la jerarquía.
     ///
     /// # Parámetros
     /// - `from`: nodo de origen de la relación.
@@ -1547,7 +1588,7 @@ impl Proyecto {
             label: label.into(),
             relation_type,
         });
-        self.updated_at = Utc::now();
+        self.updated_at = Timestamp::now();
         self.marcar_modificado();
         Some(id)
     }
@@ -1560,7 +1601,7 @@ impl Proyecto {
         let cantidad_anterior = self.connections.len();
         self.connections.retain(|c| c.id != id);
         if self.connections.len() != cantidad_anterior {
-            self.updated_at = Utc::now();
+            self.updated_at = Timestamp::now();
             self.marcar_modificado();
         }
     }

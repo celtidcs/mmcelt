@@ -226,7 +226,7 @@ pub fn importar_de_texto_de_ia(input: &str) -> AppResult<Proyecto> {
     // Primero como JSON: admite tanto JSON suelto como bloques ```json ... ```.
     let json_str = extraer_bloque_json(clean_input);
 
-    let proyecto = match serde_json::from_str::<AiJsonProject>(&json_str) {
+    let mut proyecto = match serde_json::from_str::<AiJsonProject>(&json_str) {
         Ok(ai_proj) => construir_proyecto_desde_json(ai_proj)?,
         Err(json_err) => {
             // Respaldo: esquema Markdown de títulos y viñetas.
@@ -247,7 +247,25 @@ pub fn importar_de_texto_de_ia(input: &str) -> AppResult<Proyecto> {
     // archivo del usuario. Ver `Proyecto::validar_longitudes_de_texto`.
     proyecto.validar_longitudes_de_texto()?;
 
+    marcar_como_nuevo_de_la_ia(&mut proyecto);
     Ok(proyecto)
+}
+
+/// Marca como recién hecho por la IA todo lo que llega en un texto suyo.
+///
+/// Cada nodo lleva `nuevo_de_la_ia`, también los que traen un estado explícito: la marca dice
+/// «nuevo», no «sin estado». Y ninguno puede quedar como «Sin marcar», que es el estado de lo
+/// que crea la persona: el que no trae estado, o trae ese, pasa a «Generado por IA».
+///
+/// # Parámetros
+/// - `proyecto`: el mapa recién importado, cuyos nodos se marcan en el sitio.
+fn marcar_como_nuevo_de_la_ia(proyecto: &mut Proyecto) {
+    for nodo in proyecto.nodes.values_mut() {
+        if nodo.review_status == EstadoRevision::SinMarcar {
+            nodo.review_status = EstadoRevision::GeneradoPorIA;
+        }
+        nodo.nuevo_de_la_ia = true;
+    }
 }
 
 /// Extrae el bloque JSON de una respuesta conversacional de IA.
@@ -418,6 +436,7 @@ pub(crate) fn construir_proyecto_desde_json(ai_proj: AiJsonProject) -> AppResult
 pub(crate) fn marcar_todo_como_trabajo_de_la_ia(proyecto: &mut Proyecto) {
     for nodo in proyecto.nodes.values_mut() {
         nodo.review_status = crate::model::EstadoRevision::GeneradoPorIA;
+        nodo.nuevo_de_la_ia = true;
         nodo.correction_feedback.clear();
     }
 }

@@ -18,6 +18,14 @@ En los modos de disposición automática, mover un nodo no cuenta como cambio: e
 
 En **Posición Libre Manual** sí cuenta, porque ahí colocar los nodos es tu trabajo y no lo recoge nada más.
 
+### 🚪 Al cerrar con cambios sin guardar
+
+Si cierras MMCelt con algo que no está en disco, te pregunta antes: **Guardar**, **No guardar** o **Cancelar**. Cuenta como no guardado cualquier cambio del mapa, un título a medio escribir y los nodos nuevos de la IA que hayas abierto desde el último guardado.
+
+Un mapa que todavía no tiene archivo —un escaneo, una importación, una plantilla o un ejemplo del menú— también pregunta aunque no lo hayas tocado. Solo se cierran sin preguntar el ejemplo con el que arranca el programa y un mapa nuevo con solo la idea central, si no los has tocado.
+
+Sin archivo, **Guardar** abre «Guardar como»; si ahí cancelas o el guardado falla, MMCelt sigue abierto. **Cancelar** te deja seguir trabajando sin guardar nada.
+
 ### ⚠️ Si al abrir te ofrece recuperar
 Te dice de cuándo es la copia y qué mapa contiene. Decides tú: si cerraste a propósito sin guardar, descártala. No se restaura sola.
 

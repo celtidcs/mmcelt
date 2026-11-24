@@ -31,11 +31,10 @@ credentials.json
 mmcelt-errores.log
 !examples/**/*.mmcelt
 
-# --- Herramientas de trabajo, fuera del repositorio publicado ---
-# El repositorio contiene la aplicación y su documentación. Las instrucciones de los
-# agentes de IA que ayudan a desarrollarla, el canal por el que se coordinan y el registro
-# de las sesiones son del proceso de trabajo: no le sirven de nada a quien descarga el
-# programa, así que se quedan en el equipo y no se publican.
+# --- Archivos locales de trabajo, fuera del repositorio publicado ---
+# El repositorio contiene la aplicación y su documentación. Las instrucciones locales de las
+# herramientas de desarrollo y sus archivos de trabajo no le sirven de nada a quien descarga
+# el programa, así que se quedan en el equipo y no se publican.
 # La barra inicial las ata a la raiz. Sin ella, `CLAUDE.md` excluiria cualquier archivo
 # con ese nombre en cualquier carpeta, y en Windows —que no distingue mayusculas— eso
 # alcanzaba tambien a la guia `documentacion/integraciones/claude.md`, que si es del

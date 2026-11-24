@@ -41,6 +41,7 @@
 //! esperando o, peor, convencido de que su llamada se atendió. Una notificación bien formada
 //! sí sigue sin respuesta, que es lo que manda el protocolo.
 
+use super::EspacioMcp;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::error::Category;
 use serde_json::{json, Map, Number, Value};
@@ -481,7 +482,7 @@ impl SobreCrudo {
 /// # Devuelve
 /// La respuesta a enviar, o `None` si la petición era una notificación válida y por tanto no
 /// espera ninguna.
-pub(crate) fn procesar_linea(linea: &str) -> Option<String> {
+pub(crate) fn procesar_linea(espacio: &EspacioMcp, linea: &str) -> Option<String> {
     // Se descarta la marca de orden de bytes si el cliente la envía. Los clientes MCP
     // reales mandan UTF-8 limpio, pero algunos intérpretes de órdenes la anteponen al
     // encauzar texto hacia un programa, y sin quitarla el análisis fallaría en el primer
@@ -498,7 +499,7 @@ pub(crate) fn procesar_linea(linea: &str) -> Option<String> {
     };
 
     match sobre.validar() {
-        Ok(peticion) => atender(peticion),
+        Ok(peticion) => atender(espacio, peticion),
         Err((id, error)) => Some(RespuestaJsonRpc::con_error(&id, error).en_linea()),
     }
 }
@@ -520,11 +521,11 @@ fn traducir_fallo(fallo: &serde_json::Error) -> ErrorJsonRpc {
 ///
 /// # Devuelve
 /// La respuesta, o `None` si la petición era una notificación.
-fn atender(peticion: PeticionJsonRpc) -> Option<String> {
+fn atender(espacio: &EspacioMcp, peticion: PeticionJsonRpc) -> Option<String> {
     // Las notificaciones no llevan `id` y no esperan respuesta, ni siquiera de error.
     let id = peticion.id.clone()?;
 
-    let respuesta = match super::operaciones::atender_metodo(&peticion) {
+    let respuesta = match super::operaciones::atender_metodo(espacio, &peticion) {
         Ok(resultado) => RespuestaJsonRpc::con_resultado(&id, resultado),
         Err(error) => RespuestaJsonRpc::con_error(&id, error),
     };

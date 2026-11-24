@@ -78,6 +78,15 @@ const MARGEN_DEL_ENCUADRE: f32 = 0.92;
 /// Tamaño de letra de la etiqueta que acompaña a una conexión cruzada, a zoom 1.
 const LETRA_DE_LA_ETIQUETA_DE_CONEXION: f32 = 11.0;
 
+/// Separación vertical en píxeles aplicada a las conexiones cruzadas directas entre
+/// padre e hijo, para que su trazado y etiqueta no se solapen con la jerarquía.
+const SEPARACION_CONEXION_PADRE_HIJO: f32 = 28.0;
+
+/// Separación vertical mínima en píxeles de pantalla aplicada al desvío de la curva de
+/// conexión cruzada entre padre e hijo, para garantizar separación visual con respecto
+/// al eje de jerarquía incluso a niveles bajos de zoom.
+const SEPARACION_MINIMA_DESVIO_CONEXION_PADRE_HIJO: f32 = 16.0;
+
 /// Tamaño de letra del título de un nodo mientras se está editando, a zoom 1.
 ///
 /// Es mayor que el de los adornos porque es texto que el usuario está escribiendo, no un
@@ -187,8 +196,8 @@ struct PulsacionesDelPuntero {
 
 /// Lee de una vez todo lo que hace el puntero en el fotograma.
 ///
-/// El ratón se lee crudo del contexto, así que hay que descartar lo que no es del lienzo
-/// (PH-1007-6). El clic es de otro si el puntero está fuera de la zona del mapa —el inspector y
+/// El ratón se lee crudo del contexto, así que hay que descartar lo que no es del lienzo.
+/// El clic es de otro si el puntero está fuera de la zona del mapa —el inspector y
 /// la barra comparten capa con el lienzo, y detrás de ellos sigue habiendo nodos que no se ven—
 /// o si encima hay otra capa interactiva: la lista de un desplegable, un menú, una ventana. Sin
 /// este filtro, pulsar un desplegable del inspector con un nodo oculto detrás lo seleccionaba y el
@@ -246,7 +255,7 @@ fn pulsacion_empezada_en_el_mapa(
     recien_pulsado: bool,
     sobre_el_mapa: bool,
 ) -> bool {
-    let marca = egui::Id::new("pulsacion_empezada_en_el_mapa");
+    let marca = egui::Id::unique("pulsacion_empezada_en_el_mapa");
     if recien_pulsado {
         ctx.data_mut(|datos| datos.insert_temp(marca, sobre_el_mapa));
     }
@@ -284,7 +293,7 @@ struct Fotograma<'a> {
     ///
     /// Se pregunta **una vez** por fotograma y viaja con él: antes el lienzo lo repreguntaba
     /// en cada sitio que cambiaba el mapa (arrastre, botón «+», hijo rápido), y cada sitio
-    /// nuevo era una guarda más que alguien podía olvidar (barrera P7, «solo-lectura»).
+    /// nuevo era una guarda más que alguien podía olvidar.
     editable: bool,
 }
 
@@ -381,12 +390,75 @@ pub struct IndicadorVisual {
     pub es_prioridad: bool,
 }
 
-/// Decide de forma pura qué indicadores visuales deben dibujarse en la tarjeta del nodo (C19-A, C19-C).
+/// Lo que decide el fondo y el borde de una tarjeta.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct EstadoVisualDeLaTarjeta {
+    /// Es el nodo raíz del mapa.
+    pub es_la_raiz: bool,
+    /// Es el nodo seleccionado.
+    pub esta_seleccionado: bool,
+    /// El cursor está encima de la tarjeta.
+    pub cursor_encima: bool,
+    /// La IA lo acaba de crear y la persona aún no lo ha abierto.
+    pub nuevo_de_la_ia: bool,
+}
+
+/// Decide de forma pura el fondo y el borde de la tarjeta de un nodo.
+///
+/// Un nodo nuevo de la IA lleva fondo y borde propios. Su fondo manda sobre el de la raíz,
+/// porque lo que importa de un vistazo es que falta revisarlo. Su borde cede ante la selección
+/// y el cursor, que dicen sobre qué va a actuar la persona.
+///
+/// # Devuelve
+/// `(fondo, borde)`.
+pub(crate) fn colores_de_la_tarjeta(
+    presentacion: &crate::aplicacion::EstadoDePresentacion,
+    estado: EstadoVisualDeLaTarjeta,
+) -> (Color32, Color32) {
+    let tema = presentacion.tema();
+    let fondo = if estado.nuevo_de_la_ia {
+        tema.fondo_del_nodo_nuevo_de_la_ia
+    } else if estado.es_la_raiz {
+        tema.fondo_de_la_raiz
+    } else {
+        tema.fondo_del_nodo
+    };
+    let borde = if estado.esta_seleccionado {
+        tema.borde_del_nodo_seleccionado
+    } else if estado.cursor_encima {
+        tema.texto_secundario
+    } else if estado.nuevo_de_la_ia {
+        tema.borde_del_nodo_nuevo_de_la_ia
+    } else {
+        tema.borde_del_nodo
+    };
+    (fondo, borde)
+}
+
+/// Color del indicador de revisión de una tarjeta.
+///
+/// `PendienteRevision` va en color de aviso: casi siempre significa que la IA cambió un nodo
+/// que ya existía, y tiene que verse qué queda por revisar.
+pub(crate) fn color_del_indicador_de_revision(
+    presentacion: &crate::aplicacion::EstadoDePresentacion,
+    revision: EstadoRevision,
+) -> Color32 {
+    let tema = presentacion.tema();
+    match revision {
+        EstadoRevision::RequiereCorreccion => tema.peligro,
+        EstadoRevision::AprobadoPorHumano => tema.exito,
+        EstadoRevision::GeneradoPorIA => tema.acento,
+        EstadoRevision::PendienteRevision => tema.aviso,
+        EstadoRevision::SinMarcar => tema.texto_secundario,
+    }
+}
+
+/// Decide de forma pura qué indicadores visuales deben dibujarse en la tarjeta del nodo.
 ///
 /// Implementa la filosofía de lienzo limpio:
 /// - Prioridad: solo se dibuja si es `Critica` (🔥) o `Alta` (⚡).
-/// - Control humano: solo se dibuja si es `GeneradoPorIA` (🤖), `AprobadoPorHumano` (🛡️)
-///   o `RequiereCorreccion` (⚠️). `PendienteRevision` no se dibuja para evitar saturación.
+/// - Control humano: se dibuja en todos los estados salvo `SinMarcar`, que es lo que tiene un
+///   nodo creado por la propia persona y no pide ninguna revisión.
 ///
 /// # Parámetros
 /// - `prioridad`: urgencia estratégica del nodo.
@@ -415,7 +487,7 @@ pub fn calcular_indicadores_del_nodo(
     indicadores
 }
 
-/// Calcula el margen horizontal reservado a la derecha del título para alojar los indicadores (C19-D).
+/// Calcula el margen horizontal reservado a la derecha del título para alojar los indicadores.
 ///
 /// Garantiza cero solapamiento con el texto del título: el ancho asignado al galley del título
 /// se reduce exactamente por esta cantidad cuando hay indicadores activos.
@@ -448,7 +520,9 @@ struct DatosDeLaTarjeta {
     priority: PrioridadNodo,
     /// Estado de supervisión humana para indicadores de control.
     review_status: EstadoRevision,
-    /// Rol del nodo, que se pinta abajo a la derecha (PH-1007-3).
+    /// La IA lo acaba de crear y la persona aún no lo ha abierto: la tarjeta va resaltada.
+    nuevo_de_la_ia: bool,
+    /// Rol del nodo, que se pinta abajo a la derecha.
     role: crate::model::RolNodo,
     /// Posición en las coordenadas del mapa.
     pos: [f32; 2],
@@ -574,7 +648,7 @@ fn dibujar_fotograma_del_lienzo(
         a_mundo: &a_mundo,
         ocultos: &ocultos,
         puntero: leer_las_pulsaciones(ui.ctx(), ui.layer_id(), response.rect),
-        editable: !app.es_solo_lectura_por_raiz(),
+        editable: !app.es_solo_lectura_por_raiz() && !app.agentes().bloqueo.esta_bloqueado(),
     };
     anotar_el_clic_derecho(app, response, &fotograma);
 
@@ -689,7 +763,16 @@ fn dibujar_las_conexiones_cruzadas(app: &AplicacionMapaMental, fotograma: &Fotog
             let origen_en_pantalla = a_pantalla(Pos2::new(from_node.pos[0], from_node.pos[1]));
             let destino_en_pantalla = a_pantalla(Pos2::new(to_node.pos[0], to_node.pos[1]));
 
-            let pts = calcular_curva_bezier(origen_en_pantalla, destino_en_pantalla);
+            let mut pts = calcular_curva_bezier(origen_en_pantalla, destino_en_pantalla);
+            let es_relacion_padre_hijo =
+                from_node.parent_id == Some(conn.to) || to_node.parent_id == Some(conn.from);
+            if es_relacion_padre_hijo {
+                let desvio = (SEPARACION_CONEXION_PADRE_HIJO * zoom)
+                    .max(SEPARACION_MINIMA_DESVIO_CONEXION_PADRE_HIJO);
+                pts[1].y -= desvio;
+                pts[2].y -= desvio;
+            }
+
             let stroke = Stroke::new(
                 (2.0 * zoom).clamp(GROSOR_MINIMO_CONEXION, GROSOR_MAXIMO_CONEXION),
                 app.presentacion().tema().linea_de_conexion_cruzada,
@@ -800,6 +883,7 @@ fn datos_de_la_tarjeta(
         status: node.status,
         priority: node.priority,
         review_status: node.review_status,
+        nuevo_de_la_ia: node.nuevo_de_la_ia,
         role: node.role,
         pos: node.pos,
         sin_hijos: node.children.is_empty(),
@@ -1035,23 +1119,19 @@ fn pintar_la_tarjeta(
         es_la_raiz,
         esta_seleccionado,
         indice_de_rama,
+        nuevo_de_la_ia,
         ..
     } = *datos;
 
-    // Fondo y borde de la tarjeta del nodo
-    let color_de_fondo = if es_la_raiz {
-        app.presentacion().tema().fondo_de_la_raiz
-    } else {
-        app.presentacion().tema().fondo_del_nodo
-    };
-
-    let color_del_borde = if esta_seleccionado {
-        app.presentacion().tema().borde_del_nodo_seleccionado
-    } else if cursor_encima {
-        app.presentacion().tema().texto_secundario
-    } else {
-        app.presentacion().tema().borde_del_nodo
-    };
+    let (color_de_fondo, color_del_borde) = colores_de_la_tarjeta(
+        app.presentacion(),
+        EstadoVisualDeLaTarjeta {
+            es_la_raiz,
+            esta_seleccionado,
+            cursor_encima,
+            nuevo_de_la_ia,
+        },
+    );
 
     let grosor_del_borde = if esta_seleccionado {
         GROSOR_DEL_BORDE_SELECCIONADO * zoom
@@ -1200,7 +1280,7 @@ fn pintar_el_titulo_y_los_indicadores(
     //
     // Se compone con un ancho máximo para que **se envuelva dentro de la
     // caja**. El espacio disponible tiene en cuenta la reserva horizontal
-    // para los indicadores de la esquina superior derecha (C19-D).
+    // para los indicadores de la esquina superior derecha.
     let posicion_del_titulo = posicion_del_titulo(caja_del_nodo, zoom);
 
     let texto_del_titulo = format!("{} {}", status.emoji(), title);
@@ -1220,7 +1300,7 @@ fn pintar_el_titulo_y_los_indicadores(
         app.presentacion().tema().texto_principal,
     );
 
-    // Indicadores visuales de prioridad y control humano (C19-C, C19-D)
+    // Indicadores visuales de prioridad y control humano
     if !indicadores.is_empty() {
         let tamano_letra_indicador = 12.0 * zoom;
 
@@ -1232,12 +1312,7 @@ fn pintar_el_titulo_y_los_indicadores(
                     _ => app.presentacion().tema().texto_secundario,
                 }
             } else {
-                match review_status {
-                    EstadoRevision::RequiereCorreccion => app.presentacion().tema().peligro,
-                    EstadoRevision::AprobadoPorHumano => app.presentacion().tema().exito,
-                    EstadoRevision::GeneradoPorIA => app.presentacion().tema().acento,
-                    _ => app.presentacion().tema().texto_secundario,
-                }
+                color_del_indicador_de_revision(app.presentacion(), *review_status)
             };
 
             painter.text(
@@ -1733,7 +1808,7 @@ pub enum IconoDelNodo {
     Revision,
     /// El 📝 de las notas, abajo a la derecha.
     Notas,
-    /// El icono del rol, abajo a la derecha, a la izquierda del de notas (PH-1007-3).
+    /// El icono del rol, abajo a la derecha, a la izquierda del de notas.
     Rol,
 }
 
@@ -1933,14 +2008,14 @@ const SEPARACION_DEL_TEXTO_EMERGENTE: Vec2 = Vec2::new(14.0, 14.0);
 /// - `texto`: lo que dice la nube, ya traducido.
 /// - `puntero`: dónde está el cursor; la nube se abre un poco más abajo y a la derecha.
 pub fn pintar_el_texto_emergente(ctx: &egui::Context, texto: String, puntero: Pos2) {
-    egui::Area::new(egui::Id::new("texto_emergente_de_icono"))
+    egui::Area::new(egui::Id::unique("texto_emergente_de_icono"))
         .order(egui::Order::Tooltip)
         .fixed_pos(puntero + SEPARACION_DEL_TEXTO_EMERGENTE)
         .interactable(false)
         .show(ctx, |ui| {
             // El área recuerda el tamaño del fotograma anterior y lo da como ancho máximo; todas
             // las nubes comparten esta área, así que sin fijar el ancho la de un texto largo
-            // heredaba el de la última corta y salía con tres letras por línea (PH-1007-5). Se
+            // heredaba el de la última corta y salía con tres letras por línea. Se
             // fija el mismo que usan los textos emergentes propios de egui.
             egui::Frame::popup(ui.style()).show(ui, |ui| {
                 ui.set_max_width(ui.spacing().tooltip_width);

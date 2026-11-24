@@ -1,368 +1,289 @@
-# 📖 Manual de Supervisión y Alineación Bidireccional con IA: Claude, ChatGPT y Gemini
+Manual de supervisión y alineación bidireccional con IA: Claude, ChatGPT y Gemini
 
-> **Qué conecta MMCelt hoy.** Desde la versión 0.11.6 el programa se conecta con tres agentes de
-> consola: **Claude Code**, **Codex CLI** y **Gemini CLI**. Lo que esta guía cuenta de
-> Claude Desktop, Cursor y Antigravity se conserva como referencia de cómo funciona cada plataforma: **ya no se conectan desde
-> MMCelt** (el motivo está en el [README](../../README.md#por-qué-ya-no-están-antigravity-cursor-windsurf-y-claude-desktop)).
+MMCelt es una cabina de control visual y un plano arquitectónico para proyectos desarrollados con
+inteligencia artificial. Este manual explica los dos flujos de trabajo, cómo se usa la ayuda de la
+aplicación y cómo se trabaja paso a paso con Claude, ChatGPT y Gemini.
 
-> **MMCelt: Tu cabina de control visual y plano arquitectónico para proyectos desarrollados con Inteligencia Artificial.**
+Qué conecta MMCelt hoy
 
----
+Desde la versión 0.11.6 el programa se conecta con tres agentes de consola: Claude Code, Codex CLI y
+Antigravity CLI (agy). Lo que este manual cuenta de Claude Desktop, Cursor y el IDE antiguo de
+Antigravity se conserva como referencia de cómo funciona cada plataforma: ya no se conectan desde
+MMCelt. El motivo está en el apartado «Conectarlo con tu IA» del README.md de la raíz del repositorio.
 
-## 1. La Filosofía: Bidireccionalidad Real entre Humano e Inteligencia Artificial
+La filosofía: bidireccionalidad real entre la persona y la IA
 
-Cuando trabajas en proyectos complejos con modelos de Inteligencia Artificial (arquitectura de software, investigación profunda, diseño de producto o estrategia de negocio), el mayor reto no es escribir texto o código, sino **mantener la alineación conceptual y el control absoluto del proyecto**.
+Cuando trabajas en proyectos complejos con modelos de inteligencia artificial, ya sea arquitectura de
+software, investigación, diseño de producto o estrategia de negocio, el mayor reto no es escribir
+texto o código, sino mantener la alineación conceptual y el control del proyecto.
 
-**MMCelt está diseñado para funcionar en ambas direcciones de forma totalmente fluida:**
+MMCelt está diseñado para funcionar en las dos direcciones. Arriba está el usuario, como arquitecto o
+supervisor: diseña la estructura, los módulos y las rutas de archivo, o bien supervisa el trabajo que
+la IA ha generado. Abajo está la inteligencia artificial, como constructora o socia: Claude Code,
+Codex, Gemini u otro agente lee tu mapa como especificación maestra, sincroniza su avance y acata las
+correcciones en vivo. Entre ambos hay dos flujos posibles: en el primero tú eres el arquitecto,
+diseñas el plano en MMCelt y la IA lo programa paso a paso; en el segundo tú eres el supervisor, la
+IA genera el mapa y tú lo revisas y corriges los desvíos de rumbo.
 
-```
-                  ┌────────────────────────────────────────────────────────┐
-                  │ 👤 EL USUARIO (ARQUITECTO / SUPERVISOR)               │
-                  │ - Diseña la estructura, módulos y rutas de archivo     │
-                  │ - O bien supervisa el trabajo que la IA ha generado    │
-                  └─────────────────────────┬──────────────────────────────┘
-                                            │
-        FLUJO 1: "Tú eres el Arquitecto"    │   FLUJO 2: "Tú eres el Supervisor"
-        Diseñas el plano en MMCelt y        │   La IA genera el mapa, tú lo auditas
-        la IA lo programa paso a paso       │   y corriges desvíos de rumbo
-                                            │
-                                            ▼
-                  ┌────────────────────────────────────────────────────────┐
-                  │ 🤖 LA INTELIGENCIA ARTIFICIAL (CONSTRUCTOR / SOCIO)   │
-                  │ (Claude Code, Cursor, Codex, Gemini, Antigravity)      │
-                  │ - Lee tu mapa como especificación maestra              │
-                  │ - Sincroniza su avance y acata correcciones en vivo    │
-                  └────────────────────────────────────────────────────────┘
-```
+Primer flujo: tú eres el arquitecto
 
----
+En este modo tienes la idea clara y quieres que la IA programe exactamente lo que tienes en mente, sin
+que tome decisiones por su cuenta ni invente nombres de archivo extraños.
 
-### Flujo 1: Tú eres el Arquitecto (Diseñas en MMCelt ➔ La IA Programa)
-En este modo, tú tienes la idea clara y quieres que la IA programe exactamente lo que tienes en mente, sin que tome decisiones por su cuenta ni invente nombres de archivos extraños:
+Abres MMCelt y creas tu mapa mental con los atajos rápidos, Tab para ramas hijas y Enter para ramas
+hermanas, o cargas una plantilla de arquitectura como Clean Architecture o Fullstack. Asignas a cada
+nodo la ruta de su archivo de código, por ejemplo src/auth/jwt.rs o migrations/001_init.sql. En las
+notas de cada nodo escribes las especificaciones técnicas: qué librerías usar, qué algoritmos o qué
+restricciones. En el panel «Visión del Creador y Metas del Proyecto (Para la IA)» redactas el
+propósito global del software.
 
-1. **Abres MMCelt:** Creas tu mapa mental usando atajos rápidos (<kbd>Tab</kbd> para ramas hijas, <kbd>Enter</kbd> para ramas hermanas) o cargas una plantilla de arquitectura (*Clean Architecture*, *Fullstack*).
-2. **Defines los módulos y sus archivos:** Asignas a cada nodo su ruta de archivo de código (ej. `src/auth/jwt.rs`, `migrations/001_init.sql`).
-3. **Escribes las especificaciones técnicas:** En las notas de cada nodo defines qué librerías usar, algoritmos o restricciones.
-4. **Fijas la visión del proyecto:** En el panel
-   `🧭 Visión del Creador y Metas del Proyecto (Para la IA)` redactas el propósito global del
-   software.
-5. **Se lo entregas a la IA (Claude Code, ChatGPT, Gemini o Antigravity):** La IA recibe el archivo `.md` o `.mmcelt` como un **plano de construcción de obra civil**, garantizando que el código se escribe en orden, respetando tus dependencias y sin alucinaciones arquitectónicas.
+Por último se lo entregas a la IA, sea Claude Code, ChatGPT, Gemini u otra. La IA recibe el archivo
+.md o .mmcelt como un plano de obra, de modo que el código se escribe en orden, respetando tus
+dependencias y sin decisiones arquitectónicas inventadas.
 
----
+Segundo flujo: tú eres el supervisor
 
-### Flujo 2: Tú eres el Supervisor (La IA Plantea ➔ Tú Auditas y Corriges)
-En este modo, le pides a la IA que investigue o plantee la solución técnica a un problema grande:
+En este modo le pides a la IA que investigue o plantee la solución técnica a un problema grande.
 
-1. **La IA genera el mapa mental:** La IA analiza tu proyecto y genera el mapa mental visual (vía MCP o código JSON).
-2. **Abres el mapa en MMCelt:** Tienes en segundos una radiografía panorámica de todo lo que la IA entiende, cómo divide el trabajo y qué dudas técnicas tiene.
-3. **Detectas errores o caminos que no te gustan:** Si la IA eligió una base de datos incorrecta o un enfoque que no deseas, marcas ese nodo como **`⛔ Descartado`** o **`⚠️ Requiere Corrección`** y escribes tu directiva en el campo de corrección.
-4. **Eliges `🛑 Enviar Correcciones y Directivas a la IA...`:** La IA recibe un informe estricto de control humano que le prohíbe continuar por las vías descartadas y le obliga a reajustar el código según tus órdenes exactas.
+La IA analiza tu proyecto y genera el mapa mental, por MCP o mediante un bloque JSON. Al abrirlo en
+MMCelt tienes en segundos una vista panorámica de lo que la IA entiende, de cómo divide el trabajo y
+de qué dudas técnicas tiene. Si eligió una base de datos incorrecta o un enfoque que no deseas,
+marcas ese nodo como «Descartado» o «⚠️ Requiere Corrección» y escribes tu directiva en el campo de
+corrección. Después eliges «🛑 Enviar Correcciones y Directivas a la IA...» y la IA recibe un informe
+estricto de control humano que le prohíbe continuar por las vías descartadas y le obliga a reajustar
+el código según tus indicaciones.
 
----
+La interfaz y la ayuda para usuarios nuevos
 
-## 2. Interfaz Estándar y Sistema Pedagógico de Ayuda para Usuarios Noveles
+Para que cualquier persona, principiante o desarrollador con experiencia, domine la herramienta desde
+el primer minuto, MMCelt cuenta con una barra de menús de escritorio y con un sistema de ayuda
+contextual.
 
-Para garantizar que cualquier persona (sea principiante o desarrollador experimentado) domine la herramienta desde el primer minuto, MMCelt cuenta con dos elementos clave:
+La barra de menús tiene cinco entradas. En «Archivo» están crear un mapa nuevo, las plantillas de
+arquitectura, el escáner automático de carpetas de código, abrir, guardar con Ctrl+S y exportar a
+Markdown para IA con Ctrl+E. En «Edición» están añadir un hijo con Tab, añadir un hermano con Enter,
+eliminar con Supr, editar con Espacio o F2, las conexiones cruzadas y la ficha de visión del
+proyecto. En «Inteligencia Artificial» están importar mapas desde chats de IA, copiar el prompt
+maestro, el panel de directivas de corrección humana, la vista previa del .md y la exportación. En
+«Ver y Diseño» están los modos de disposición automática, que son árbol balanceado, radial y libre,
+el centrado de la cámara con la tecla Inicio y los temas visuales oscuro, claro y de alto contraste.
+En «Ayuda» están la activación de las galletas guiadas, las guías temáticas, los atajos de teclado y
+el panel de ayuda completa.
 
-### A. Barra de Menús de Escritorio Estándar
-Se han sustituido los botones dispersos por una estructura limpia y jerárquica:
-- **`📁 Archivo`:** Crear nuevo mapa, plantillas arquitectónicas (*Clean Arch*, *Fullstack*), escáner automático de carpetas de código, abrir, guardar (`Ctrl+S`) y exportar a Markdown para IA (`Ctrl+E`).
-- **`✏️ Edición`:** Añadir hijo (<kbd>Tab</kbd>), añadir hermano (<kbd>Enter</kbd>), eliminar (<kbd>Supr</kbd>), editar (<kbd>Espacio</kbd>/<kbd>F2</kbd>), conexiones cruzadas y ficha de visión del proyecto.
-- **`🤖 Inteligencia Artificial`:** Importar mapas desde chats de IA, copiar el prompt maestro, panel de directivas de corrección humana, previsualizar `.md` y exportar.
-- **`🎨 Ver y Diseño`:** Modos de auto-layout (Árbol balanceado, Radial, Libre), centrado de cámara (<kbd>Inicio</kbd>) y temas visuales (Oscuro, Claro, Alto Contraste).
-- **`❓ Ayuda`:** Activación de galletas guiadas, guías temáticas directas, atajos de teclado y panel de ayuda exhaustiva.
+Las galletas contextuales son avisos breves y discretos que aparecen arriba del lienzo y en el
+inspector lateral, y se adaptan a lo que estás haciendo o al nodo que tengas seleccionado. Cada
+galleta incluye un enlace «+info». Al pulsarlo no se abre una ventana emergente, sino un panel lateral
+a la derecha con toda la información disponible: qué hace exactamente esa opción, qué posibilidades
+tienes para configurarla, por dónde continuar y qué pasos se recomiendan, y ejemplos prácticos de
+integración con IA y atajos de teclado relacionados.
 
-### B. Sistema de "Galletas" Guiadas y Ventana Lateral de Ayuda Detallada (`+info`)
-- **🍪 Las Galletas Contextuales:** Son píldoras informativas discretas que aparecen automáticamente arriba del lienzo y en el inspector lateral, adaptándose a lo que estás haciendo o al nodo que tengas seleccionado.
-- **El enlace interactivo `+info`:** Cada galleta incluye un botón `+info`. Al pulsarlo, **no te invade con ventanas emergentes molestas**, sino que **despliega un panel lateral a la derecha con toda la información exhaustiva posible**:
-  - ¿Qué hace exactamente esa opción?
-  - Qué opciones tienes para configurarla.
-  - Por dónde continuar y qué pasos se recomiendan.
-  - Ejemplos prácticos de integración con IAs y atajos de teclado relacionados.
+Guía paso a paso para Claude
 
----
+En el ecosistema de Anthropic puedes usar Claude Code, Claude Desktop o la web de Claude. Claude Code
+y Claude Desktop admiten MCP, pero la aplicación gráfica la abres tú y la consola puede abrirla
+MMCelt. La configuración de cada uno se explica en el documento claude-mcp.md de la carpeta
+documentacion/integraciones.
 
-## 🟣 3. Guía Paso a Paso para CLAUDE (Anthropic)
+Con Claude Desktop no hay que copiar y pegar el mapa: tú abres la aplicación y la conversación, y
+Claude lee y devuelve los mapas mediante MCP. Una vez registrado el servidor, el flujo es el
+siguiente. Primero le pides a Claude que inicie el proyecto, por ejemplo: «Claude, vamos a diseñar una
+aplicación de análisis financiero en Rust. Analiza los requisitos que te he dado y usa la herramienta
+mmcelt_create_mindmap para guardar el mapa mental en finanzas.mmcelt dentro de mi espacio de trabajo,
+con los pilares principales y las dudas a resolver.» Después abres MMCelt, pulsas «Abrir Mapa (.mmcelt
+/ .json)...», cargas finanzas.mmcelt y ves todas las ramas en el lienzo.
 
-En el ecosistema de Anthropic puedes usar Claude Desktop o Claude Code. Ambos admiten MCP, pero
-la aplicación gráfica la abres tú y la consola puede abrirla MMCelt.
+Si necesitas corregir a Claude, haces clic en el nodo que quieras cambiar, por ejemplo uno que diga
+usar MongoDB, cambias su estado a «Descartado» o «Requiere Corrección» y escribes en el campo de
+corrección algo como: descartamos las bases de datos NoSQL, usaremos PostgreSQL porque necesitamos
+transacciones ACID estrictas. Guardas el archivo con Ctrl+S. Para devolverle el control, en tu
+conversación le dices: «Claude, he revisado el mapa mental en MMCelt y he dejado correcciones. Usa
+mmcelt_get_human_feedback y ajusta el plan de arquitectura.» Claude ejecutará la herramienta, leerá
+tus notas y responderá confirmando que ha descartado MongoDB y reorientado el desarrollo hacia
+PostgreSQL.
 
-### Modalidad A: Claude Desktop, con apertura manual y devolución MCP
-En este modo no tienes que copiar y pegar el mapa. Tú abres la aplicación y la conversación;
-Claude lee y devuelve los mapas mediante MCP.
+Si usas la versión web de Claude, en MMCelt pulsas «Copiar Prompt Maestro para IA...» y pegas el texto
+en el chat junto con la descripción de tu proyecto. Claude te responderá con un bloque de código JSON.
+En MMCelt abres «📥 Importar desde IA (ChatGPT, Claude, Gemini)...», pegas la respuesta de Claude y
+pulsas «✨ Sustituir el mapa por el de la IA».
 
-#### Paso 1: Conectar MMCelt con Claude (se hace una sola vez)
-
-El servidor MCP va dentro del propio ejecutable de MMCelt, así que no hay nada que
-instalar aparte: ni Python, ni Node, ni ningún paquete.
-
-**La vía corta.** Abre MMCelt y entra en el menú
-**`🤖 Inteligencia Artificial` → `🔌 Conectar MMCelt con mis IAs...`**. La aplicación busca
-los agentes que tengas instalados, te los muestra en una lista y los conecta al pulsar
-**`🔌 Conectar`**. Hace una copia de seguridad del archivo de configuración antes de
-tocarlo. Después, reinicia Claude Desktop.
-
-**A mano, si prefieres ver lo que se escribe.** Abre
-`%APPDATA%\Claude\claude_desktop_config.json` —o entra en Claude Desktop, en
-**Settings → Developer → Edit Config**— y añade:
-
-```json
-{
-  "mcpServers": {
-    "mmcelt": {
-      "command": "C:/ruta/hasta/mmcelt.exe",
-      "args": ["--mcp-server"],
-      "env": {
-        "MMCELT_WORKSPACE": "C:/ruta/hasta/tu/carpeta/de/mapas"
-      }
-    }
-  }
-}
-```
-
-Sustituye las dos rutas por las tuyas y escríbelas con barras normales (`/`), que es lo
-que espera el formato JSON. `MMCELT_WORKSPACE` marca la carpeta dentro de la cual el
-agente puede leer y escribir: fuera de ella no tiene acceso a nada.
-
-Guarda y reinicia Claude Desktop. Sabrás que ha funcionado porque aparece un icono de
-martillo 🔨 abajo a la derecha, con las herramientas de MMCelt dentro.
-
-#### Paso 2: El flujo de trabajo real
-1. **Pídele a Claude que inicie el proyecto:**
-   > *"Claude, vamos a diseñar una aplicación de análisis financiero en Rust. Analiza los requisitos que te he dado y usa la herramienta `mmcelt_create_mindmap` para guardar el mapa mental en `finanzas.mmcelt` dentro de mi espacio de trabajo, con los pilares principales y dudas a resolver."*
-2. **Supervisa en MMCelt:**
-   * Abre la app MMCelt y pulsa **`📂 Abrir Mapa (.mmcelt / .json)...`** para cargar `finanzas.mmcelt`.
-   * Verás todas las ramas en tu lienzo 2D infinito.
-3. **Si necesitas corregir a Claude:**
-   * Haz clic en el nodo que quieras cambiar (ej. *"Usar MongoDB"*).
-   * Cambia su estado a **`⛔ Descartado`** o **`⚠️ Requiere Corrección`**.
-   * En el campo **"🛑 Corrección / Instrucción Exigida a la IA"**, escribe: *"Descartamos bases de datos NoSQL. Usaremos PostgreSQL porque necesitamos transacciones ACID estrictas"*.
-   * Guarda el archivo (<kbd>Ctrl</kbd>+<kbd>S</kbd>).
-4. **Devuélvele el control a Claude:**
-   * En tu conversación con Claude, dile simplemente:
-     > *"Claude, he revisado el mapa mental en MMCelt y he dejado correcciones. Usa `mmcelt_get_human_feedback` y ajusta el plan de arquitectura."*
-   * Claude ejecutará la herramienta, leerá tus notas y te responderá confirmando que ha descartado MongoDB y reorientado el desarrollo hacia PostgreSQL.
-
----
-
-### Modalidad B: Uso en la Web (Claude.ai)
-Si utilizas la versión web de Claude:
-1. En MMCelt, pulsa el botón **`📋 Copiar Prompt Maestro para IA...`** y cópialo.
-2. Pégalo en tu chat de Claude.ai junto con la descripción de tu proyecto.
-3. Claude te responderá con un bloque de código JSON.
-4. En MMCelt, abre **`📥 Importar desde IA (ChatGPT, Claude, Gemini)...`**, pega la respuesta de Claude y pulsa **`✨ Sustituir el mapa por el de la IA`**.
-
----
-
-## 🟢 4. Guía Paso a Paso para CHATGPT (OpenAI)
+Guía paso a paso para ChatGPT
 
 En un chat web de ChatGPT puedes trabajar por copia manual. Para un recorrido local con MCP utiliza
-Codex CLI o la aplicación Codex, según se explica en
-[`chatgpt.md`](chatgpt.md). La CLI la abre MMCelt; la aplicación y su tarea las abres tú.
+Codex CLI o la aplicación Codex, como se explica en el documento chatgpt.md de la carpeta
+documentacion/integraciones. La CLI la abre MMCelt; la aplicación y su tarea las abres tú.
 
-### Modalidad A: Crear tu propio "Custom GPT: Copiloto MMCelt" (Recomendada)
-Si tienes ChatGPT Plus, Team o Enterprise, puedes crear un asistente permanente que siempre hable el idioma de MMCelt:
+Si tienes ChatGPT Plus, Team o Enterprise, la forma recomendada es crear un GPT personalizado que
+siempre hable el idioma de MMCelt. En ChatGPT entra en Explore GPTs y pulsa Create. En la pestaña
+Configure escribe en Name «MMCelt - Arquitecto de Mapas Mentales», en Description «Asistente para
+estructuración visual y supervisión de proyectos con MMCelt.» y en Instructions pega el texto completo
+del archivo skills/mmcelt-mindmap/SKILL.md del repositorio. Guarda el GPT. A partir de entonces, cada
+vez que lo abras y le hables de una idea, te generará los bloques listos para importar a MMCelt.
 
-1. Entra en ChatGPT y haz clic en **Explore GPTs** > **+ Create**.
-2. Ve a la pestaña **Configure**:
-   * **Name:** `MMCelt - Arquitecto de Mapas Mentales`
-   * **Description:** `Asistente para estructuración visual y supervisión de proyectos con MMCelt.`
-   * **Instructions:** Abre el archivo [`skills/mmcelt-mindmap/SKILL.md`](../../skills/mmcelt-mindmap/SKILL.md) de tu proyecto, copia todo su texto y pégalo en este cuadro de instrucciones.
-3. Guarda el GPT.
+En cualquier chat normal de ChatGPT también puedes estructurar tu idea. En MMCelt pulsas «Copiar
+Prompt Maestro para IA...» y en ChatGPT escribes algo como: «Actúa según estas directrices de MMCelt:
+aquí pego el prompt maestro. Aquí tienes mi proyecto: aquí describo mi idea o pego mi código.»
+ChatGPT generará el bloque estructurado, y en MMCelt eliges «Importar desde IA (ChatGPT, Claude,
+Gemini)...», pegas la respuesta y tendrás tu mapa montado.
 
-A partir de ahora, cada vez que abras ese GPT y le hables de una idea, te generará automáticamente los bloques listos para importar a MMCelt.
+Si tras ver el mapa descubres que ChatGPT ha omitido un módulo o ha elegido una tecnología errónea,
+modifica los nodos en MMCelt, añade tus notas de corrección o elimina lo que no sirva. Abre el menú
+«Inteligencia Artificial», elige «Enviar Correcciones y Directivas a la IA...» y pulsa «Copiar
+Directivas de Corrección». Pégalo en ChatGPT. El mensaje empieza con una cabecera de instrucción de
+corrección y reajuste del proyecto que indica que has revisado el mapa en MMCelt y exiges cambios
+obligatorios. ChatGPT acatará las correcciones, desechará los caminos vetados y continuará por donde
+tú le has marcado.
 
----
+Guía paso a paso para Gemini
 
-### Modalidad B: En cualquier Chat normal de ChatGPT
-1. **Pedirle a ChatGPT que estructure tu idea:**
-   * En MMCelt pulsa **`📋 Copiar Prompt Maestro para IA...`** y copia el texto maestro.
-   * En ChatGPT escribe:
-     > *"Actúa según estas directrices de MMCelt: [pega el prompt maestro]. Aquí tienes mi proyecto: [describe tu idea o pega tu código]."*
-   * ChatGPT generará el bloque estructurado.
-   * En MMCelt elige **`📥 Importar desde IA (ChatGPT, Claude, Gemini)...`**, pega la respuesta y tendrás tu mapa montado.
+En el ecosistema de Google puedes usar el chat web o Antigravity CLI (agy). El chat web usa copia
+manual y MMCelt puede abrir Antigravity CLI (agy) de forma interactiva con MCP. Los detalles están en el
+documento gemini.md de la carpeta documentacion/integraciones.
 
-2. **Corregir a ChatGPT cuando se equivoque:**
-   * Si tras ver el mapa mental en MMCelt descubres que ChatGPT ha omitido un módulo o ha elegido una tecnología errónea:
-   * Modifica los nodos en MMCelt, añade tus notas de corrección o elimina lo que no sirva.
-   * Abre `🤖 Inteligencia Artificial` y elige **`🛑 Enviar Correcciones y Directivas a la IA...`**.
-   * Pulsa **`📋 Copiar Directivas de Corrección`**.
-   * Pégalo en ChatGPT. El mensaje empezará con una cabecera estricta:
-     > *"🛑 INSTRUCCIÓN DE CORRECCIÓN Y REAJUSTE DE PROYECTO PARA LA IA: He revisado el mapa mental en MMCelt y exijo los siguientes cambios obligatorios..."*
-   * ChatGPT acatará las correcciones, desechará los caminos vetados y continuará el desarrollo exactamente por donde tú le has marcado.
+Para tener un asistente permanente, crea un Gem personalizado. En Gemini entra en el gestor de Gems y
+pulsa New Gem, ponle un nombre como MMCelt Strategy Architect, pega en sus instrucciones el contenido
+del archivo skills/mmcelt-mindmap/SKILL.md y pulsa Save. A partir de ahí el Gem responderá siempre en
+formato MMCelt.
 
----
+Para analizar proyectos grandes con el .md exportado, diseña en MMCelt la estructura inicial de tu
+idea, escribe tu visión en el panel «Visión del Creador y Metas del Proyecto (Para la IA)» y pulsa
+«Exportar Markdown para IA (.md)» o Ctrl+E. Se generará un archivo como MiProyecto_AI.md. Abre Gemini
+o Google AI Studio y arrastra ese archivo al chat junto con tus archivos de código o documentación en
+PDF. Una instrucción útil es: «Gemini, he adjuntado el mapa mental de mi proyecto. Lee con máxima
+atención la Sección 1, mi visión como creador, y la Sección 6, puntos de decisión, dudas y bloqueos.
+Elabora una propuesta técnica detallada que resuelva todas las dudas abiertas y devuélveme el mapa
+mental actualizado en formato MMCelt para que pueda supervisarlo en mi aplicación.» Copias la
+respuesta, la pegas en MMCelt con «Importar desde IA (ChatGPT, Claude, Gemini)...» y tendrás en
+pantalla la evolución del proyecto.
 
-## 🔵 5. Guía Paso a Paso para GEMINI (Google)
+Integración con entornos de desarrollo autónomos
 
-En el ecosistema de Google puedes usar el chat web, Gemini CLI o Antigravity. El chat web usa copia
-manual, MMCelt puede abrir Gemini CLI y Antigravity se abre manualmente después de preparar MCP.
+Cuando pasas del chat a herramientas donde la IA escribe código, refactoriza repositorios y ejecuta
+órdenes en la terminal de forma autónoma, MMCelt se vuelve aún más importante como salvaguarda y mapa
+de ruta visual.
 
-### Modalidad A: Crear un "Gem" Personalizado (Gemini Advanced)
-1. En Gemini, entra en el gestor de **Gems** y pulsa **New Gem**.
-2. **Nombre:** `MMCelt Strategy Architect`.
-3. **Instrucciones:** Copia y pega el contenido de [`skills/mmcelt-mindmap/SKILL.md`](../../skills/mmcelt-mindmap/SKILL.md).
-4. Pulsa **Save**. Ahora tu Gem responderá siempre en formato MMCelt.
+Claude Code
 
----
+Claude Code es el agente de línea de órdenes de Anthropic que recorre tu código, crea ramas y ejecuta
+pruebas de forma autónoma en la terminal.
 
-### Modalidad B: Análisis de Proyectos Masivos mediante el `.md` Exportado
-1. Diseña en MMCelt la estructura inicial de tu idea, escribe tu visión en el panel
-   **`🧭 Visión del Creador y Metas del Proyecto (Para la IA)`** y pulsa
-   **`🤖 Exportar Markdown para IA (.md)`** (o <kbd>Ctrl</kbd>+<kbd>E</kbd>).
-2. Se generará un archivo como `MiProyecto_AI.md`.
-3. Abre Gemini (o Google AI Studio) y **arrastra el archivo `.md` directamente al chat** junto con tus archivos de código o documentación PDF.
-4. **Instrucción para Gemini:**
-   > *"Gemini, he adjuntado el mapa mental de mi proyecto. Lee con máxima atención la Sección 1 (Mi visión como creador) y la Sección 5 (Dudas y puntos de decisión pendientes). Elabora una propuesta técnica detallada que resuelva todas las dudas abiertas y devuélveme el mapa mental actualizado en formato MMCelt para que pueda supervisarlo en mi aplicación."*
-5. Copias la respuesta de Gemini, la pegas en MMCelt con **`📥 Importar desde IA (ChatGPT, Claude, Gemini)...`** y tendrás en tu pantalla la evolución del proyecto generada por Gemini.
+Para vincularlo con el servidor MCP de MMCelt basta el menú «Inteligencia Artificial → Conectar
+MMCelt con mis IAs...», que detecta Claude Code y lo configura. Si lo prefieres desde la terminal, se
+registra con una sola orden, sustituyendo las dos rutas por las tuyas:
 
----
-
----
-
-## 6. Integración con Entornos de Desarrollo Autónomos y Agénticos
-
-Cuando pasas del chat conversacional a herramientas donde la IA **escribe código, refactoriza repositorios y ejecuta terminales de forma autónoma**, MMCelt se vuelve aún más crucial como tu **salvaguarda y mapa de ruta visual**.
-
----
-
-### 🟣 A. CLAUDE CODE (CLI de Anthropic para Terminal)
-
-**Claude Code** es el agente de línea de comandos de Anthropic que navega por tu código, crea ramas y ejecuta tests de forma autónoma en la terminal.
-
-#### 1. Vincular el Servidor MCP de MMCelt a Claude Code
-
-Vale la misma vía corta que con Claude Desktop: el menú
-**`🤖 Inteligencia Artificial` → `🔌 Conectar MMCelt con mis IAs...`** detecta también
-Claude Code y lo configura.
-
-Si lo prefieres desde la terminal, se registra con una sola orden:
-
-```bash
 claude mcp add mmcelt -s user -e MMCELT_WORKSPACE="C:/ruta/hasta/tu/carpeta/de/mapas" -- "C:/ruta/hasta/mmcelt.exe" --mcp-server
-```
 
-Lo que se registra es el ejecutable de MMCelt, no un script suelto: por eso quien reciba
-el programa no necesita instalar nada más para conectarlo con su agente.
+Lo que se registra es el ejecutable de MMCelt, no un script suelto, así que quien reciba el programa
+no necesita instalar nada más para conectarlo con su agente.
 
-#### 2. Flujo de Trabajo en Terminal
-1. **Antes de empezar a programar:**
-   Inicia Claude Code y dale la siguiente instrucción:
-   ```bash
-   claude "Analiza el repositorio actual. Antes de tocar ningún archivo de código, genera un mapa mental con mmcelt_create_mindmap en ./arquitectura.mmcelt dividiendo las fases de refactorización y los puntos críticos a comprobar."
-   ```
-2. **Supervisión en tiempo real:**
-   Abre MMCelt en paralelo. Cargas `arquitectura.mmcelt` y verás el plan completo de Claude Code.
-3. **Pausar o Corregir a Claude Code:**
-   Si ves que Claude Code planea modificar un módulo sensible que no debe tocar:
-   - Marcas ese nodo como `⛔ Descartado` o `⚠️ Requiere Corrección` en MMCelt y guardas (<kbd>Ctrl</kbd>+<kbd>S</kbd>).
-   - En la terminal de Claude Code escribes:
-     ```text
-     Consulta el mapa mental con mmcelt_get_human_feedback antes de continuar y acata las correcciones.
-     ```
-   - Claude Code leerá tus directivas, cancelará la modificación de ese módulo y redirigirá su plan de código.
+Antes de empezar a programar, inicia Claude Code con una instrucción como esta:
 
----
+claude "Analiza el repositorio actual. Antes de tocar ningún archivo de código, genera un mapa mental con mmcelt_create_mindmap en ./arquitectura.mmcelt dividiendo las fases de refactorización y los puntos críticos a comprobar."
 
-### 🟢 B. OPENAI CODEX / CANVAS / CURSOR (Ecosistema OpenAI)
+Abre MMCelt en paralelo y carga arquitectura.mmcelt para ver el plan completo. Si ves que Claude Code
+planea modificar un módulo delicado que no debe tocar, marca ese nodo como «Descartado» o «Requiere
+Corrección» en MMCelt, guarda con Ctrl+S y escribe en la terminal de Claude Code:
 
-Para entornos orientados a desarrollo con modelos de OpenAI (GPT-4o, o1, Canvas y extensiones de código como Cursor o VS Code):
+Consulta el mapa mental con mmcelt_get_human_feedback antes de continuar y acata las correcciones.
 
-#### 1. El Mapa Mental como "Plan de Arquitectura Vivo"
-1. **Inicialización:**
-   Al comenzar una sesión de programación en Canvas o Cursor con ChatGPT, añade al inicio del contexto:
-   > *"Actúa como Senior Tech Lead. Mantendremos la arquitectura y decisiones del proyecto sincronizadas con la estructura de MMCelt. Lee el archivo `proyecto_AI.md` que adjunto como especificación maestra de requisitos y restricciones."*
-2. **Generación de Diffs y Verificación:**
-   Cuando le pidas a la IA una refactorización profunda, añade:
-   > *"Genera el código necesario y, al terminar, entrégame el bloque JSON de actualización para MMCelt reflejando los nuevos módulos creados, los tests implementados y los posibles bloqueos técnicos detectados."*
-3. **Supervisión Continua:**
-   Pegas el bloque devuelto en **`📥 Importar desde IA (ChatGPT, Claude, Gemini)...`** en MMCelt. Puedes ver al instante si el código generado cubre todos los requisitos o si ha dejado cabos sueltos.
+Claude Code leerá tus directivas, cancelará la modificación de ese módulo y redirigirá su plan.
 
----
+Codex, Canvas y Cursor
 
-### 🔵 C. GOOGLE ANTIGRAVITY (Plataforma Agéntica para Gemini)
+En los entornos de desarrollo con modelos de OpenAI, como Canvas o extensiones de código como Cursor o
+VS Code, el mapa funciona como plan de arquitectura vivo. Al comenzar una sesión de programación,
+añade al inicio del contexto algo como: «Actúa como responsable técnico. Mantendremos la arquitectura
+y las decisiones del proyecto sincronizadas con la estructura de MMCelt. Lee el archivo
+proyecto_AI.md que adjunto como especificación maestra de requisitos y restricciones.» Cuando le
+pidas una refactorización profunda, añade: «Genera el código necesario y, al terminar, entrégame el
+bloque JSON de actualización para MMCelt reflejando los nuevos módulos creados, las pruebas
+implementadas y los posibles bloqueos técnicos detectados.» Después pegas el bloque devuelto en
+«Importar desde IA (ChatGPT, Claude, Gemini)...» y ves al instante si el código generado cubre todos
+los requisitos o si ha dejado cabos sueltos. Para Codex CLI y la aplicación Codex, consulta el
+documento chatgpt.md de la carpeta documentacion/integraciones.
 
-**Google Antigravity** es el entorno de desarrollo agéntico avanzado impulsado por **Gemini**, diseñado para planificar y ejecutar proyectos de software de gran escala con subagentes y herramientas integradas.
+Google Antigravity
 
-#### 1. Instalación del Skill de MMCelt en Antigravity
-El archivo [`skills/mmcelt-mindmap/SKILL.md`](../../skills/mmcelt-mindmap/SKILL.md) está diseñado con el formato estándar de **Agent Skills** compatible con Antigravity.
+Antigravity es el entorno de desarrollo agéntico de Google basado en Gemini, pensado para planificar
+y ejecutar proyectos de software grandes con subagentes y herramientas integradas. Ya no se conecta
+desde MMCelt, pero el recorrido se conserva como referencia.
 
-Puedes indicarle a Antigravity:
-```text
+El archivo skills/mmcelt-mindmap/SKILL.md sigue el formato estándar de Agent Skills compatible con
+Antigravity. Para cargarlo puedes indicarle a Antigravity:
+
 Carga el skill ubicado en ./skills/mmcelt-mindmap/SKILL.md y úsalo para documentar la arquitectura visual del proyecto.
-```
 
-#### 2. El Ciclo de Planificación y Control en Antigravity
-1. **Plan de Implementación Visual:**
-   Cuando Antigravity entra en *Planning Mode* para crear el `implementation_plan.md`, pídele que genere simultáneamente el mapa visual:
-   > *"Antigravity, junto con el implementation_plan.md, genera el archivo `plan_arquitectura.mmcelt` con la descomposición visual de tareas y dependencias."*
-2. **Supervisión en Vivo mientras Antigravity ejecuta:**
-   Mientras Antigravity crea archivos, ejecuta subagentes o corre comandos en segundo plano, tú mantienes abierto MMCelt en tu pantalla para monitorizar la visión global.
-3. **Inyección de Feedback de Corrección:**
-   Si al revisar el mapa en MMCelt detectas que un subagente va a tomar una decisión no deseada, eliges **`🛑 Enviar Correcciones y Directivas a la IA...`** y pegas el texto en el prompt de Antigravity:
-   > *"He modificado el mapa mental en MMCelt. Acata las siguientes directivas de corrección obligatorias: [pegar directivas]. Reajusta el implementation_plan.md antes de continuar."*
-   Antigravity reevaluará su plan de ejecución, actualizará el walkthrough y procederá con las nuevas restricciones.
+Cuando Antigravity entra en su modo de planificación para crear el archivo implementation_plan.md,
+pídele que genere a la vez el mapa visual, por ejemplo: «Antigravity, junto con el
+implementation_plan.md, genera el archivo plan_arquitectura.mmcelt con la descomposición visual de
+tareas y dependencias.» Mientras Antigravity crea archivos, ejecuta subagentes u órdenes en segundo
+plano, tú mantienes abierto MMCelt para vigilar la visión global. Si al revisar el mapa detectas que
+un subagente va a tomar una decisión no deseada, eliges «Enviar Correcciones y Directivas a la IA...»
+y pegas el texto en Antigravity con una indicación como: «He modificado el mapa mental en MMCelt.
+Acata las siguientes directivas de corrección obligatorias, que pego a continuación. Reajusta el
+implementation_plan.md antes de continuar.» Antigravity reevaluará su plan de ejecución y seguirá con
+las nuevas restricciones.
 
----
+Resumen de acciones y atajos
 
-## 7. Tabla Resumen de Acciones y Atajos
+Para que la IA te dé un mapa de lo que está haciendo, pulsa «Copiar Prompt Maestro para IA...» o usa
+MCP; la IA genera el JSON estructurado o ejecuta mmcelt_create_mindmap. Para ver el mapa de la IA en
+tu pantalla, elige «Importar desde IA (ChatGPT, Claude, Gemini)...» y pega la respuesta, o abre el
+archivo .mmcelt. Para explicarle a la IA qué pretendes con el proyecto, edita el panel «Visión del
+Creador y Metas del Proyecto (Para la IA)»; la IA lo lee en la sección 1 del .md. Para corregir a la
+IA si tomó un mal camino, marca «Descartado» o «Requiere Corrección» y elige «Enviar Correcciones y
+Directivas a la IA...»; después pega el texto en la IA o pídele que llame a mmcelt_get_human_feedback.
+Para darle a la IA todo tu proyecto preparado, pulsa «Exportar Markdown para IA (.md)» o Ctrl+E y sube
+el archivo .md a Claude, ChatGPT, Gemini o Claude Code. Para mandarlo y ver el mapa cambiar solo, usa
+«Inteligencia Artificial → Enviar a...», revisa el prompt, confírmalo y deja trabajar al agente. Para
+cortar el seguimiento de un modelo que se ha desbocado, usa «Inteligencia Artificial → Detener
+seguimiento». Para navegar a máxima velocidad, usa Tab para crear un hijo, Enter para un hermano,
+Supr para borrar y Espacio para editar.
 
-| Objetivo que deseas conseguir | Acción en MMCelt | Acción en la IA / CLI / IDE |
-| :--- | :--- | :--- |
-| **Que la IA te dé un mapa de lo que está haciendo** | Pulsa `📋 Copiar Prompt Maestro para IA...` o usa MCP | La IA genera el JSON estructurado o ejecuta `mmcelt_create_mindmap` |
-| **Ver el mapa de la IA en tu pantalla** | Elige `📥 Importar desde IA (ChatGPT, Claude, Gemini)...` y pega (o abre el `.mmcelt`) | — |
-| **Explicarle a la IA qué pretendes con el proyecto** | Edita el panel `🧭 Visión del Creador y Metas del Proyecto (Para la IA)` | La IA lo lee en la sección 1 del `.md` |
-| **Corregir a la IA si tomó un mal camino** | Marca `⛔ Descartado` o `⚠️ Requiere Corrección` y elige `🛑 Enviar Correcciones y Directivas a la IA...` | Pega el texto en la IA o llama a `mmcelt_get_human_feedback` |
-| **Darle a la IA todo tu proyecto masticado** | Pulsa `🤖 Exportar Markdown para IA (.md)` (<kbd>Ctrl</kbd>+<kbd>E</kbd>) | Sube el archivo `.md` a Claude, ChatGPT, Gemini o Claude Code |
-| **Mandarlo y ver el mapa cambiar solo** | `🤖 Inteligencia Artificial → 📤 Enviar a...` | Pega el prompt, que ya está en el portapapeles, y deja trabajar al agente |
-| **Cortar a un modelo que se ha desbocado** | `🤖 Inteligencia Artificial → ⏹ Detener seguimiento` | — |
-| **Navegar a máxima velocidad** | <kbd>Tab</kbd> (Hijo), <kbd>Enter</kbd> (Hermano), <kbd>Supr</kbd> (Borrar), <kbd>Espacio</kbd> (Editar) | — |
+El bucle cerrado: mandar y ver volver
 
----
+Los flujos web anteriores tienen un paso manual en cada sentido: llevarle el documento al modelo y
+traer su respuesta. Con «Enviar a...» y un cliente MCP, la devolución puede automatizarse; la
+apertura depende del cliente.
 
-## 8. El bucle cerrado: mandar y ver volver (desde la 0.9.0)
+Desde «Inteligencia Artificial → Enviar a...» eliges el agente. Antes de confirmar lees en la vista
+previa todo lo que va a salir; las reglas comunes y el encargo se escriben antes, en la ventana
+«Proyecto e instrucciones para la IA». MMCelt guarda el mapa, exporta el documento, conserva el
+prompt exacto en .mmcelt/sesiones y empieza a vigilar el archivo. Si el destino tiene una CLI
+compatible, también abre una consola nueva en la carpeta del proyecto.
 
-Los flujos web de arriba tienen un paso manual en cada sentido: llevarle el documento al modelo y
-traer su respuesta. **Con «📤 Enviar a...» y un cliente MCP, la devolución puede automatizarse; la
-apertura depende del cliente.**
-
-`🤖 Inteligencia Artificial → 📤 Enviar a...` y eliges el agente. Antes de confirmar puedes leer y
-modificar las reglas comunes y el encargo. MMCelt guarda el mapa, exporta el documento, conserva
-el prompt exacto en `.mmcelt/sesiones` y **empieza a vigilar el archivo**. Si el destino tiene una
-CLI compatible, también abre una consola nueva en la carpeta del proyecto.
-
-### La familia del modelo no es la aplicación que estás usando
+La familia del modelo no es la aplicación que estás usando
 
 La consola y la aplicación gráfica son clientes diferentes. Pueden utilizar modelos de la misma
 familia, pero cada una mantiene su propia conversación y puede cargar herramientas o permisos
 distintos. La conexión MCP permite que el cliente lea y devuelva el mapa; no permite que MMCelt
 escriba dentro de una conversación gráfica ya abierta.
 
-| Familia | Cliente de consola | Cliente gráfico | Procedimiento de apertura |
-|---|---|---|---|
-| **Claude** | Claude Code | Claude Desktop | `📤 Enviar a...` abre Claude Code. Claude Desktop lo abres o reinicias tú y adjuntas o pegas el expediente. |
-| **OpenAI** | Codex CLI | Aplicación Codex | `📤 Enviar a...` abre Codex CLI. En la aplicación Codex abres una tarea local y le indicas el expediente. |
-| **Gemini** | Gemini CLI | Antigravity | `📤 Enviar a...` abre Gemini CLI. Para Antigravity, MMCelt prepara la sesión y tú abres el proyecto y continúas allí. |
-| **Web** | — | ChatGPT, Claude.ai o Gemini en el navegador | Abres el chat y adjuntas el `_AI.md`; un chat web ordinario no lee el MCP local. |
+En la familia Claude, el cliente de consola es Claude Code y el gráfico es Claude Desktop: «Enviar
+a...» abre Claude Code, mientras que Claude Desktop lo abres o reinicias tú y le adjuntas o pegas el
+expediente. En la familia OpenAI, el cliente de consola es Codex CLI y el gráfico es la aplicación
+Codex: «Enviar a...» abre Codex CLI, y en la aplicación Codex abres una tarea local y le indicas el
+expediente. En la familia Gemini y Google, el cliente de consola oficial es Antigravity CLI (agy):
+«Enviar a...» abre agy interactivamente. En la web, ChatGPT, Claude o Gemini en el navegador,
+abres el chat y adjuntas el _AI.md; un chat web ordinario no lee el MCP local.
 
 Después de registrar o actualizar MCP, cierra por completo el cliente afectado y vuelve a abrirlo.
-Los tres clientes con apertura automática son **Claude Code, Codex CLI y Gemini CLI**. En los
-clientes gráficos, `Preparar para MCP` significa exactamente eso: el mapa, el expediente y la
-vigilancia están listos, pero MMCelt no ha abierto ni controlado la otra aplicación.
+Los tres clientes con apertura automática son Claude Code, Codex CLI y Antigravity CLI (agy). En los clientes
+gráficos, «Preparar para MCP» significa exactamente eso: el mapa, el expediente y la vigilancia están
+listos, pero MMCelt no ha abierto ni controlado la otra aplicación.
 
 La vuelta puede ser automática en cualquier cliente local que haya cargado el servidor MCP y use
-`mmcelt_sync_ai_progress`. En cambio, un chat web corriente necesita el recorrido manual de
-exportación e importación.
+mmcelt_sync_ai_progress. En cambio, un chat web corriente necesita el recorrido manual de exportación
+e importación.
 
-### Tu trabajo no se pierde
+Tu trabajo no se pierde
 
-Si estabas editando el mapa cuando llega el cambio del modelo, **MMCelt no toca lo tuyo**: te
-avisa y decides. Y antes de cualquier recarga deja una copia en el archivo de recuperación.
+Mientras el agente trabaja, el mapa está bloqueado y no se puede editar; puedes verlo, recorrerlo,
+buscar y exportar. El agente marca su última entrega como trabajo terminado y MMCelt levanta el
+bloqueo al cargar el mapa final. Si el agente falla o no avisa, pulsa «Recuperar el control» en la
+barra inferior.
 
-Un consejo que ahorra tiempo: **pídele al modelo que te avise cuando acabe** de escribir sus
-cambios. Te lo dirá en su propio terminal y revisas en MMCelt cuando quieras.
+Si recuperaste el control y estabas editando el mapa cuando llega el cambio del modelo, MMCelt no toca lo tuyo: te avisa y
+decides tú. Antes de cualquier recarga deja una copia en el archivo de recuperación.
 
----
-
-*Manual para MMCelt v0.11.3 — Aplicación portable en Rust para la supervisión y el control humano de inteligencias artificiales.*
-
+Un consejo que ahorra tiempo: si el modelo dice que ha terminado y el mapa sigue bloqueado,
+recuérdale que haga su última entrega con work_finished a true, o recupera tú el control.

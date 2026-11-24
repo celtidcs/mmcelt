@@ -1,6 +1,6 @@
 [package]
 name = "mmcelt"
-version = "0.13.0"
+version = "0.16.0"
 edition = "2021"
 
 # Los datos de aqui abajo no los usa el programa: los leen quien recibe el proyecto y las
@@ -25,26 +25,31 @@ license = "GPL-3.0-or-later"
 publish = false
 
 [dependencies]
-eframe = { version = "0.36.0", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
-egui = "0.36.0"
+eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
+# Desde la 0.37, los emojis monocromos de egui van aparte; MMCelt los sigue usando como respaldo.
+egui = { version = "0.37.0", features = ["monochrome_emoji_fonts"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rfd = "0.15"
+rfd = "0.18"
 uuid = { version = "1.10", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
+jiff = { version = "1.0.1", features = ["serde"] }
 notify = "8.0"
 sha2 = "0.10"
-# Lectura y escritura de OPML y del .mm de FreeMind/Freeplane (tanda 5, exportación e
+# Lectura y escritura de OPML y del .mm de FreeMind/Freeplane (exportación e
 # importación a formatos no propietarios). MIT/Apache-2.0, compatible con GPL-3.0-or-later.
 quick-xml = "=0.41.0"
-# Consulta, al arrancar, de la última versión publicada en GitHub (aviso de versión nueva,
-# PEND-2026-10-07-1). Solo HTTPS con rustls y las raíces de webpki-roots; sin gzip ni nada más.
-# ureq es MIT/Apache-2.0; rustls, Apache-2.0/MIT/ISC; webpki-roots, CDLA-Permissive-2.0.
-ureq = { version = "3.4", default-features = false, features = ["rustls"] }
+# Aviso de versión nueva: consulta, al arrancar, la última versión publicada en GitHub. La
+# lógica vive en una biblioteca propia, incluida en este repositorio en
+# bibliotecas/aviso-version-github para que otros programas puedan reutilizarla. Solo HTTPS con
+# rustls; en Windows lee además el proxy del sistema. Su licencia es la misma que la de MMCelt.
+aviso-version-github = { path = "bibliotecas/aviso-version-github" }
+# Búsqueda de las cuentas de cada agente de consola (CLAUDE_CONFIG_DIR, CODEX_HOME y altas a
+# mano). Está en bibliotecas/deteccion-agentes para que otros programas puedan reutilizarla.
+deteccion-agentes = { path = "bibliotecas/deteccion-agentes" }
 
 [build-dependencies]
 # Solo para poner la fecha de compilacion en el binario (ver build.rs).
-chrono = "0.4"
+jiff = "1.0.1"
 
 # Incrusta el icono como recurso del ejecutable, que es lo que hace que Windows lo muestre
 # en el explorador y en los accesos directos. Solo interviene al compilar en Windows: no

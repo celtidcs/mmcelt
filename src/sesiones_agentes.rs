@@ -7,7 +7,7 @@ use crate::conectores::IdAgente;
 use crate::configuracion_agente_proyecto::EstadoFuenteNativa;
 use crate::error::{AppError, AppResult, CampoEntrada, MotivoEntradaInvalida};
 use crate::proyecto_trabajo::ContextoProyecto;
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -383,7 +383,7 @@ pub struct MetadatosSesion {
     /// Identidad aleatoria de esta confirmación concreta.
     pub id_sesion: Uuid,
     /// Momento UTC en que se confirmó el prompt.
-    pub fecha_utc: DateTime<Utc>,
+    pub fecha_utc: Timestamp,
     /// Producto elegido por identidad estable.
     pub agente: IdAgente,
     /// Ruta del mapa relativa a la raíz autorizada.
@@ -435,7 +435,7 @@ pub fn preparar_sesion(
     let fuentes_incorporadas = rutas_relativas_de_fuentes(contexto, prompt, true)?;
     let fuentes_nativas_detectadas = rutas_relativas_de_fuentes(contexto, prompt, false)?;
     let id_sesion = Uuid::new_v4();
-    let fecha_utc = Utc::now();
+    let fecha_utc = Timestamp::now();
     let metadatos = MetadatosSesion {
         version_formato: VERSION_FORMATO_SESION,
         id_sesion,
@@ -607,7 +607,7 @@ fn rutas_relativas_de_fuentes(
 }
 
 /// Forma un nombre portable sin títulos, encargos ni ningún otro texto del usuario.
-fn nombre_de_sesion(fecha: DateTime<Utc>, agente: IdAgente, id: Uuid) -> String {
+fn nombre_de_sesion(fecha: Timestamp, agente: IdAgente, id: Uuid) -> String {
     let agente = match agente {
         IdAgente::ClaudeCode => "claude-code",
         IdAgente::ClaudeDesktop => "claude-desktop",
@@ -615,9 +615,9 @@ fn nombre_de_sesion(fecha: DateTime<Utc>, agente: IdAgente, id: Uuid) -> String 
         IdAgente::Cursor => "cursor",
         IdAgente::Windsurf => "windsurf",
         IdAgente::CodexCli => "codex-cli",
-        IdAgente::GeminiCli => "gemini-cli",
+        IdAgente::Agy => "agy",
     };
-    format!("{}-{agente}-{id}", fecha.format("%Y%m%dT%H%M%S%.3fZ"))
+    format!("{}-{agente}-{id}", fecha.strftime("%Y%m%dT%H%M%S%.3fZ"))
 }
 
 /// Retira solo los archivos que esta operación conoce y después intenta retirar su carpeta vacía.

@@ -20,4 +20,4 @@ Eine Mindmap ist eine grafische Darstellung Ihrer Gedanken: Sie beginnen mit ein
 ### 🧭 So geht es weiter:
 1. Klicken Sie auf den zentralen Knoten und drücken Sie `Leertaste` (oder Doppelkick), um Ihr Projekt zu benennen.
 2. Drücken Sie `Tab`, um Ihre ersten strategischen Säulen (Kindknoten) anzulegen, und `Eingabe`, um Alternativen (Geschwisterknoten) hinzuzufügen.
-3. Öffnen Sie `🤖 Künstliche Intelligenz` → `🧭 Projekt und Anweisungen für die KI`, um der KI im Reiter **Projekt** Ihr Vorhaben zu beschreiben.
+3. Öffnen Sie `✏️ Bearbeiten` → `🧭 Projekt und Anweisungen für die KI`, um der KI im Reiter **Projekt** Ihr Vorhaben zu beschreiben.

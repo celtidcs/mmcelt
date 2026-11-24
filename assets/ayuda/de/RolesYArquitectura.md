@@ -41,7 +41,7 @@ Jede Rolle verleiht dem Knotenkasten im visuellen Schema eine unverwechselbare I
 - Verbindungslinien, die den organischen Aufbau des Projekts abbilden.
 
 **🤖 Warum Rollen für die KI entscheidend sind:**
-Wenn Sie Ihre Map exportieren oder an eine KI senden (wie Claude Code, Codex CLI oder Gemini CLI), sieht das Modell keine flache Textliste:
+Wenn Sie Ihre Map exportieren oder an eine KI senden (wie Claude Code, Codex CLI oder Antigravity CLI), sieht das Modell keine flache Textliste:
 - **Versteht die Architektur:** Weiß, dass eine *Strategische Säule* Weitblick erfordert und nicht leichtfertig modifiziert werden darf.
 - **Trennt Zweifel von Gewissheiten:** Behandelt *Hypothesen / Fragen* als Analysefragen, die technischer Prüfung und Abwägung bedürfen.
 - **Erzeugt stimmige Aufgaben:** Wird die KI gebeten, ein Modul auszuarbeiten, formuliert sie konkrete *Aufgaben / Aktionen* und empfiehlt geeignete *Ressourcen / Werkzeuge*.

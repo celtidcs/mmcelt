@@ -86,6 +86,7 @@ use super::seguridad::{
     escribir_con_respaldo, espacio_de_trabajo, preparar_devolucion, publicar_devolucion,
     validar_ruta, PoliticaDeCopia, UsoDeLaRuta,
 };
+use super::EspacioMcp;
 use crate::ai_export::exportar_markdown_para_ia;
 use crate::devolucion_agentes::OperacionDevolucion;
 use crate::model::{EstadoNodo, PrioridadNodo, Proyecto, TipoRelacion};
@@ -194,6 +195,7 @@ type ResultadoHerramienta = Result<Value, ErrorHerramienta>;
 /// # Devuelve
 /// El código de salida del proceso: 0 siempre que el bucle termine con normalidad.
 pub fn ejecutar() -> i32 {
+    let espacio = &EspacioMcp::desde_entorno();
     let entrada = std::io::stdin();
     let mut entrada = entrada.lock();
     let mut salida = std::io::stdout();
@@ -218,7 +220,7 @@ pub fn ejecutar() -> i32 {
             continue;
         }
 
-        let respuesta = procesar_peticion(&linea);
+        let respuesta = procesar_peticion(espacio, &linea);
 
         // Una petición de notificación (sin `id`) no lleva respuesta.
         if let Some(respuesta) = respuesta {
@@ -243,8 +245,8 @@ pub fn ejecutar() -> i32 {
 ///
 /// # Devuelve
 /// La respuesta a enviar, o `None` si la petición era una notificación.
-pub(crate) fn procesar_peticion(linea: &str) -> Option<String> {
-    protocolo::procesar_linea(linea)
+pub(crate) fn procesar_peticion(espacio: &EspacioMcp, linea: &str) -> Option<String> {
+    protocolo::procesar_linea(espacio, linea)
 }
 
 /// Atiende un método MCP a partir de una petición **cuyo sobre ya está validado**.
@@ -259,7 +261,10 @@ pub(crate) fn procesar_peticion(linea: &str) -> Option<String> {
 /// # Devuelve
 /// El contenido del campo `result` de la respuesta, o el error del protocolo cuando el método
 /// no se ofrece.
-pub(super) fn atender_metodo(peticion: &PeticionJsonRpc) -> Result<Value, ErrorJsonRpc> {
+pub(super) fn atender_metodo(
+    espacio: &EspacioMcp,
+    peticion: &PeticionJsonRpc,
+) -> Result<Value, ErrorJsonRpc> {
     match peticion.metodo() {
         // `instructions` es lo primero que lee un agente al conectarse, y es donde el
         // protocolo espera que el servidor explique cómo se usa. Sin ese campo, el agente
@@ -269,12 +274,12 @@ pub(super) fn atender_metodo(peticion: &PeticionJsonRpc) -> Result<Value, ErrorJ
             "protocolVersion": version_de_protocolo_negociada(peticion.parametros()),
             "capabilities": { "tools": {} },
             "serverInfo": { "name": "mmcelt-mcp", "version": VERSION_SERVIDOR },
-            "instructions": instrucciones_para_el_agente()
+            "instructions": instrucciones_para_el_agente(espacio, )
         })),
 
         "tools/list" => Ok(json!({ "tools": super::catalogo::descripcion_herramientas() })),
 
-        "tools/call" => llamar_a_una_herramienta(peticion.parametros()),
+        "tools/call" => llamar_a_una_herramienta(espacio, peticion.parametros()),
 
         otro => Err(ErrorJsonRpc::metodo_no_encontrado(otro)),
     }
@@ -288,7 +293,10 @@ pub(super) fn atender_metodo(peticion: &PeticionJsonRpc) -> Result<Value, ErrorJ
 ///
 /// # Devuelve
 /// El contenido de la respuesta a `tools/call`.
-fn llamar_a_una_herramienta(parametros: &ParametrosMcp) -> Result<Value, ErrorJsonRpc> {
+fn llamar_a_una_herramienta(
+    espacio: &EspacioMcp,
+    parametros: &ParametrosMcp,
+) -> Result<Value, ErrorJsonRpc> {
     let nombre = parametros
         .texto("name")
         .ok_or_else(|| ErrorJsonRpc::parametros_invalidos("Falta «name» o no es texto"))?;
@@ -300,7 +308,7 @@ fn llamar_a_una_herramienta(parametros: &ParametrosMcp) -> Result<Value, ErrorJs
         ));
     }
 
-    let contenido = match despachar_herramienta(nombre, argumentos)? {
+    let contenido = match despachar_herramienta(espacio, nombre, argumentos)? {
         Ok(valor) => valor,
         Err(e) => json!({
             "status": "error",
@@ -329,14 +337,14 @@ fn llamar_a_una_herramienta(parametros: &ParametrosMcp) -> Result<Value, ErrorJs
 ///
 /// # Devuelve
 /// El texto para el campo `instructions` de la respuesta a `initialize`.
-fn instrucciones_para_el_agente() -> String {
+fn instrucciones_para_el_agente(espacio: &EspacioMcp) -> String {
     let recorrido = "Recorrido habitual: «mmcelt_workspace_info» para saber qué mapas hay, \
                      «mmcelt_read_mindmap» para leer uno, «mmcelt_get_human_feedback» para \
                      conocer las correcciones de la persona —acátalas y no sigas ningún \
                      camino descartado— y «mmcelt_sync_ai_progress» para devolver tu avance \
                      al mismo archivo.";
 
-    match espacio_de_trabajo() {
+    match espacio_de_trabajo(espacio) {
         Ok(raiz) => format!(
             "MMCelt es un programa de mapas mentales con el que una persona dirige y \
              supervisa tu trabajo.\n\n\
@@ -367,6 +375,7 @@ fn instrucciones_para_el_agente() -> String {
 
 /// Ejecuta la herramienta solicitada.
 fn despachar_herramienta(
+    espacio: &EspacioMcp,
     nombre: &str,
     argumentos: &Value,
 ) -> Result<ResultadoHerramienta, ErrorJsonRpc> {
@@ -379,19 +388,19 @@ fn despachar_herramienta(
     let resultado = match nombre {
         "mmcelt_workspace_info" => {
             let _: ArgumentosSinContenido = leer(argumentos)?;
-            informar_del_espacio()
+            informar_del_espacio(espacio)
         }
-        "mmcelt_create_mindmap" => crear_mapa(leer(argumentos)?),
-        "mmcelt_read_mindmap" => leer_mapa(&leer(argumentos)?),
-        "mmcelt_get_human_feedback" => obtener_correcciones(&leer(argumentos)?),
+        "mmcelt_create_mindmap" => crear_mapa(espacio, leer(argumentos)?),
+        "mmcelt_read_mindmap" => leer_mapa(espacio, &leer(argumentos)?),
+        "mmcelt_get_human_feedback" => obtener_correcciones(espacio, &leer(argumentos)?),
         "mmcelt_sync_ai_progress" => {
             let argumentos: ArgumentosSincronizar = leer(argumentos)?;
             argumentos
                 .validar()
                 .map_err(ErrorJsonRpc::parametros_invalidos)?;
-            sincronizar_progreso(&argumentos.into())
+            sincronizar_progreso(espacio, &argumentos.into())
         }
-        "mmcelt_export_ai_markdown" => exportar_markdown(&leer(argumentos)?),
+        "mmcelt_export_ai_markdown" => exportar_markdown(espacio, &leer(argumentos)?),
         otro => Err(ErrorHerramienta::argumento(format!(
             "Herramienta desconocida: {otro}"
         ))),
@@ -521,7 +530,8 @@ fn recopilar_mapas(
             bytes: metadatos.as_ref().map(|m| m.len()).unwrap_or(0),
             modificado: metadatos
                 .and_then(|m| m.modified().ok())
-                .map(|instante| chrono::DateTime::<chrono::Utc>::from(instante).to_rfc3339()),
+                .and_then(|instante| jiff::Timestamp::try_from(instante).ok())
+                .map(|instante| instante.to_string()),
         });
     }
 
@@ -556,8 +566,8 @@ fn es_un_mapa(ruta: &Path) -> bool {
 ///
 /// # Errores
 /// Error de seguridad si no hay espacio de trabajo definido o no se puede resolver.
-fn informar_del_espacio() -> ResultadoHerramienta {
-    let raiz = espacio_de_trabajo()?;
+fn informar_del_espacio(espacio: &EspacioMcp) -> ResultadoHerramienta {
+    let raiz = espacio_de_trabajo(espacio)?;
 
     let mut mapas = Vec::new();
     let completo = recopilar_mapas(&raiz, &raiz, 0, &mut mapas);
@@ -615,7 +625,7 @@ pub(crate) fn el_mapa_es_solo_de_la_ia(proyecto: &Proyecto) -> bool {
 
 /// Índice del título normalizado a **todos** los nodos que lo llevan.
 ///
-/// Que el valor sea una lista y no un identificador suelto es el hallazgo H4 hecho tipo: un
+/// Que el valor sea una lista y no un identificador suelto es una garantía tipada: un
 /// título no identifica a un nodo, y el programa no puede fingir que sí.
 type IndiceDeTitulos = std::collections::HashMap<String, Vec<uuid::Uuid>>;
 
@@ -631,7 +641,7 @@ type IndiceDeTitulos = std::collections::HashMap<String, Vec<uuid::Uuid>>;
 ///
 /// # Por qué guarda una lista y no un identificador
 ///
-/// Es el hallazgo H4. Antes, cuando dos nodos compartían título —cosa nada rara: dos
+/// Antes, cuando dos nodos compartían título —cosa nada rara: dos
 /// «Pruebas», dos «README.md» del escáner, y sobre todo los dos «Sí» y los dos «No» de
 /// cualquier diagrama de decisiones—, ganaba el de identificador menor. La elección era
 /// estable entre ejecuciones, pero seguía siendo una elección a ciegas: el UUID es aleatorio y
@@ -689,10 +699,10 @@ fn listar_candidatos(proyecto: &Proyecto, ids: &[uuid::Uuid]) -> String {
 /// Averigua a qué nodo del mapa se refiere una entrada que puede traer título, identificador
 /// o los dos.
 ///
-/// Es la pieza central de los hallazgos H4 y H5, y la usan los cuatro sitios donde el agente
+/// Es la pieza central de la resolución de nodos, y la usan los cuatro sitios donde el agente
 /// nombra un nodo: el nodo de una actualización, su padre y los dos extremos de una conexión
 /// cruzada. Que sea una sola función es lo que garantiza que las cuatro se comporten igual;
-/// tener una regla distinta en cada sitio fue justamente lo que hubo que documentar en H3.
+/// tener una regla distinta en cada sitio provocaba inconsistencias.
 ///
 /// # La regla
 ///
@@ -806,7 +816,7 @@ fn resolver_nodo_senalado(
 /// La primera versión contaba los nodos con corrección, descarte o aprobación. Un mapa que
 /// la persona haya escrito a mano en la aplicación, sin tocar nunca el desplegable «Control
 /// Humano», **no tiene ninguna de esas tres marcas**: sus nodos nacen en
-/// [`crate::model::EstadoRevision::PendienteRevision`], que es el valor por omisión. Es decir, el trabajo
+/// [`crate::model::EstadoRevision::SinMarcar`], que es el valor por omisión. Es decir, el trabajo
 /// más habitual del usuario —abrir el programa y escribir su mapa— era justo el que no
 /// protegía nada, y un agente podía sustituirlo entero por un nodo suyo.
 ///
@@ -902,8 +912,8 @@ fn rechazar_si_pisa_trabajo_de_la_persona(ruta: &Path) -> Result<(), ErrorHerram
 }
 
 /// Implementa `mmcelt_create_mindmap`.
-fn crear_mapa(argumentos: ArgumentosCrearMapa) -> ResultadoHerramienta {
-    let ruta = validar_ruta(&argumentos.file_path, UsoDeLaRuta::EscrituraDeMapa)?;
+fn crear_mapa(espacio: &EspacioMcp, argumentos: ArgumentosCrearMapa) -> ResultadoHerramienta {
+    let ruta = validar_ruta(espacio, &argumentos.file_path, UsoDeLaRuta::EscrituraDeMapa)?;
     if argumentos.file_path.trim().is_empty() {
         return Err(ErrorHerramienta::argumento(
             "La ruta del archivo no puede estar vacía.",
@@ -955,14 +965,16 @@ fn crear_mapa(argumentos: ArgumentosCrearMapa) -> ResultadoHerramienta {
     crate::layout::aplicar_disposicion_automatica(&mut proyecto);
 
     let devolucion = preparar_devolucion(
+        espacio,
         &ruta,
         argumentos.agent_name.as_deref(),
         OperacionDevolucion::Generado,
+        argumentos.work_finished,
     )?;
 
     validar_el_mapa_antes_de_escribirlo(&proyecto)?;
 
-    let (ruta_md, markdown, respaldos) = escribir_el_mapa_y_su_markdown(&ruta, &proyecto)?;
+    let (ruta_md, markdown, respaldos) = escribir_el_mapa_y_su_markdown(espacio, &ruta, &proyecto)?;
 
     if let Some((contexto, recibo)) = &devolucion {
         publicar_devolucion(contexto, recibo)?;
@@ -1029,6 +1041,7 @@ fn validar_el_mapa_antes_de_escribirlo(proyecto: &Proyecto) -> Result<(), ErrorH
 /// De seguridad si la ruta del Markdown no supera la validación, o de ejecución si falla la
 /// serialización o alguna de las dos escrituras.
 fn escribir_el_mapa_y_su_markdown(
+    espacio: &EspacioMcp,
     ruta: &Path,
     proyecto: &Proyecto,
 ) -> Result<(PathBuf, String, Vec<String>), ErrorHerramienta> {
@@ -1036,7 +1049,7 @@ fn escribir_el_mapa_y_su_markdown(
         .map_err(|e| ErrorHerramienta::ejecucion(format!("No se pudo serializar: {e}")))?;
 
     let ruta_md = ruta.with_extension("").display().to_string() + SUFIJO_MARKDOWN_IA;
-    let ruta_md = validar_ruta(&ruta_md, UsoDeLaRuta::EscrituraDeMarkdown)?;
+    let ruta_md = validar_ruta(espacio, &ruta_md, UsoDeLaRuta::EscrituraDeMarkdown)?;
 
     let mut respaldos = Vec::new();
     if let Some(r) = escribir_con_respaldo(ruta, &json, PoliticaDeCopia::DejarCopia)? {
@@ -1064,8 +1077,8 @@ fn cargar(ruta: &Path) -> Result<Proyecto, ErrorHerramienta> {
 }
 
 /// Implementa `mmcelt_read_mindmap`.
-fn leer_mapa(argumentos: &ArgumentosLeerMapa) -> ResultadoHerramienta {
-    let ruta = validar_ruta(&argumentos.file_path, UsoDeLaRuta::Lectura)?;
+fn leer_mapa(espacio: &EspacioMcp, argumentos: &ArgumentosLeerMapa) -> ResultadoHerramienta {
+    let ruta = validar_ruta(espacio, &argumentos.file_path, UsoDeLaRuta::Lectura)?;
 
     if !ruta.exists() {
         return Err(ErrorHerramienta::ejecucion(format!(
@@ -1090,7 +1103,7 @@ fn leer_mapa(argumentos: &ArgumentosLeerMapa) -> ResultadoHerramienta {
 
     let proyecto = cargar(&ruta)?;
 
-    // H5: cada conexión habla los dos idiomas del contrato. Los UUID se conservan para no
+    // Cada conexión habla los dos idiomas del contrato. Los UUID se conservan para no
     // romper clientes existentes y los títulos se añaden para poder reutilizar directamente
     // la lectura en las herramientas de escritura.
     //
@@ -1129,10 +1142,13 @@ fn leer_mapa(argumentos: &ArgumentosLeerMapa) -> ResultadoHerramienta {
 }
 
 /// Implementa `mmcelt_get_human_feedback`.
-fn obtener_correcciones(argumentos: &ArgumentosLeerMapa) -> ResultadoHerramienta {
+fn obtener_correcciones(
+    espacio: &EspacioMcp,
+    argumentos: &ArgumentosLeerMapa,
+) -> ResultadoHerramienta {
     use crate::model::EstadoRevision;
 
-    let ruta = validar_ruta(&argumentos.file_path, UsoDeLaRuta::Lectura)?;
+    let ruta = validar_ruta(espacio, &argumentos.file_path, UsoDeLaRuta::Lectura)?;
     let proyecto = cargar(&ruta)?;
 
     let mut correcciones = Vec::new();
@@ -1209,7 +1225,7 @@ struct AvisosDeSincronizacion {
 /// # Por qué no se usa `RolNodo::desde_texto`
 ///
 /// Esa función cae en `Subtema` ante cualquier texto desconocido, que es lo correcto al abrir
-/// un archivo antiguo y lo peor posible en la frontera con un agente: es el hallazgo H6, el de
+/// un archivo antiguo y lo peor posible en la frontera con un agente: evita
 /// los fallos que corrompen en silencio. Adivinar mal no daría error, el mapa quedaría mal y
 /// nadie se enteraría. `status` y `priority` ya entraban por `reconocer_texto` por este mismo
 /// motivo; el rol entra por la misma puerta.
@@ -1519,15 +1535,22 @@ fn aplicar_la_ruta_del_archivo(
 /// visto bueno sobre un texto que no había leído nunca, que es justo lo contrario de lo que
 /// este programa promete.
 ///
-/// Los demás estados de revisión no se tocan: solo la aprobación afirma algo que el cambio
-/// invalida. Y `correction_feedback` se conserva siempre, para que no se pierda lo que el
-/// usuario exigió.
+/// Lo mismo vale para un nodo «Sin marcar», que es el que escribió la persona, y para uno que
+/// «Requiere corrección»: la IA lo ha cambiado y alguien tiene que mirarlo. Un nodo «Generado
+/// por IA» sigue siéndolo, con su resalte tal como estuviera, y uno pendiente sigue pendiente.
+/// `correction_feedback` se conserva siempre, para que no se pierda lo que el usuario exigió.
 ///
 /// # Parámetros
 /// - `nodo`: el nodo que acaba de cambiar.
 fn caducar_la_aprobacion_humana(nodo: &mut crate::model::Nodo) {
-    if nodo.review_status == crate::model::EstadoRevision::AprobadoPorHumano {
-        nodo.review_status = crate::model::EstadoRevision::PendienteRevision;
+    use crate::model::EstadoRevision;
+    match nodo.review_status {
+        EstadoRevision::SinMarcar
+        | EstadoRevision::AprobadoPorHumano
+        | EstadoRevision::RequiereCorreccion => {
+            nodo.review_status = EstadoRevision::PendienteRevision;
+        }
+        EstadoRevision::GeneradoPorIA | EstadoRevision::PendienteRevision => {}
     }
 }
 
@@ -1610,6 +1633,7 @@ fn inicializar_nodo_del_agente(
 ) {
     nodo.tags = vec!["ia_progress".to_string()];
     nodo.review_status = crate::model::EstadoRevision::GeneradoPorIA;
+    nodo.nuevo_de_la_ia = true;
     aplicar_actualizacion(
         nodo,
         actualizacion,
@@ -1623,7 +1647,7 @@ fn inicializar_nodo_del_agente(
 ///
 /// # Por qué existe
 ///
-/// Es la otra mitad del hallazgo H3, el que bloqueó la prueba real. Un flujo con un bucle no
+/// Un flujo con un bucle no
 /// se puede expresar con una jerarquía: hace falta una arista que vuelva atrás. La única
 /// herramienta autorizada a escribir sobre un mapa con trabajo humano no sabía crearlas, así
 /// que el agente tenía que elegir entre entregar otra cosa o editar el archivo por su cuenta.
@@ -1669,7 +1693,7 @@ fn inicializar_nodo_del_agente(
 ///   diagrama afirma, y el `success` haría que nadie fuera a mirarla. Como el mapa se
 ///   escribe al final de la sincronización y no aquí, propagar el error deja el archivo
 ///   intacto, incluidos los nodos que venían en la misma llamada.
-/// - **Se avisan y se sigue** los problemas de H3, que son de contenido y no de identidad: un
+/// - **Se avisan y se sigue** los problemas de contenido y no de identidad: un
 ///   título que sencillamente no está en el mapa, la autoconexión, el extremo descartado y la
 ///   relación duplicada. Ahí no hay nada que adivinar ni nada corrupto que evitar, solo una
 ///   arista de la lista que no procede, y perder por ella las demás sería peor servicio.
@@ -1784,7 +1808,11 @@ fn anadir_las_conexiones_cruzadas(
 /// # Errores
 /// [`ErrorHerramienta`] si el mapa no supera la validación estructural o la de longitudes,
 /// si no se puede serializar o si no se puede escribir.
-fn guardar_el_mapa_sincronizado(ruta: &Path, proyecto: &Proyecto) -> Result<(), ErrorHerramienta> {
+fn guardar_el_mapa_sincronizado(
+    espacio: &EspacioMcp,
+    ruta: &Path,
+    proyecto: &Proyecto,
+) -> Result<(), ErrorHerramienta> {
     // Escribir es una frontera, igual que leer: el mapa que sale de aquí tiene que poder
     // abrirse después. Una sucesión de sincronizaciones puede añadir nodos hasta pasarse
     // de profundidad, y sin esta comprobación el archivo quedaría en disco dañado y la
@@ -1825,7 +1853,7 @@ fn guardar_el_mapa_sincronizado(ruta: &Path, proyecto: &Proyecto) -> Result<(), 
     escribir_con_respaldo(ruta, &json, politica)?;
 
     let ruta_md = ruta.with_extension("").display().to_string() + SUFIJO_MARKDOWN_IA;
-    let ruta_md = validar_ruta(&ruta_md, UsoDeLaRuta::EscrituraDeMarkdown)?;
+    let ruta_md = validar_ruta(espacio, &ruta_md, UsoDeLaRuta::EscrituraDeMarkdown)?;
     // El documento acompañante sigue la misma política: si la persona tenía ahí un
     // `nombre_AI.md` escrito a mano, tampoco puede desaparecer sin copia.
     escribir_con_respaldo(
@@ -1860,8 +1888,8 @@ fn mensaje_de_sincronizacion(
             " Se han añadido {conexiones_creadas} conexiones cruzadas."
         ));
     }
-    // Se cuenta lo rechazado aunque el agente pueda leerlo en `connections_not_created`: el
-    // motivo del hallazgo H3 es que un flujo a medio dibujar no puede devolver «success» a
+    // Se cuenta lo rechazado aunque el agente pueda leerlo en `connections_not_created`:
+    // un flujo a medio dibujar no puede devolver «success» a
     // secas, y el `message` es lo único que muchos clientes enseñan.
     if !avisos.conexiones_no_creadas.is_empty() {
         mensaje.push_str(&format!(
@@ -1887,8 +1915,11 @@ fn mensaje_de_sincronizacion(
 }
 
 /// Implementa `mmcelt_sync_ai_progress`.
-fn sincronizar_progreso(argumentos: &SincronizacionTipada) -> ResultadoHerramienta {
-    let ruta = validar_ruta(&argumentos.file_path, UsoDeLaRuta::EscrituraDeMapa)?;
+fn sincronizar_progreso(
+    espacio: &EspacioMcp,
+    argumentos: &SincronizacionTipada,
+) -> ResultadoHerramienta {
+    let ruta = validar_ruta(espacio, &argumentos.file_path, UsoDeLaRuta::EscrituraDeMapa)?;
 
     let actualizaciones = &argumentos.node_updates;
 
@@ -1935,16 +1966,18 @@ fn sincronizar_progreso(argumentos: &SincronizacionTipada) -> ResultadoHerramien
         &mut avisos,
     )?;
 
-    proyecto.updated_at = chrono::Utc::now();
+    proyecto.updated_at = jiff::Timestamp::now();
     crate::layout::aplicar_disposicion_automatica(&mut proyecto);
 
     let devolucion = preparar_devolucion(
+        espacio,
         &ruta,
         argumentos.agent_name.as_deref(),
         OperacionDevolucion::Modificado,
+        argumentos.work_finished,
     )?;
 
-    guardar_el_mapa_sincronizado(&ruta, &proyecto)?;
+    guardar_el_mapa_sincronizado(espacio, &ruta, &proyecto)?;
 
     if let Some((contexto, recibo)) = &devolucion {
         publicar_devolucion(contexto, recibo)?;
@@ -2012,9 +2045,16 @@ fn rechazar_si_el_markdown_no_lo_escribio_mmcelt(destino: &Path) -> Result<(), E
 }
 
 /// Implementa `mmcelt_export_ai_markdown`.
-fn exportar_markdown(argumentos: &ArgumentosExportar) -> ResultadoHerramienta {
-    let origen = validar_ruta(&argumentos.mmcelt_file_path, UsoDeLaRuta::Lectura)?;
-    let destino = validar_ruta(&argumentos.output_md_path, UsoDeLaRuta::EscrituraDeMarkdown)?;
+fn exportar_markdown(
+    espacio: &EspacioMcp,
+    argumentos: &ArgumentosExportar,
+) -> ResultadoHerramienta {
+    let origen = validar_ruta(espacio, &argumentos.mmcelt_file_path, UsoDeLaRuta::Lectura)?;
+    let destino = validar_ruta(
+        espacio,
+        &argumentos.output_md_path,
+        UsoDeLaRuta::EscrituraDeMarkdown,
+    )?;
     rechazar_si_el_markdown_no_lo_escribio_mmcelt(&destino)?;
 
     let proyecto = cargar(&origen)?;

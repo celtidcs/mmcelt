@@ -1,110 +1,99 @@
-# MMCelt — Documentación
+MMCelt: documentación
 
-<img src="../assets/icono/mmcelt-128.png" alt="Icono de MMCelt" width="96" height="96">
+MMCelt es una aplicación de escritorio para construir mapas mentales cuyo propósito no es solo
+organizar ideas para uno mismo, sino dirigir, acotar y supervisar el trabajo de modelos y agentes de
+inteligencia artificial. El icono de la aplicación está en assets/icono/mmcelt-128.png.
 
-**MMCelt** es una aplicación de escritorio para construir mapas mentales cuyo propósito
-no es solo organizar ideas para uno mismo, sino **dirigir, acotar y supervisar el trabajo
-de modelos y agentes de inteligencia artificial**.
-
-## El problema que resuelve
+El problema que resuelve
 
 Cuando se trabaja con una IA en proyectos de cierta envergadura, la conversación tiende a
-desordenarse: el modelo pierde el hilo de la intención original, reabre caminos que ya se
-habían descartado e inventa soluciones que contradicen decisiones previas.
+desordenarse: el modelo pierde el hilo de la intención original, reabre caminos que ya se habían
+descartado e inventa soluciones que contradicen decisiones previas.
 
-MMCelt resuelve este problema transformando el proyecto en un **mapa visual estructurado con estados,
-prioridades y dependencias**. El usuario define qué está completado, qué está en progreso, qué
-dudas técnicas bloquean el camino y qué opciones han sido formalmente descartadas. A partir de ese
-mapa, MMCelt exporta un documento Markdown jerárquico que la IA comprende de una sola vez, o se
-comunica directamente con agentes autónomos mediante su protocolo MCP local.
+MMCelt resuelve este problema transformando el proyecto en un mapa visual estructurado con estados,
+prioridades y dependencias. El usuario define qué está completado, qué está en progreso, qué dudas
+técnicas bloquean el camino y qué opciones se han descartado formalmente. A partir de ese mapa,
+MMCelt exporta un documento Markdown jerárquico que la IA comprende de una sola vez, o se comunica
+directamente con agentes autónomos mediante su servidor MCP local.
 
-El flujo es **bidireccional**: la persona diseña y supervisa; la IA analiza, propone y actualiza
-el mapa con sus avances.
+El flujo es bidireccional: la persona diseña y supervisa; la IA analiza, propone y actualiza el mapa
+con sus avances. MMCelt exporta el Markdown hacia la IA (Claude, ChatGPT, Gemini u otra) y recibe de
+vuelta su respuesta importando JSON, OPML o archivos de FreeMind. Además, un agente de IA autónomo
+que trabaje en consola o por MCP puede leer y sincronizar el mapa a través del servidor MCP local.
 
-```
-     ┌──────────────┐   exportar Markdown    ┌──────────────┐
-     │              │ ─────────────────────► │              │
-     │   MMCelt     │                        │  IA (Claude, │
-     │  (escritorio)│                        │  ChatGPT,    │
-     │              │ ◄───────────────────── │  Gemini…)    │
-     └──────────────┘   importar JSON / OPML └──────────────┘
-            ▲
-            │  servidor MCP local (lectura y sincronización)
-            ▼
-     ┌──────────────┐
-     │ Agente de IA │
-     │  autónomo    │
-     │  (CLI / MCP) │
-     └──────────────┘
-```
+Tecnologías
 
-## Tecnologías
+La aplicación de escritorio está escrita en Rust 1.95 o posterior con egui y eframe 0.37, una
+interfaz de modo inmediato acelerada por GPU con el backend glow. Los mapas se guardan en archivos
+.mmcelt, que son JSON estructurado serializado con serde. Para el intercambio con otros programas
+usa estándares abiertos no propietarios: OPML y FreeMind o Freeplane (archivos .mm).
 
-| Componente | Tecnología |
-|---|---|
-| Aplicación de escritorio | **Rust** 1.95+ con `egui` / `eframe` 0.36 (modo inmediato, aceleración por GPU con backend `glow`) |
-| Persistencia nativa | JSON estructurado mediante `serde`, en archivos `.mmcelt` |
-| Formatos de intercambio | Estándares abiertos no propietarios: **OPML** y **FreeMind / Freeplane (`.mm`)** |
-| Servidor MCP integrado | `mmcelt --mcp-server`, protocolo JSON-RPC 2.0 (2024-11-05) sobre entrada/salida estándar con 6 herramientas |
-| Diálogos del sistema | `rfd` (diálogos nativos de selección de archivos y carpetas) |
-| Vigilancia de archivos | `notify` 8.0 (observador reactivo del sistema de archivos para sincronización en tiempo real) |
-| Aviso de versión nueva | `ureq` 3.4 con `rustls` (una consulta HTTPS anónima a GitHub al arrancar, desactivable) |
-| Tipografía internacional | Subconjunto embebido de **Noto Sans SC** para soporte CJK completo (chino simplificado) sin dependencias |
+El servidor MCP integrado se arranca con mmcelt --mcp-server y habla el protocolo JSON-RPC 2.0 en
+la versión de MCP 2024-11-05 sobre la entrada y la salida estándar, con seis herramientas. Los
+diálogos nativos de selección de archivos y carpetas usan rfd. La vigilancia de archivos para la
+sincronización en tiempo real usa notify 8.0. El aviso de versión nueva usa ureq 3.4 con rustls
+para hacer una consulta HTTPS anónima a GitHub al arrancar, que se puede desactivar. Lleva embebidos
+subconjuntos de tres fuentes, Noto Sans SC para el chino simplificado y Noto Emoji y Noto Sans Math
+para los símbolos, sin dependencias externas.
 
-**Privacidad y soberanía de datos**: La aplicación no requiere conexión a internet para funcionar,
-no aloja datos en la nube ni recopila telemetría. Su única petición de red es una consulta anónima
-a GitHub al arrancar para avisar de versiones nuevas, que se desactiva desde el menú «🎨 Ver y
-Diseño». Toda la comunicación con agentes de IA se realiza en
-local (mediante la consola del sistema o el servidor MCP en `stdio`).
+Privacidad y control de los datos: la aplicación no necesita conexión a internet para funcionar, no
+aloja datos en la nube ni recopila telemetría. Su única petición de red es una consulta anónima a
+GitHub al arrancar para avisar de versiones nuevas, que se desactiva desde el menú «Ver y Diseño».
+Toda la comunicación con agentes de IA se hace en local, mediante la consola del sistema o el
+servidor MCP por la entrada y la salida estándar.
 
-## Puesta en marcha rápida
+Puesta en marcha rápida
 
-```bash
-git clone <url-del-repositorio> mmcelt
+Para descargar el código del repositorio público:
+
+git clone https://github.com/celtidcs/mmcelt mmcelt
+
+Para entrar en la carpeta descargada:
+
 cd mmcelt
+
+Para compilar y arrancar la aplicación:
+
 cargo run --release
-```
 
-Requiere Rust 1.95 o superior. **No hay dependencias externas pesadas**: el servidor MCP y todos los
-activos de ayuda e idiomas van integrados dentro del propio ejecutable.
+Hace falta Rust 1.95 o posterior. No hay dependencias externas pesadas: el servidor MCP y todos los
+recursos de ayuda e idiomas van integrados en el propio ejecutable.
 
-La guía completa está en [`infraestructura/guia-de-clonado.md`](infraestructura/guia-de-clonado.md), y
-se incluyen scripts automatizados de preparación de entorno: [`preparar-entorno.ps1`](infraestructura/preparar-entorno.ps1) para Windows y [`preparar-entorno.sh`](infraestructura/preparar-entorno.sh) para Linux y macOS.
+La guía completa está en el documento guia-de-clonado.md de la carpeta infraestructura. En esa
+misma carpeta hay dos guiones que preparan el entorno de forma automática: preparar-entorno.ps1 para
+Windows y preparar-entorno.sh para Linux y macOS.
 
-## Índice de la documentación
+Índice de la documentación
 
-| Documento | Contenido |
-|---|---|
-| [`funcionalidades.md`](funcionalidades.md) | Catálogo exhaustivo de características: lienzo, nodos, estados, prioridades, conexiones cruzadas y formatos |
-| [`manual-de-uso.md`](manual-de-uso.md) | Manual para el usuario: flujos de trabajo paso a paso, atajos de teclado y trabajo con agentes |
-| [`arquitectura.md`](arquitectura.md) | Diseño del software, arquitectura de módulos, separación de responsabilidades y decisiones técnicas |
-| [`historial-de-cambios.md`](historial-de-cambios.md) | Registro cronológico detallado de cambios y versiones publicadas |
-| [`defectos-conocidos.md`](defectos-conocidos.md) | Registro de comportamientos anómalos conocidos y estado de investigación |
-| [`integraciones/`](integraciones/) | Guías de integración y conexión con agentes (Claude Code, Codex CLI, Gemini CLI) |
-| [`infraestructura/vision-general.md`](infraestructura/vision-general.md) | Mapa de componentes del entorno y dependencias del sistema |
-| [`infraestructura/requisitos.md`](infraestructura/requisitos.md) | Requisitos mínimos y recomendados de hardware y compilación |
-| [`infraestructura/servicios.md`](infraestructura/servicios.md) | Servicios externos, configuración de agentes y protocolo MCP |
-| [`infraestructura/guia-de-clonado.md`](infraestructura/guia-de-clonado.md) | Instrucciones paso a paso para clonar y compilar en cualquier sistema |
+El documento funcionalidades.md es el catálogo completo de características: lienzo, nodos, estados,
+prioridades, conexiones cruzadas y formatos. El documento manual-de-uso.md es el manual para el
+usuario, con los flujos de trabajo paso a paso, los atajos de teclado y el trabajo con agentes. El
+documento arquitectura.md explica el diseño del software, los módulos, la separación de
+responsabilidades y las decisiones técnicas. El documento historial-de-cambios.md recoge los cambios
+de cada versión publicada, y defectos-conocidos.md los comportamientos anómalos conocidos y su
+estado.
 
-## Integración con Agentes de Inteligencia Artificial
+La carpeta integraciones reúne las guías de conexión con agentes: Claude Code, Codex CLI y
+Antigravity CLI (agy). La carpeta infraestructura contiene vision-general.md, con el mapa de
+componentes y cómo se comunican; requisitos.md, con los requisitos de compilación, sistema y hardware;
+servicios.md, con los servicios externos, la configuración de los agentes y el protocolo MCP; y
+guia-de-clonado.md, con las instrucciones paso a paso para descargar y compilar el proyecto en
+cualquier sistema.
 
-MMCelt admite dos modalidades principales de trabajo con IA:
+Integración con agentes de inteligencia artificial
 
-1. **Flujo Asistido (Copiar / Pegar)**: Exportación de esquemas Markdown estructurados (`Ctrl + E`) y posterior importación de respuestas en JSON o formatos estándar OPML / `.mm`.
-2. **Flujo Autónomo (Consola y MCP)**: Conexión con agentes de línea de comandos mediante el menú `🤖 Inteligencia Artificial → Conectar MMCelt con mis IAs`. Se soportan de forma oficial los agentes de terminal:
-   - **Claude Code** (Anthropic)
-   - **Codex CLI** (OpenAI)
-   - **Gemini CLI** (Google, mediante clave de API gratuita de Google AI Studio)
+MMCelt admite dos maneras de trabajar con una IA. En el flujo asistido, de copiar y pegar, se
+exporta el esquema en Markdown con Ctrl+E y después se importa la respuesta en JSON o en los
+formatos estándar OPML o .mm. En el flujo autónomo, por consola y MCP, se conectan agentes de línea
+de órdenes desde el menú «Inteligencia Artificial → Conectar MMCelt con mis IAs...». Los agentes de
+terminal admitidos son Claude Code, de Anthropic; Codex CLI, de OpenAI; y Antigravity CLI (agy), de
+Google, que funciona con una cuenta normal de Google.
 
-## Estado del proyecto
+Estado del proyecto
 
-- **Versión vigente**: **0.13.0**
-- **Estado de verificación**:
-  - Windows: **611 pruebas unitarias e integradas** pasadas al 100%.
-  - Linux (`mmcelt-linux`): **610 pruebas** pasadas al 100% (una es exclusiva de Windows).
-  - Auditoría de código: `cargo clippy --all-targets --all-features -- -D warnings` (0 advertencias).
-  - Formato: `cargo fmt --check` (100% conforme).
-  - Documentación: `cargo doc --all-features --no-deps` (0 advertencias).
-  - Seguridad: `cargo audit` (0 vulnerabilidades reportadas sobre 441 dependencias).
-  - Validación manual: la versión publicada se comprobó a mano, recorriendo cada novedad, antes de
-    publicarla; los defectos que salieron se corrigieron antes de publicar.
+La última versión publicada es la 0.16.0. Cada versión se publica después de pasar en Windows y en
+Linux la batería completa de pruebas unitarias e integradas, el linter sin avisos (cargo clippy
+--all-targets --all-features -- -D warnings), el formateador sin diferencias (cargo fmt --check), la
+generación de la documentación sin avisos (cargo doc --all-features --no-deps) y la auditoría de
+dependencias sin vulnerabilidades conocidas (cargo audit). Una de las pruebas solo existe en
+Windows.

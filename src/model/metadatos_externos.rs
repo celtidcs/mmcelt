@@ -1,10 +1,10 @@
 //! # Metadatos de MMCelt embebidos en formatos externos (`model/metadatos_externos.rs`)
 //!
-//! OPML y el `.mm` de FreeMind/Freeplane —los dos formatos no propietarios elegidos para la
-//! tanda 5— solo saben representar un árbol con título y una nota de texto por nodo. **Todo
+//! OPML y el `.mm` de FreeMind/Freeplane —los dos formatos no propietarios soportados—
+//! solo saben representar un árbol con título y una nota de texto por nodo. **Todo
 //! lo demás de [`crate::model::Nodo`] y [`crate::model::Proyecto`] no tiene sitio nativo ahí.**
 //!
-//! Lo que no cabe **no se pierde**: se vuelca como JSON estructurado
+//! Por diseño del producto: lo que no cabe **no se pierde**. Se vuelca como JSON estructurado
 //! dentro de la propia nota, para que quien reciba el archivo —MMCelt al reimportarlo, o
 //! cualquier otra persona con un editor de texto— pueda aprovechar la información en bruto.
 //!
@@ -125,9 +125,9 @@ pub struct MetadatosProyectoExterno {
     /// [`Proyecto`]), así que necesita su propio sitio para no perderse en la ida y vuelta.
     pub title: String,
     /// Fecha de creación original del proyecto en MMCelt.
-    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: jiff::Timestamp,
     /// Fecha de última modificación original del proyecto en MMCelt.
-    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: jiff::Timestamp,
     /// Visión del creador.
     #[serde(default)]
     pub creator_vision: String,
@@ -213,7 +213,7 @@ pub struct NotaImportada {
 /// Un archivo que no viene de MMCelt —exportado desde otra aplicación— no lleva ninguna marca:
 /// en ese caso toda la nota se conserva como `notas_usuario` y los dos campos de metadatos
 /// quedan en `None`. Es la señal que usa quien importa para saber que hace falta aplicar
-/// valores por defecto y avisar a la persona (C21-D).
+/// valores por defecto y avisar a la persona en la importación.
 ///
 /// Un JSON mal formado tras una marca reconocida **no interrumpe la importación**: se trata
 /// igual que si la marca no estuviera, y la línea completa se conserva como prosa. Un archivo

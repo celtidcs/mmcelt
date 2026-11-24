@@ -18,6 +18,14 @@ In automatischen Layout-Modi zählt das Verschieben von Knoten nicht als Änderu
 
 Im Modus **Manuelle freie Position** zählt das Verschieben hingegen als Änderung, da die manuelle Anordnung Ihre bewusste Arbeit darstellt.
 
+### 🚪 Schließen mit ungespeicherten Änderungen
+
+Wenn Sie MMCelt schließen, während etwas nicht auf der Festplatte ist, fragt das Programm zuerst: **Speichern**, **Nicht speichern** oder **Abbrechen**. Als ungespeichert gilt jede Änderung der Karte, ein Titel, den Sie gerade schreiben, und die neuen KI-Knoten, die Sie seit dem letzten Speichern geöffnet haben.
+
+Eine Karte ohne Datei —ein Scan, ein Import, eine Vorlage oder ein Beispiel aus dem Menü— fragt ebenfalls, auch wenn Sie sie nicht verändert haben. Ohne Nachfrage schließen nur das Beispiel, mit dem das Programm startet, und eine neue Karte mit nur der zentralen Idee, solange Sie sie nicht verändert haben.
+
+Ohne Datei öffnet **Speichern** den Dialog „Speichern unter“; brechen Sie dort ab oder schlägt das Speichern fehl, bleibt MMCelt geöffnet. **Abbrechen** lässt Sie weiterarbeiten, ohne etwas zu speichern.
+
 ### ⚠️ Wiederherstellungsangebot beim Start
 Der Dialog zeigt Erstellungszeitpunkt und Map-Titel des Backups an. Sie entscheiden: Wurde das Programm bewusst ohne Speichern geschlossen, verwerfen Sie die Kopie. Eine automatische Wiederherstellung ohne Bestätigung erfolgt nicht.
 
