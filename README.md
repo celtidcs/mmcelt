@@ -208,7 +208,7 @@ documentacion/infraestructura.
 
 Versión y publicación
 
-La última versión publicada es la 0.16.0, disponible en el repositorio público
+La última versión publicada es la 0.16.1, disponible en el repositorio público
 https://github.com/celtidcs/mmcelt con ejecutables para Windows y Linux en su página de publicaciones
 (Releases). Cada versión se publica después de pasar las pruebas automáticas en las dos plataformas.
 

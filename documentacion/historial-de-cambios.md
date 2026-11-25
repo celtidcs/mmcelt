@@ -6,6 +6,10 @@ El historial empieza en la 0.7.0, que es la primera versión que se publicó. La
 
 Cómo se numeran las versiones. El último número sube cuando se corrige un defecto sin añadir nada nuevo, y en este proyecto sube con cada arreglo que se confirma, se publique o no; por eso hay números que nunca llegan a una descarga. El número del medio sube cuando aparece una funcionalidad nueva o cambia una pieza de fondo aunque no se vea, como el motor gráfico. El primer número subirá cuando se rompa la compatibilidad hacia fuera: que un mapa .mmcelt guardado siga abriéndose igual, que un agente ya conectado por MCP siga funcionando y que la configuración que MMCelt escribió en un agente siga sirviendo. Mientras el primer número sea 0, ese compromiso no está dado, porque el estándar considera las versiones 0.y.z desarrollo inicial. La 1.0.0 llegará cuando el formato y el protocolo se declaren estables y el programa se haya probado también en macOS. Una prueba del proyecto comprueba que la versión declarada en Cargo.toml tiene su entrada en este historial.
 
+Versión 0.16.1 — 2026-11-25
+
+Corrige dos fallos que impidieron publicar la 0.16.0 y no cambia el comportamiento del programa. El linter de la versión 1.100 de Rust rechazaba una comprobación de los ejecutables de los agentes escrita de forma redundante en Windows, y en macOS una prueba del lanzamiento de agy comparaba la carpeta temporal con un nombre distinto del que devuelve el sistema (/private/var en lugar de /var). La 0.16.0 llegó a etiquetarse, pero no tiene ejecutables publicados: lo que se cuenta para ella llega con esta versión.
+
 Versión 0.16.0 — 2026-11-24
 
 Lo que se hace mientras el envío a un agente guarda el mapa ya no se da por guardado. Al enviar, MMCelt guarda el mapa en segundo plano tal como estaba en ese momento. Si mientras tanto se editaba un nodo o se abría uno nuevo de la IA, al terminar el guardado ese cambio contaba como guardado aunque el archivo no lo tuviera: al cerrar no se preguntaba y el cambio podía perderse. Ahora solo cuenta como guardado lo que de verdad está en el archivo.

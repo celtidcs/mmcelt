@@ -31,7 +31,7 @@ X.Y.Z, con una v delante opcional. El enlace del aviso se compone desde la confi
 desde la respuesta.
 
 La petición lleva la cabecera User-Agent, que GitHub exige, con el nombre y la versión de MMCelt
-seguidos de los de la biblioteca que hace la consulta, por ejemplo mmcelt/0.16.0
+seguidos de los de la biblioteca que hace la consulta, por ejemplo mmcelt/0.16.1
 aviso-version-github/0.2.4, y la cabecera Accept con el valor application/vnd.github+json. No lleva autenticación; sin
 autenticar, GitHub admite 60 peticiones por hora y dirección IP, según
 https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api. El transporte es

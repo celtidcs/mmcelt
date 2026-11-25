@@ -675,19 +675,17 @@ fn nombres_segun_el_sistema(nombre: &str, pathext: &OsStr, sistema: Sistema) -> 
 
 /// Comprueba el tipo de archivo y el permiso ejecutable cuando el sistema lo representa.
 fn es_archivo_ejecutable(ruta: &Path) -> bool {
-    if !ruta.is_file() {
-        return false;
-    }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::metadata(ruta)
-            .map(|metadatos| metadatos.permissions().mode() & 0o111 != 0)
-            .unwrap_or(false)
+        ruta.is_file()
+            && std::fs::metadata(ruta)
+                .map(|metadatos| metadatos.permissions().mode() & 0o111 != 0)
+                .unwrap_or(false)
     }
     #[cfg(not(unix))]
     {
-        true
+        ruta.is_file()
     }
 }
 

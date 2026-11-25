@@ -18065,9 +18065,10 @@ fn agy_recibe_un_prompt_inicial_y_sigue_interactivo() {
     assert_eq!(orden.argumentos.len(), 5);
     assert_eq!(orden.argumentos[0], "--new-project");
     assert_eq!(orden.argumentos[1], "--add-dir");
+    // La orden lleva la raíz canónica: en macOS la carpeta temporal /var es /private/var.
     assert_eq!(
         orden.argumentos[2],
-        crate::lanzador_agentes::ruta_portable(&raiz)
+        crate::lanzador_agentes::ruta_portable(&raiz.canonicalize().expect("raíz canónica"))
     );
     assert_eq!(orden.argumentos[3], "-i");
     assert!(orden.argumentos[4].contains("inicio.md"));

@@ -91,7 +91,7 @@ Google, que funciona con una cuenta normal de Google.
 
 Estado del proyecto
 
-La última versión publicada es la 0.16.0. Cada versión se publica después de pasar en Windows y en
+La última versión publicada es la 0.16.1. Cada versión se publica después de pasar en Windows y en
 Linux la batería completa de pruebas unitarias e integradas, el linter sin avisos (cargo clippy
 --all-targets --all-features -- -D warnings), el formateador sin diferencias (cargo fmt --check), la
 generación de la documentación sin avisos (cargo doc --all-features --no-deps) y la auditoría de
